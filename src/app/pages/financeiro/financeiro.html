@@ -1,0 +1,129 @@
+<main class="financeiro-page">
+
+  <div class="financeiro-header">
+    <div>
+      <h1>Financeiro</h1>
+      <p>Acompanhe ganhos, gastos e lucro do seu negócio</p>
+    </div>
+    <button class="btn-primary" (click)="abrirModal()">+ Adicionar Despesa</button>
+  </div>
+
+  <div class="mes-nav">
+    <button class="btn-nav" (click)="mudarMes(-1)">‹</button>
+    <h2>{{ nomeMesAtualExtenso }}</h2>
+    <button class="btn-nav" (click)="mudarMes(1)">›</button>
+  </div>
+
+  <div class="grafico-card">
+    <h3>Lucro nos últimos meses</h3>
+
+    <svg viewBox="0 0 600 140" class="grafico-svg">
+      <polyline [attr.points]="pontosSvg" fill="none" stroke-width="3" class="linha-lucro" />
+      <circle
+        *ngFor="let p of historico; let i = index"
+        [attr.cx]="posicaoX(i)"
+        [attr.cy]="posicaoY(p.lucro)"
+        r="4"
+        class="ponto-lucro"
+      />
+    </svg>
+
+    <div class="grafico-legendas">
+      <span *ngFor="let p of historico">{{ p.label }}</span>
+    </div>
+  </div>
+
+  <div class="mes-resumo-grid">
+
+    <div class="grafico-diario-card">
+  <h3>Ganhos por dia — {{ nomeMesAtualExtenso }}</h3>
+  <div class="barras-diarias">
+    <div class="barra-coluna" *ngFor="let d of ganhosPorDia">
+      <span class="barra-valor" *ngIf="d.valor > 0">R$ {{ d.valor.toFixed(0) }}</span>
+      <div class="barra-dia" [style.height.%]="d.alturaPercentual" [title]="'Dia ' + d.dia + ': R$ ' + d.valor.toFixed(2)"></div>
+      <span class="barra-dia-numero">{{ d.dia }}</span>
+    </div>
+  </div>
+</div>
+
+    <div class="cards-resumo">
+      <div class="card-resumo card-ganhos">
+        <span class="card-label">Ganhos</span>
+        <span class="card-valor">R$ {{ ganhosDoMes.toFixed(2) }}</span>
+      </div>
+      <div class="card-resumo card-gastos">
+        <span class="card-label">Gastos</span>
+        <span class="card-valor">R$ {{ gastosDoMes.toFixed(2) }}</span>
+      </div>
+      <div class="card-resumo card-lucro" [class.negativo]="lucroDoMes < 0">
+        <span class="card-label">Lucro</span>
+        <span class="card-valor">R$ {{ lucroDoMes.toFixed(2) }}</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="despesas-card">
+    <div class="despesas-header">
+      <h3>Despesas de {{ nomeMesAtualExtenso }}</h3>
+    </div>
+
+    <div class="despesa-item" *ngFor="let d of despesasDoMesAtual">
+      <span class="despesa-descricao">
+        {{ d.descricao }}
+        <span class="tag-tipo" [class.tag-emergencial]="d.tipo === 'emergencial'">
+          {{ d.tipo === 'fixa' ? 'fixa' : 'emergencial' }}
+        </span>
+      </span>
+      <span class="despesa-valor">R$ {{ d.valor.toFixed(2) }}</span>
+      <button class="btn-icon" title="Remover" (click)="removerDespesa(d.id)">🗑️</button>
+    </div>
+
+    <p class="empty-state" *ngIf="despesasDoMesAtual.length === 0">
+      Nenhuma despesa registrada neste mês.
+    </p>
+  </div>
+
+
+  <!-- MODAL -->
+  <div class="modal-overlay" *ngIf="modalAberto">
+    <div class="modal">
+
+      <div class="modal-header">
+        <h2>Nova Despesa</h2>
+        <button class="btn-icon" (click)="fecharModal()">×</button>
+      </div>
+
+      <p class="modal-data">Para {{ nomeMesAtualExtenso }}</p>
+
+      <form class="modal-form" (ngSubmit)="salvarDespesa($event)">
+
+        <div class="form-group">
+          <label>Descrição *</label>
+          <input type="text" placeholder="Ex: aluguel, tinta da impressora..." [(ngModel)]="novaDespesa.descricao" name="descricao" required />
+        </div>
+
+        <div class="form-group">
+          <label>Valor (R$) *</label>
+          <input type="number" min="0" step="0.01" [(ngModel)]="novaDespesa.valor" name="valor" required />
+        </div>
+
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select [(ngModel)]="novaDespesa.tipo" name="tipo" required>
+            <option value="fixa">Fixa (repete todo mês, ex: aluguel)</option>
+            <option value="emergencial">Emergencial (só neste mês, gasto não planejado)</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar Despesa</button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+</main>

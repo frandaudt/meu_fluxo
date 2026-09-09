@@ -1,0 +1,115 @@
+<main class="servicos-page">
+
+  <div class="servicos-header">
+    <div>
+      <h1>Serviços</h1>
+      <p>Gerencie os serviços que você oferece</p>
+    </div>
+
+    <button class="btn-primary" (click)="abrirModal()">
+      + Novo Serviço
+    </button>
+  </div>
+
+  <div class="servicos-list">
+
+    <div class="servico-card" *ngFor="let servico of servicos">
+      <div class="card-header">
+        <div class="servico-icon">✂️</div>
+
+        <div class="card-title">
+          <h3>{{ servico.nome }}</h3>
+          <span class="badge-categoria" *ngIf="servico.categoria">{{ servico.categoria }}</span>
+        </div>
+
+        <button class="btn-icon" title="Remover" (click)="removerServico(servico.id)">
+          🗑️
+        </button>
+      </div>
+
+      <div class="card-body">
+        <p class="info-item">💰 R$ {{ servico.valor.toFixed(2) }}</p>
+        <p class="info-item">⏱️ {{ servico.duracao }} min</p>
+      </div>
+    </div>
+
+    <p class="empty-state" *ngIf="servicos.length === 0">
+      Nenhum serviço cadastrado ainda. Clique em "+ Novo Serviço" para começar.
+    </p>
+
+  </div>
+
+
+  <!-- MODAL -->
+  <div class="modal-overlay" *ngIf="modalAberto">
+    <div class="modal">
+
+      <div class="modal-header">
+        <h2>Novo Serviço</h2>
+        <button class="btn-icon" (click)="fecharModal()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="salvarServico($event)">
+
+        <div class="form-group">
+          <label>Nome do serviço *</label>
+          <input
+            type="text"
+            placeholder="Ex: Corte de Cabelo"
+            [(ngModel)]="novoServico.nome"
+            name="nome"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Categoria</label>
+          <input
+            type="text"
+            placeholder="Ex: Cabelo, Unhas, Estética..."
+            [(ngModel)]="novoServico.categoria"
+            name="categoria"
+          />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Valor (R$) *</label>
+            <input
+              type="number"
+              placeholder="0,00"
+              [(ngModel)]="novoServico.valor"
+              name="valor"
+              min="0"
+              step="0.01"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Duração (min)</label>
+            <input
+              type="number"
+              placeholder="30"
+              [(ngModel)]="novoServico.duracao"
+              name="duracao"
+              min="0"
+            />
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-primary">
+            Salvar Serviço
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+</main>

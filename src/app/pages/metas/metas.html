@@ -1,0 +1,130 @@
+<main class="metas-page">
+
+  <div class="metas-header">
+    <div>
+      <h1>Metas</h1>
+      <p>Defina objetivos e acompanhe o progresso do seu negócio</p>
+    </div>
+    <button class="btn-primary" (click)="abrirModalMensal()">+ Nova Meta Mensal</button>
+  </div>
+
+  <div class="meta-anual-card">
+    <div class="meta-anual-header">
+      <div>
+        <span class="meta-anual-label">Meta de {{ anoAtual }}</span>
+        <h2 *ngIf="metaAnualDoAno">R$ {{ metaAnualDoAno.valorAlvo.toFixed(2) }}</h2>
+        <p *ngIf="!metaAnualDoAno" class="sem-meta">Nenhuma meta definida para este ano.</p>
+      </div>
+      <button class="btn-secondary" (click)="abrirModalAnual()">
+        {{ metaAnualDoAno ? 'Editar meta anual' : '+ Definir meta anual' }}
+      </button>
+    </div>
+
+    <div class="progresso-bloco" *ngIf="metaAnualDoAno">
+      <div class="barra-progresso">
+        <div class="barra-preenchida" [style.width.%]="percentualAnual > 100 ? 100 : percentualAnual"></div>
+      </div>
+      <div class="progresso-legenda">
+        <span>R$ {{ progressoAnual.toFixed(2) }} alcançados</span>
+        <span class="progresso-percentual" [class.acima]="percentualAnual >= 100">{{ percentualAnual }}%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="metas-mensais-lista">
+    <h2 class="secao-titulo">Metas Mensais</h2>
+
+    <div class="meta-mensal-card" *ngFor="let m of metasMensaisExibicao" [class.meta-atual]="m.atual">
+      <div class="meta-mensal-topo">
+        <div>
+          <span class="meta-mensal-label">
+            {{ m.label }}
+            <span class="badge-atual" *ngIf="m.atual">mês atual</span>
+          </span>
+          <h3>
+            <span *ngIf="m.tipo === 'faturamento'">R$ {{ m.valorAlvo.toFixed(2) }}</span>
+            <span *ngIf="m.tipo === 'clientes'">{{ m.valorAlvo }} clientes</span>
+          </h3>
+        </div>
+        <button class="btn-icon" title="Remover" (click)="removerMetaMensal(m.id)">🗑️</button>
+      </div>
+
+      <div class="barra-progresso">
+        <div class="barra-preenchida" [style.width.%]="m.percentual > 100 ? 100 : m.percentual"></div>
+      </div>
+      <div class="progresso-legenda">
+        <span *ngIf="m.tipo === 'faturamento'">R$ {{ m.progresso.toFixed(2) }} alcançados</span>
+        <span *ngIf="m.tipo === 'clientes'">{{ m.progresso }} atendidos</span>
+        <span class="progresso-percentual" [class.acima]="m.percentual >= 100">{{ m.percentual }}%</span>
+      </div>
+    </div>
+
+    <p class="empty-state" *ngIf="metasMensaisExibicao.length === 0">
+      Nenhuma meta mensal cadastrada ainda.
+    </p>
+  </div>
+
+
+  <!-- MODAL META MENSAL -->
+  <div class="modal-overlay" *ngIf="modalMensalAberto">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Nova Meta Mensal</h2>
+        <button class="btn-icon" (click)="fecharModalMensal()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="salvarMetaMensal($event)">
+        <div class="form-group">
+          <label>Mês *</label>
+          <input type="month" [(ngModel)]="novaMetaMensal.mes" name="mes" required />
+        </div>
+
+        <div class="form-group">
+          <label>Tipo de meta *</label>
+          <select [(ngModel)]="novaMetaMensal.tipo" name="tipo" required>
+            <option value="faturamento">Faturamento (R$)</option>
+            <option value="clientes">Clientes atendidos</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>{{ novaMetaMensal.tipo === 'faturamento' ? 'Valor alvo (R$) *' : 'Número de clientes *' }}</label>
+          <input type="number" min="0" [step]="novaMetaMensal.tipo === 'faturamento' ? 0.01 : 1" [(ngModel)]="novaMetaMensal.valorAlvo" name="valorAlvo" required />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharModalMensal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar Meta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL META ANUAL -->
+  <div class="modal-overlay" *ngIf="modalAnualAberto">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Meta Anual</h2>
+        <button class="btn-icon" (click)="fecharModalAnual()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="salvarMetaAnual($event)">
+        <div class="form-group">
+          <label>Ano *</label>
+          <input type="number" [(ngModel)]="novaMetaAnual.ano" name="ano" required />
+        </div>
+
+        <div class="form-group">
+          <label>Valor alvo (R$) *</label>
+          <input type="number" min="0" step="0.01" [(ngModel)]="novaMetaAnual.valorAlvo" name="valorAlvo" required />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharModalAnual()">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar Meta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</main>

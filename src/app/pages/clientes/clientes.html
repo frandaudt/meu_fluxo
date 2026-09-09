@@ -1,0 +1,90 @@
+<main class="clientes-page">
+
+  <div class="clientes-header">
+    <div>
+      <h1>Clientes</h1>
+      <p>Gerencie seus clientes</p>
+    </div>
+
+    <button class="btn-primary" (click)="abrirModal()">
+      + Novo Cliente
+    </button>
+  </div>
+
+  <div class="busca-ativa" *ngIf="termoBusca">
+    Buscando por "<strong>{{ termoBusca }}</strong>"
+    <button (click)="limparBusca()">Limpar</button>
+  </div>
+
+  <div class="clientes-list">
+
+    <div class="cliente-card" *ngFor="let cliente of clientesFiltrados">
+      <div class="card-header">
+        <div class="user-avatar">{{ iniciais(cliente.nome) }}</div>
+
+        <div class="card-title">
+          <h3>{{ cliente.nome }}</h3>
+          <span class="badge-status">Ativo</span>
+        </div>
+
+        <button class="btn-icon" title="Remover" (click)="removerCliente(cliente.id)">🗑️</button>
+      </div>
+
+      <div class="card-body">
+        <p class="info-item">📞 {{ cliente.telefone }}</p>
+        <p class="info-item" *ngIf="cliente.email">✉️ {{ cliente.email }}</p>
+        <p class="info-item" *ngIf="cliente.endereco">📍 {{ cliente.endereco }}</p>
+      </div>
+    </div>
+
+    <p class="empty-state" *ngIf="clientesFiltrados.length === 0">
+      Nenhum cliente encontrado.
+    </p>
+
+  </div>
+
+
+  <!-- MODAL -->
+  <div class="modal-overlay" *ngIf="modalAberto">
+    <div class="modal">
+
+      <div class="modal-header">
+        <h2>Novo Cliente</h2>
+        <button class="btn-icon" (click)="fecharModal()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="salvarCliente($event)">
+
+        <div class="form-group">
+          <label>Nome Completo *</label>
+          <input type="text" placeholder="Ex: Maria Silva" [(ngModel)]="novoCliente.nome" name="nome" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Telefone / WhatsApp *</label>
+            <input type="tel" placeholder="(11) 99999-9999" [(ngModel)]="novoCliente.telefone" name="telefone" required />
+          </div>
+
+          <div class="form-group">
+            <label>E-mail</label>
+            <input type="email" placeholder="cliente&#64;email.com" [(ngModel)]="novoCliente.email" name="email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Endereço / Complemento</label>
+          <input type="text" placeholder="Rua, número, bairro..." [(ngModel)]="novoCliente.endereco" name="endereco" />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar Cliente</button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+</main>

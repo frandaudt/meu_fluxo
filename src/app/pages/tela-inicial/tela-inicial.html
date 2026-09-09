@@ -1,0 +1,103 @@
+<main class="dashboard-container">
+
+  <div class="dashboard-header">
+    <div class="title-with-icon">
+      <span class="header-icon"></span>
+      <h1>Início</h1>
+    </div>
+  </div>
+
+  <div class="metrics-grid">
+  <div class="metric-card card-lucro">
+    <img src="assets/icons/icone-dashboard-lucro.png" class="card-icon-img" alt="" />
+    <div>
+      <p>Lucro do mês</p>
+      <h3>R$ {{ lucroDoMes.toFixed(2) }}</h3>
+    </div>
+  </div>
+
+  <div class="metric-card card-despesas">
+    <img src="assets/icons/icone-dashboard-despesas.png" class="card-icon-img" alt="" />
+    <div>
+      <p>Despesas do mês</p>
+      <h3>R$ {{ despesasDoMes.toFixed(2) }}</h3>
+    </div>
+  </div>
+
+  <div class="metric-card card-agendamentos">
+    <img src="assets/icons/icone-dashboard-agendamentos.png" class="card-icon-img" alt="" />
+    <div>
+      <p>Agendamentos hoje</p>
+      <h3>{{ agendamentosHoje }}</h3>
+    </div>
+  </div>
+
+  <div class="metric-card card-metas">
+    <img src="assets/icons/icone-dashboard-metas.png" class="card-icon-img" alt="" />
+    <div>
+      <p>Metas cadastradas</p>
+      <h3>{{ totalMetas }}</h3>
+    </div>
+  </div>
+</div>
+
+  <div class="content-grid">
+
+    <div class="white-card calendar-section">
+      <app-calendario
+        [ano]="anoAtual"
+        [mes]="mesAtual"
+        [diaSelecionado]="diaSelecionado"
+        [eventosPorDia]="eventosPorDia"
+        (selecionarDia)="selecionarDia($event)"
+        (mesAnterior)="mudarMes(-1)"
+        (mesProximo)="mudarMes(1)"
+      ></app-calendario>
+    </div>
+
+    <div class="right-column">
+
+      <div class="white-card">
+        <div class="card-title">
+          <h4>Próximos Agendamentos</h4>
+        </div>
+
+        <div class="item-list">
+          <div class="list-item" *ngFor="let ag of proximosAgendamentos">
+            <div class="circle-avatar" [class.hoje-avatar]="ag.ehHoje">{{ ag.clienteNome.charAt(0) }}</div>
+            <div class="item-info">
+              <strong>{{ ag.horario }} {{ ag.clienteNome }}</strong>
+              <p>{{ ag.servicoNome }} · {{ ag.label }}</p>
+            </div>
+          </div>
+
+          <p class="empty-state" *ngIf="proximosAgendamentos.length === 0">
+            Nenhum agendamento futuro.
+          </p>
+        </div>
+      </div>
+
+      <div class="white-card">
+        <h4>Progresso das Metas — {{ nomeMesRealExtenso }}</h4>
+
+        <div class="meta-mini" *ngFor="let m of metasDoMesResumo">
+          <div class="meta-mini-topo">
+            <span *ngIf="m.tipo === 'faturamento'">R$ {{ m.progresso.toFixed(2) }} de R$ {{ m.valorAlvo.toFixed(2) }}</span>
+            <span *ngIf="m.tipo === 'clientes'">{{ m.progresso }} de {{ m.valorAlvo }} clientes</span>
+            <span class="meta-mini-percentual" [class.acima]="m.percentual >= 100">{{ m.percentual }}%</span>
+          </div>
+          <div class="barra-progresso">
+            <div class="barra-preenchida" [style.width.%]="m.percentual > 100 ? 100 : m.percentual"></div>
+          </div>
+        </div>
+
+        <p class="empty-state" *ngIf="metasDoMesResumo.length === 0">
+          Nenhuma meta cadastrada para este mês.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+</main>

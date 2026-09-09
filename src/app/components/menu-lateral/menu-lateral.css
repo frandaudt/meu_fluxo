@@ -1,0 +1,66 @@
+:host { display: block; width: 240px; }
+
+.sidebar {
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  padding: 24px 14px;
+  height: calc(100vh - 112px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 20px 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.logo h2 { margin: 0; font-size: 1.15rem; color: var(--color-primary-dark); }
+.logo-icon-img { width: 26px; height: 26px; object-fit: contain; }
+
+.nav-menu { display: flex; flex-direction: column; gap: 4px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: 0.92rem;
+  transition: background var(--transition), color var(--transition);
+}
+
+.nav-item .icon { transition: transform var(--transition); }
+.nav-item:hover { background-color: var(--color-primary-light); color: var(--color-primary-dark); }
+.nav-item:hover .icon { transform: scale(1.08); }
+
+.nav-item.active {
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  transition: filter var(--transition);
+}
+
+/* item ativo tem fundo verde escuro — deixa o ícone branco pra não sumir */
+.nav-item.active .nav-icon-img {
+  filter: brightness(0) invert(1);
+}
+
+.sidebar-footer { border-top: 1px solid var(--color-border); padding-top: 12px; }
+.logout { color: #b5645a; }
+.logout:hover { background-color: #f6dcd9; color: #a8483c; }

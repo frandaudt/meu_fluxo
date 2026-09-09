@@ -1,1 +1,196 @@
-/* You can add global styles to this file, and also import other style files */
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --color-bg: #E2E6DC;
+  --color-primary: #55634e;
+  --color-primary-dark: #44513d;
+  --color-primary-light: #DDE5D4;
+  --color-accent: #E29388;
+  --color-white: #ffffff;
+  --color-text: #2c3730;
+  --color-text-muted: #737c70;
+  --color-border: #e9ebe3;
+
+  --font-display: 'Poppins', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+
+  --shadow-sm: 0 2px 8px rgba(44, 55, 48, 0.05);
+  --shadow-md: 0 10px 24px rgba(44, 55, 48, 0.08);
+  --shadow-lg: 0 20px 45px rgba(44, 55, 48, 0.14);
+
+  --transition: 180ms cubic-bezier(.4,0,.2,1);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg);
+  font-family: var(--font-body);
+  color: var(--color-text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .brand-logo h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.top-bar-verde {
+  height: 64px;
+  background: linear-gradient(135deg, #5c6b54, #4d5a46);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 28px;
+  color: white;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 10;
+}
+
+.brand-logo { display: flex; align-items: center; gap: 10px; }
+.brand-logo h2 { margin: 0; font-size: 1.3rem; font-weight: 600; }
+
+.top-bar-right { display: flex; align-items: center; gap: 18px; }
+
+.search-input {
+  background: rgba(255, 255, 255, 0.14);
+  padding: 8px 16px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background var(--transition);
+}
+.search-input:focus-within { background: rgba(255, 255, 255, 0.22); }
+
+.search-input input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+}
+.search-input input::placeholder { color: rgba(255, 255, 255, 0.65); }
+
+.icon-btn { cursor: pointer; opacity: 0.9; transition: opacity var(--transition); }
+.icon-btn:hover { opacity: 1; }
+
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  transition: background var(--transition);
+}
+.user-pill:hover { background: rgba(255,255,255,0.12); }
+
+.user-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.5);
+}
+
+.app-body {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  min-height: calc(100vh - 64px);
+  padding: 24px;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+app-menu-lateral {
+  display: block;
+  width: 240px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 24px;
+}
+
+.main-content { flex: 1; min-width: 0; }
+.app-body.no-layout {
+  padding: 0;
+  gap: 0;
+}
+.brand-logo-icon {
+  height: 34px;
+  width: auto;
+  display: block;
+  filter: brightness(0) invert(1);
+}
+
+.brand-logo h2 {
+  font-family: 'Playfair Display', serif;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.brand-logo h2::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: -1px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.55;
+}
+.user-pill { position: relative; }
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-family: var(--font-body);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.dropdown-item:hover { background: var(--color-bg); }
+
+.dropdown-sair { color: #b5645a; }
+.dropdown-sair:hover { background: #f6dcd9; }

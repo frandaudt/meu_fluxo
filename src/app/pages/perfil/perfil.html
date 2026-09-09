@@ -1,0 +1,81 @@
+<main class="perfil-page">
+
+  <h1>Meu Perfil</h1>
+
+   <div class="perfil-card avatar-card">
+    <div class="avatar-wrapper">
+      <div class="avatar-iniciais">{{ inicialNome }}</div>
+    </div>
+    <div>
+      <h3>{{ form.nome || 'Seu nome' }}</h3>
+      <p>{{ form.email }}</p>
+    </div>
+  </div>
+
+  <form class="perfil-card" (ngSubmit)="salvarPerfil($event)">
+    <div class="form-group">
+      <label>Nome completo *</label>
+      <input type="text" [(ngModel)]="form.nome" name="nome" required />
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>E-mail *</label>
+        <input type="email" [(ngModel)]="form.email" name="email" required />
+      </div>
+      <div class="form-group">
+        <label>Telefone</label>
+        <input type="tel" placeholder="(11) 99999-9999" [(ngModel)]="form.telefone" name="telefone" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Nome do negócio</label>
+      <input type="text" placeholder="Ex: Studio Nicole Beauty" [(ngModel)]="form.nomeNegocio" name="nomeNegocio" />
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Salvar alterações</button>
+    </div>
+  </form>
+
+  <div class="perfil-card senha-card">
+    <div>
+      <h4>Senha</h4>
+      <p>••••••••</p>
+    </div>
+    <button type="button" class="link-acao" (click)="abrirModalSenha()">Alterar senha</button>
+  </div>
+
+
+  <!-- MODAL TROCAR SENHA -->
+  <div class="modal-overlay" *ngIf="modalSenhaAberto">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Alterar Senha</h2>
+        <button class="btn-icon" (click)="fecharModalSenha()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="salvarNovaSenha($event)">
+        <div class="form-group">
+          <label>Senha atual *</label>
+          <input type="password" [(ngModel)]="senhaAtual" name="senhaAtual" required />
+        </div>
+        <div class="form-group">
+          <label>Nova senha *</label>
+          <input type="password" [(ngModel)]="novaSenha" name="novaSenha" required />
+        </div>
+        <div class="form-group">
+          <label>Confirmar nova senha *</label>
+          <input type="password" [(ngModel)]="confirmarSenha" name="confirmarSenha" required />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharModalSenha()">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar Senha</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</main>

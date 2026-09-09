@@ -1,0 +1,28 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-icon">✨</div>
+    <h2>Criar conta</h2>
+    <p class="subtitle">Comece a organizar clientes, agenda e financeiro</p>
+
+    <form class="auth-form" (ngSubmit)="fazerCadastro($event)">
+      <div class="input-group">
+        <label>Nome completo</label>
+        <input type="text" placeholder="Seu nome" [(ngModel)]="nome" name="nome" />
+      </div>
+      <div class="input-group">
+        <label>E-mail</label>
+        <input type="email" placeholder="seuemail@exemplo.com" [(ngModel)]="email" name="email" />
+      </div>
+      <div class="input-group">
+        <label>Senha</label>
+        <input type="password" placeholder="••••••••" [(ngModel)]="senha" name="senha" />
+      </div>
+
+      <button type="submit" class="btn-primary">Criar conta</button>
+    </form>
+
+    <div class="auth-footer">
+      Já tem uma conta? <a routerLink="/login">Fazer login</a>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,40 @@
+<div class="calendario">
+  <div class="calendario-header">
+    <button class="btn-nav" (click)="mesAnterior.emit()">‹</button>
+    <h3>{{ nomeMesAtual }}</h3>
+    <button class="btn-nav" (click)="mesProximo.emit()">›</button>
+  </div>
+
+  <div class="dias-semana">
+    <span *ngFor="let d of diasSemana">{{ d }}</span>
+  </div>
+
+  <div class="semana" *ngFor="let semana of semanas">
+    <button
+  *ngFor="let dia of semana"
+  class="dia-cell"
+  [class.fora-do-mes]="dia.foraDoMes"
+  [class.hoje]="dia.hoje"
+  [class.selecionado]="dia.data === diaSelecionado"
+  [class.tem-evento]="temEvento(dia.data)"
+  (click)="selecionarDia.emit(dia.data)"
+>
+
+      <span class="dia-numero">{{ dia.numero }}</span>
+
+      <div class="dia-eventos">
+        <span
+          class="evento-chip"
+          [class.status-agendado]="ev.status === 'agendado'"
+          [class.status-realizado]="ev.status === 'realizado'"
+          [class.status-cancelado]="ev.status === 'cancelado'"
+          *ngFor="let ev of eventosDoDia(dia.data)"
+        >{{ ev.horario }} {{ ev.texto }}</span>
+
+        <span class="evento-extra" *ngIf="eventosExtras(dia.data) > 0">
+          +{{ eventosExtras(dia.data) }}
+        </span>
+      </div>
+    </button>
+  </div>
+</div>

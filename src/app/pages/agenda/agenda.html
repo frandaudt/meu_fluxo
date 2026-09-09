@@ -1,0 +1,117 @@
+<main class="agenda-page">
+
+  <div class="agenda-header">
+    <div>
+      <h1>Agenda</h1>
+      <p>Acompanhe seus agendamentos</p>
+    </div>
+    <button class="btn-primary" (click)="abrirModal()">+ Novo Agendamento</button>
+  </div>
+
+  <div class="agenda-grid">
+
+    <app-calendario
+      [ano]="anoAtual"
+      [mes]="mesAtual"
+      [diaSelecionado]="diaSelecionado"
+      [eventosPorDia]="eventosPorDia"
+      (selecionarDia)="selecionarDia($event)"
+      (mesAnterior)="mudarMes(-1)"
+      (mesProximo)="mudarMes(1)"
+    ></app-calendario>
+
+    <div class="mes-painel">
+      <div class="mes-painel-header">
+        <h2>{{ nomeMesAtualExtenso }}</h2>
+        <p>{{ gruposDoMes.length }} dia(s) com agendamento</p>
+      </div>
+
+      <div class="mes-painel-lista">
+        <div
+          class="grupo-dia"
+          *ngFor="let grupo of gruposDoMes"
+          [id]="'dia-' + grupo.data"
+          [class.grupo-selecionado]="grupo.data === diaSelecionado"
+        >
+          <h3 class="grupo-dia-label">{{ grupo.label }}</h3>
+
+          <div class="agendamento-card" *ngFor="let ag of grupo.itens">
+            <div class="agendamento-horario">{{ ag.horario }}</div>
+
+            <div class="agendamento-info">
+              <h4>{{ nomeCliente(ag.clienteId) }}</h4>
+              <p>{{ nomeServico(ag.servicoId) }} · R$ {{ valorServico(ag.servicoId).toFixed(2) }}</p>
+            </div>
+
+            <select
+              class="status-select"
+              [class.status-agendado]="ag.status === 'agendado'"
+              [class.status-realizado]="ag.status === 'realizado'"
+              [class.status-cancelado]="ag.status === 'cancelado'"
+              [(ngModel)]="ag.status"
+              (ngModelChange)="alterarStatus(ag.id, $event)"
+            >
+              <option value="agendado">Agendado</option>
+              <option value="realizado">Realizado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+
+            <button class="btn-icon" title="Remover" (click)="removerAgendamento(ag.id)">🗑️</button>
+          </div>
+        </div>
+
+        <p class="empty-state" *ngIf="gruposDoMes.length === 0">
+          Nenhum agendamento neste mês.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- MODAL -->
+  <div class="modal-overlay" *ngIf="modalAberto">
+    <div class="modal">
+
+      <div class="modal-header">
+        <h2>Novo Agendamento</h2>
+        <button class="btn-icon" (click)="fecharModal()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="salvarAgendamento($event)">
+
+        <div class="form-group">
+          <label>Data *</label>
+          <input type="date" [(ngModel)]="novoAgendamento.data" name="data" required />
+        </div>
+
+        <div class="form-group">
+          <label>Cliente *</label>
+          <select [(ngModel)]="novoAgendamento.clienteId" name="clienteId" required>
+            <option *ngFor="let c of clientes" [value]="c.id">{{ c.nome }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Serviço *</label>
+          <select [(ngModel)]="novoAgendamento.servicoId" name="servicoId" required>
+            <option *ngFor="let s of servicos" [value]="s.id">{{ s.nome }} — R$ {{ s.valor.toFixed(2) }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Horário *</label>
+          <input type="time" [(ngModel)]="novoAgendamento.horario" name="horario" required />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar Agendamento</button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+</main>
