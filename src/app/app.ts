@@ -17,16 +17,36 @@ export class App {
   mostrarLayout = true;
   menuUsuarioAberto = false;
   termoBusca = '';
+  nomeUsuario = 'Usuário';
 
   private rotasSemLayout = ['/login', '/cadastro'];
 
   constructor(private router: Router) {
+    this.carregarUsuario();
+
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event) => {
         const url = (event as NavigationEnd).urlAfterRedirects;
         this.mostrarLayout = !this.rotasSemLayout.includes(url);
+        this.carregarUsuario();
       });
+  }
+
+  get primeiroNomeUsuario(): string {
+    return this.nomeUsuario.trim().split(' ')[0] || 'Usuário';
+  }
+
+  get inicialUsuario(): string {
+    return this.nomeUsuario ? this.nomeUsuario.charAt(0).toUpperCase() : 'U';
+  }
+
+  private carregarUsuario() {
+    const salvo = localStorage.getItem('usuarioLogado');
+    if (salvo) {
+      const usuario = JSON.parse(salvo);
+      this.nomeUsuario = usuario.nome || 'Usuário';
+    }
   }
 
   toggleMenuUsuario(event: Event) {

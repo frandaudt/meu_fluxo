@@ -15,14 +15,13 @@
       />
     </div>
 
-    <div class="user-pill" (click)="toggleMenuUsuario($event)">
-      <img src="https://i.pravatar.cc/100" class="user-avatar-img" alt="Avatar" />
-      <span>Nicole</span>
+      <div class="user-pill" (click)="toggleMenuUsuario($event)">
+      <div class="user-avatar-iniciais">{{ inicialUsuario }}</div>
+      <span>{{ primeiroNomeUsuario }}</span>
       <small>▼</small>
 
       <div class="user-dropdown" *ngIf="menuUsuarioAberto" (click)="$event.stopPropagation()">
         <a routerLink="/perfil" class="dropdown-item">👤 Meu Perfil</a>
-        <a routerLink="/configuracoes" class="dropdown-item">⚙️ Configurações</a>
         <button class="dropdown-item dropdown-sair" (click)="sair()">⏻ Sair</button>
       </div>
     </div>

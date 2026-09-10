@@ -19,6 +19,15 @@ interface Usuario {
   styleUrl: './perfil.css',
 })
 export class Perfil implements OnInit {
+  private readonly CHAVES_DADOS = [
+    'meufluxo_clientes',
+    'meufluxo_servicos',
+    'meufluxo_agendamentos',
+    'meufluxo_despesas',
+    'meufluxo_metas_mensais',
+    'meufluxo_metas_anuais',
+  ];
+
   usuario: Usuario = { nome: '', email: '', senha: '' };
   form = { nome: '', email: '', telefone: '', nomeNegocio: '' };
 
@@ -36,7 +45,7 @@ export class Perfil implements OnInit {
       return;
     }
     this.usuario = JSON.parse(salvo);
-     this.form = {
+    this.form = {
       nome: this.usuario.nome || '',
       email: this.usuario.email || '',
       telefone: this.usuario.telefone || '',
@@ -47,8 +56,6 @@ export class Perfil implements OnInit {
   get inicialNome(): string {
     return this.form.nome ? this.form.nome.charAt(0).toUpperCase() : 'U';
   }
-
-
 
   salvarPerfil(event: Event) {
     event.preventDefault();
@@ -109,5 +116,39 @@ export class Perfil implements OnInit {
 
     this.fecharModalSenha();
     alert('Senha alterada com sucesso!');
+  }
+
+  exportarDados() {
+    const dados: Record<string, unknown> = {};
+    for (const chave of this.CHAVES_DADOS) {
+      const valor = localStorage.getItem(chave);
+      dados[chave] = valor ? JSON.parse(valor) : [];
+    }
+
+    const conteudo = JSON.stringify(dados, null, 2);
+    const blob = new Blob([conteudo], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `meufluxo-backup-${hoje}.json`;
+    link.click();
+
+    URL.revokeObjectURL(url);
+  }
+
+  apagarDados() {
+    const confirmou = confirm(
+      'Isso vai apagar clientes, serviços, agendamentos, despesas e metas salvos neste navegador. Essa ação não pode ser desfeita. Continuar?'
+    );
+    if (!confirmou) return;
+
+    for (const chave of this.CHAVES_DADOS) {
+      localStorage.removeItem(chave);
+    }
+
+    alert('Dados apagados com sucesso!');
+    this.router.navigate(['/tela-inicial']);
   }
 }
