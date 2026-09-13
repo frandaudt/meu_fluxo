@@ -19,7 +19,7 @@ export class App {
   termoBusca = '';
   nomeUsuario = 'Usuário';
 
-  private rotasSemLayout = ['/login', '/cadastro'];
+    private rotasSemLayout = ['/', '/login', '/cadastro'];
 
   constructor(private router: Router) {
     this.carregarUsuario();
