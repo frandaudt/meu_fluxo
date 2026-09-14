@@ -8,7 +8,7 @@
   },
   "include": [
     "src/**/*.ts"
-  ],
+, "src/app/pages/info/anuncioits"  ],
   "exclude": [
     "src/**/*.spec.ts"
   ]

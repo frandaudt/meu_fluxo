@@ -37,6 +37,6 @@ export class Cadastro {
     localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
 
     // Como ele acabou de se cadastrar, vai direto para a tela inicial!
-    this.router.navigate(['/inicio']);
+        this.router.navigate(['/tela-inicial']);
   }
 }

@@ -21,16 +21,22 @@ export class App {
 
     private rotasSemLayout = ['/', '/login', '/cadastro'];
 
-  constructor(private router: Router) {
+    constructor(private router: Router) {
     this.carregarUsuario();
+    this.atualizarMostrarLayout(this.router.url);
 
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event) => {
         const url = (event as NavigationEnd).urlAfterRedirects;
-        this.mostrarLayout = !this.rotasSemLayout.includes(url);
+        this.atualizarMostrarLayout(url);
         this.carregarUsuario();
       });
+  }
+
+  private atualizarMostrarLayout(url: string) {
+    const caminhoLimpo = url.split('#')[0].split('?')[0];
+    this.mostrarLayout = !this.rotasSemLayout.includes(caminhoLimpo);
   }
 
   get primeiroNomeUsuario(): string {

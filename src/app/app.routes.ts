@@ -1,9 +1,9 @@
 import { Routes } from '@angular/router';
 import { Agenda } from './pages/agenda/agenda';
+import { Anuncio } from './pages/anuncio/anuncio';
 import { Cadastro } from './pages/cadastro/cadastro';
 import { ClientesComponent } from './pages/clientes/clientes';
 import { Financeiro } from './pages/financeiro/financeiro';
-import { Info } from './pages/info/info';
 import { Login } from './pages/login/login';
 import { Metas } from './pages/metas/metas';
 import { Perfil } from './pages/perfil/perfil';
@@ -11,7 +11,7 @@ import { Servicos } from './pages/servicos/servicos';
 import { TelaInicial } from './pages/tela-inicial/tela-inicial';
 
 export const routes: Routes = [
-  {path: '', component: Info},
+  {path: '', component: Anuncio},
   {path: 'login', component: Login},
   {path: 'cadastro', component: Cadastro},
   {path: 'tela-inicial', component: TelaInicial},
@@ -21,4 +21,5 @@ export const routes: Routes = [
   {path: 'financeiro', component: Financeiro},
   {path: 'metas', component: Metas},
   {path: 'perfil', component: Perfil},
+
 ];

@@ -1,0 +1,113 @@
+<div class="anuncio-page">
+
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <header class="anuncio-nav">
+    <div class="anuncio-brand">
+      <div class="anuncio-brand-icon">
+        <img src="assets/icons/icone-logo-meufluxo.png" alt="" />
+      </div>
+      <span>MeuFluxo</span>
+    </div>
+
+    <nav class="anuncio-nav-links">
+      <a href="#funcionalidades">Funcionalidades</a>
+      <a routerLink="/login" class="nav-entrar">Entrar</a>
+      <a routerLink="/cadastro" class="btn-primary">Criar conta grátis</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-texto">
+      <span class="hero-tag">✨ Feito para pequenos negócios</span>
+      <h1>Organize seu negócio em um só lugar</h1>
+      <p>Clientes, agenda, serviços e financeiro centralizados numa plataforma simples, pensada para pequenos empreendedores e prestadores de serviço.</p>
+
+      <div class="hero-ctas">
+        <a routerLink="/cadastro" class="btn-primary btn-grande">Criar conta grátis</a>
+        <a routerLink="/login" class="btn-secundario btn-grande">Já tenho conta</a>
+      </div>
+
+      <div class="hero-beneficios">
+        <span>✓ Sem instalação</span>
+        <span>✓ Acesse de qualquer lugar</span>
+        <span>✓ Feito para o seu negócio</span>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="hero-print-frame">
+        <div class="hero-print-barra">
+          <span></span><span></span><span></span>
+        </div>
+        <img src="assets/prints/hero-inicio-recorte.png" alt="Tela inicial do MeuFluxo" class="hero-print-img" />
+      </div>
+      <div class="hero-chip hero-chip-1">📅 Agenda em tempo real</div>
+      <div class="hero-chip hero-chip-2">💰 Financeiro automático</div>
+    </div>
+
+    <div class="hero-fade"></div>
+  </section>
+
+  <section class="funcionalidades" id="funcionalidades">
+    <h2>Tudo que o seu negócio precisa, em um só app</h2>
+    <p class="funcionalidades-subtitulo">Cinco módulos conectados entre si — nada de planilhas soltas ou anotações espalhadas.</p>
+
+    <div class="funcionalidades-lista">
+      <div
+        class="funcionalidade-item"
+        [class.aberto]="f.aberto"
+        [ngClass]="f.classeCor"
+        *ngFor="let f of funcionalidades; let i = index"
+      >
+        <button type="button" class="funcionalidade-cabecalho" (click)="alternar(i)">
+          <img [src]="f.icone" alt="" class="funcionalidade-icone-img" />
+          <span class="funcionalidade-nome">{{ f.nome }}</span>
+          <span class="funcionalidade-seta">⌄</span>
+        </button>
+
+        <div class="funcionalidade-conteudo">
+          <div class="funcionalidade-conteudo-inner">
+            <button type="button" class="funcionalidade-print-botao" (click)="abrirLightbox(i, $event)">
+              <img [src]="f.print" [alt]="f.nome" class="funcionalidade-print" />
+              <span class="funcionalidade-ampliar">🔍 Ampliar</span>
+            </button>
+            <p>{{ f.descricao }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-final">
+    <div class="blob blob-3"></div>
+    <h2>Pronto para organizar o seu negócio?</h2>
+    <p>Crie sua conta gratuitamente e comece agora mesmo.</p>
+    <a routerLink="/cadastro" class="btn-primary btn-grande">Criar conta grátis</a>
+  </section>
+
+  <footer class="anuncio-footer">
+    <span>MeuFluxo — TCC</span>
+    <div>
+      <a routerLink="/login">Entrar</a>
+      <a routerLink="/cadastro">Criar conta</a>
+    </div>
+  </footer>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox-overlay" *ngIf="lightboxAberto" (click)="fecharLightbox()">
+    <button type="button" class="lightbox-fechar" (click)="fecharLightbox()">×</button>
+
+    <button type="button" class="lightbox-seta lightbox-seta-esquerda" (click)="anterior($event)">‹</button>
+
+    <div class="lightbox-conteudo" (click)="$event.stopPropagation()">
+      <img [src]="itemLightbox.print" [alt]="itemLightbox.nome" class="lightbox-img" />
+      <h3>{{ itemLightbox.nome }}</h3>
+      <p>{{ itemLightbox.descricao }}</p>
+    </div>
+
+    <button type="button" class="lightbox-seta lightbox-seta-direita" (click)="proximo($event)">›</button>
+  </div>
+
+</div>

@@ -19,7 +19,7 @@ export class Login {
   fazerLogin(event: Event) {
     event.preventDefault();
 
-    
+
     const usuarioSalvo = localStorage.getItem('usuario_' + this.email);
 
     if (usuarioSalvo) {
@@ -28,7 +28,7 @@ export class Login {
 
       if (this.senha === usuario.senha) {
         localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
-        this.router.navigate(['/inicio']); // CADASTRO EXISTE: Vai para a tela inicial!
+                this.router.navigate(['/tela-inicial']);
       } else {
         alert('Senha incorreta!');
       }
