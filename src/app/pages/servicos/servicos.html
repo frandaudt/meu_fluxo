@@ -15,21 +15,22 @@
 
     <div class="servico-card" *ngFor="let servico of servicos">
       <div class="card-header">
-        <div class="servico-icon">✂️</div>
-
+        <div class="servico-icon">
+        <img src="assets/icons/icone-engrenagem.png" class="servico-icon-img" alt="" />
+        </div>
         <div class="card-title">
           <h3>{{ servico.nome }}</h3>
           <span class="badge-categoria" *ngIf="servico.categoria">{{ servico.categoria }}</span>
         </div>
 
         <button class="btn-icon" title="Remover" (click)="removerServico(servico.id)">
-          🗑️
+        <img src="assets/icons/icone-lixeira.png" class="btn-icon-img" alt="Remover" />
         </button>
       </div>
 
       <div class="card-body">
         <p class="info-item">💰 R$ {{ servico.valor.toFixed(2) }}</p>
-        <p class="info-item">⏱️ {{ servico.duracao }} min</p>
+        <p class="info-item" *ngIf="servico.duracao">⏱️ {{ servico.duracao }} min</p>
       </div>
     </div>
 
@@ -89,11 +90,11 @@
           <div class="form-group">
             <label>Duração (min)</label>
             <input
-              type="number"
-              placeholder="30"
-              [(ngModel)]="novoServico.duracao"
-              name="duracao"
-              min="0"
+            type="number"
+            placeholder="Ex: 30"
+            [(ngModel)]="novoServico.duracao"
+            name="duracao"
+            min="0"
             />
           </div>
         </div>

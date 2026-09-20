@@ -13,6 +13,9 @@ export class MenuLateral {
   nomeUsuario: string = 'Utilizador';
   emailUsuario: string = 'usuario@email.com';
 
+  sair() {
+    localStorage.removeItem('usuarioLogado');
+  }
 
   get inicialNome(): string {
     return this.nomeUsuario ? this.nomeUsuario.charAt(0).toUpperCase() : 'U';

@@ -22,7 +22,10 @@
 
       <div class="user-dropdown" *ngIf="menuUsuarioAberto" (click)="$event.stopPropagation()">
         <a routerLink="/perfil" class="dropdown-item">👤 Meu Perfil</a>
-        <button class="dropdown-item dropdown-sair" (click)="sair()">⏻ Sair</button>
+        <button class="dropdown-item dropdown-sair" (click)="sair()">
+        <img src="assets/icons/icone-sair.png" class="icone-sair-inline" alt="" />
+        Sair
+        </button>
       </div>
     </div>
   </div>

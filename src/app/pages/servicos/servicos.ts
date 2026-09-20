@@ -26,8 +26,8 @@ export class Servicos implements OnInit {
   novoServico = {
     nome: '',
     categoria: '',
-    valor: 0,
-    duracao: 30,
+    valor: null,
+    duracao: null,
   };
 
   ngOnInit() {
@@ -52,7 +52,7 @@ export class Servicos implements OnInit {
 
   fecharModal() {
     this.modalAberto = false;
-    this.novoServico = { nome: '', categoria: '', valor: 0, duracao: 30 };
+    this.novoServico = { nome: '', categoria: '', valor: null, duracao: null };
   }
 
   salvarServico(event: Event) {
@@ -67,7 +67,13 @@ export class Servicos implements OnInit {
       ? Math.max(...this.servicos.map(s => s.id)) + 1
       : 1;
 
-    this.servicos.push({ id: novoId, ...this.novoServico });
+    this.servicos.push({
+    id: novoId,
+    nome: this.novoServico.nome,
+    categoria: this.novoServico.categoria,
+    valor: Number(this.novoServico.valor),
+    duracao: Number(this.novoServico.duracao) || 0,
+  });
     this.salvarNoStorage();
     this.fecharModal();
   }

@@ -7,7 +7,7 @@
   height: calc(100vh - 112px);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   box-shadow: var(--shadow-sm);
   box-sizing: border-box;
 }
@@ -61,6 +61,6 @@
   filter: brightness(0) invert(1);
 }
 
-.sidebar-footer { border-top: 1px solid var(--color-border); padding-top: 12px; }
+.sidebar-footer { border-top: 1px solid var(--color-border); padding-top: 12px; margin-top: auto; }
 .logout { color: #b5645a; }
 .logout:hover { background-color: #f6dcd9; color: #a8483c; }

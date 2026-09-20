@@ -32,9 +32,9 @@
   </nav>
 
   <div class="sidebar-footer">
-    <a routerLink="/login" class="nav-item logout">
-      <span class="icon">⏻</span>
-      <span class="label">Sair</span>
-    </a>
-  </div>
+  <a routerLink="/login" class="nav-item logout" (click)="sair()">
+    <img src="assets/icons/icone-sair.png" class="nav-icon-img" alt="" />
+    <span class="label">Sair</span>
+  </a>
+</div>
 </aside>

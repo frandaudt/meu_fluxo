@@ -208,3 +208,9 @@ app-menu-lateral {
 
 .dropdown-sair { color: #b5645a; }
 .dropdown-sair:hover { background: #f6dcd9; }
+.icone-sair-inline {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+  margin-right: 6px;
+}
