@@ -9,7 +9,15 @@ interface Usuario {
   senha: string;
   telefone?: string;
   nomeNegocio?: string;
+
 }
+// horário em que a pessoa atende (usado na grade de disponibilidade da tela Início)
+interface DiaTrabalho { ativo: boolean; inicio: string; fim: string; }
+interface HorarioTrabalho {
+  blocoMin: number;     // tamanho de cada horário da grade, em minutos
+  dias: DiaTrabalho[];  // dias[0] = domingo ... dias[6] = sábado
+}
+
 
 @Component({
   selector: 'app-perfil',
@@ -27,6 +35,17 @@ export class Perfil implements OnInit {
     'meufluxo_metas_mensais',
     'meufluxo_metas_anuais',
   ];
+  private readonly CHAVE_HORARIO = 'meufluxo_horario_trabalho';
+  private readonly HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+  readonly blocos = [15, 30, 45, 60];
+  readonly nomesDias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  /** ordem de exibição: começa na segunda e termina no domingo */
+  readonly ordemDias = [1, 2, 3, 4, 5, 6, 0];
+
+  horario: HorarioTrabalho = this.horarioPadrao();
+  erroHorario = '';
+  mensagemHorario = '';
 
   usuario: Usuario = { nome: '', email: '', senha: '' };
   form = { nome: '', email: '', telefone: '', nomeNegocio: '' };
@@ -51,6 +70,93 @@ export class Perfil implements OnInit {
       telefone: this.usuario.telefone || '',
       nomeNegocio: this.usuario.nomeNegocio || '',
     };
+    this.carregarHorario();   // <- nova
+  }
+    // ---------- horário de trabalho ----------
+
+  /** Padrão: segunda a sábado, 08:00 às 18:00, domingo fechado, blocos de 30 min. */
+  private horarioPadrao(): HorarioTrabalho {
+    const util = (): DiaTrabalho => ({ ativo: true, inicio: '08:00', fim: '18:00' });
+    return {
+      blocoMin: 30,
+      dias: [{ ativo: false, inicio: '08:00', fim: '18:00' }, util(), util(), util(), util(), util(), util()],
+    };
+  }
+
+  private carregarHorario() {
+    let salvo: unknown = null;
+    try {
+      salvo = JSON.parse(localStorage.getItem(this.CHAVE_HORARIO) || 'null');
+    } catch { /* usa o horário padrão */ }
+    this.horario = this.normalizarHorario(salvo);
+  }
+
+  /** Garante um horário válido a partir do que estiver salvo (ou devolve o padrão). */
+  private normalizarHorario(bruto: unknown): HorarioTrabalho {
+    const padrao = this.horarioPadrao();
+    if (!bruto || typeof bruto !== 'object') return padrao;
+
+    const b = bruto as { blocoMin?: unknown; dias?: unknown };
+    const bloco = this.blocos.includes(Number(b.blocoMin)) ? Number(b.blocoMin) : padrao.blocoMin;
+
+    const dias = padrao.dias.map((d, i) => {
+      const salvo = Array.isArray(b.dias) ? (b.dias[i] as Record<string, unknown> | undefined) : undefined;
+      if (!salvo || typeof salvo !== 'object') return d;
+      return {
+        ativo: typeof salvo['ativo'] === 'boolean' ? (salvo['ativo'] as boolean) : d.ativo,
+        inicio: this.HORA_REGEX.test(String(salvo['inicio'])) ? String(salvo['inicio']) : d.inicio,
+        fim: this.HORA_REGEX.test(String(salvo['fim'])) ? String(salvo['fim']) : d.fim,
+      };
+    });
+
+    return { blocoMin: bloco, dias };
+  }
+
+  private paraMinutos(hhmm: string): number {
+    const [h, m] = String(hhmm).split(':');
+    return (Number(h) || 0) * 60 + (Number(m) || 0);
+  }
+
+  /** Devolve a mensagem do primeiro problema encontrado, ou '' se estiver tudo certo. */
+  private validarHorario(): string {
+    if (!this.horario.dias.some(d => d.ativo)) return 'Marque ao menos um dia de trabalho.';
+
+    for (let i = 0; i < this.horario.dias.length; i++) {
+      const d = this.horario.dias[i];
+      if (!d.ativo) continue;
+      if (!this.HORA_REGEX.test(d.inicio) || !this.HORA_REGEX.test(d.fim)) {
+        return `${this.nomesDias[i]}: preencha o horário de início e de fim.`;
+      }
+      if (this.paraMinutos(d.fim) <= this.paraMinutos(d.inicio)) {
+        return `${this.nomesDias[i]}: o horário final precisa ser depois do inicial.`;
+      }
+      if (this.paraMinutos(d.fim) - this.paraMinutos(d.inicio) < this.horario.blocoMin) {
+        return `${this.nomesDias[i]}: o período é menor que um horário de ${this.horario.blocoMin} min.`;
+      }
+    }
+    return '';
+  }
+
+  /** Copia o horário do primeiro dia ativo para todos os outros dias em que a pessoa trabalha. */
+  aplicarHorarioATodos() {
+    const modelo = this.ordemDias.map(i => this.horario.dias[i]).find(d => d.ativo);
+    if (!modelo) return;
+    for (const dia of this.horario.dias) {
+      if (dia.ativo) {
+        dia.inicio = modelo.inicio;
+        dia.fim = modelo.fim;
+      }
+    }
+  }
+
+  salvarHorario() {
+    this.mensagemHorario = '';
+    this.erroHorario = this.validarHorario();
+    if (this.erroHorario) return;
+
+    localStorage.setItem(this.CHAVE_HORARIO, JSON.stringify(this.horario));
+    this.mensagemHorario = 'Horário de trabalho salvo!';
+    setTimeout(() => (this.mensagemHorario = ''), 3000);
   }
 
   get inicialNome(): string {

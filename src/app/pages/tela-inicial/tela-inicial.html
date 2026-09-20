@@ -44,15 +44,96 @@
   <div class="content-grid">
 
     <div class="white-card calendar-section">
-      <app-calendario
-        [ano]="anoAtual"
-        [mes]="mesAtual"
-        [diaSelecionado]="diaSelecionado"
-        [eventosPorDia]="eventosPorDia"
-        (selecionarDia)="selecionarDia($event)"
-        (mesAnterior)="mudarMes(-1)"
-        (mesProximo)="mudarMes(1)"
-      ></app-calendario>
+            <div class="grade-topo">
+        <div class="grade-titulo">
+          <h4>Disponibilidade</h4>
+          <a routerLink="/perfil" class="link-horario">Ajustar horário de trabalho</a>
+        </div>
+
+        <div class="grade-nav">
+          <button type="button" class="nav-btn" (click)="mudarMes(-1)" aria-label="Mês anterior">‹</button>
+          <strong class="mes">{{ nomeMesGrade }}</strong>
+          <button type="button" class="nav-btn" (click)="mudarMes(1)" aria-label="Próximo mês">›</button>
+          <button type="button" class="btn-hoje" (click)="irParaHoje()">Hoje</button>
+        </div>
+      </div>
+
+      <div class="legenda">
+        <span class="leg leg-livre">Horário livre</span>
+        <span class="leg leg-ocupado">Agendado</span>
+        <span class="leg leg-realizado">Realizado</span>
+        <span class="leg leg-fora">Fora do expediente</span>
+      </div>
+
+      <p class="aviso-padrao" *ngIf="usandoHorarioPadrao">
+        Usando o horário padrão (segunda a sábado, 08:00 às 18:00).
+        <a routerLink="/perfil">Defina o seu horário de trabalho</a>.
+      </p>
+
+      <p class="aviso-padrao" *ngIf="linhas.length === 0">
+        Nenhum dia de trabalho configurado.
+        <a routerLink="/perfil">Ajustar horário de trabalho</a>.
+      </p>
+
+      <div class="grade-area" *ngIf="linhas.length > 0">
+        <button type="button" class="seta seta-esq" (click)="rolar(-1)" aria-label="Ver dias anteriores">‹</button>
+        <button type="button" class="seta seta-dir" (click)="rolar(1)" aria-label="Ver próximos dias">›</button>
+
+        <div class="grade-rolagem" #rolagem>
+          <div class="grade" [style.grid-template-columns]="colunasCss" [style.grid-template-rows]="linhasCss">
+
+            <!-- 1ª coluna: horários -->
+            <div class="canto"></div>
+            <div class="hora" *ngFor="let h of linhas">{{ h }}</div>
+
+            <!-- uma coluna por dia -->
+            <ng-container *ngFor="let dia of dias">
+              <div
+                class="cab-dia"
+                [class.hoje]="dia.ehHoje"
+                [class.fechado]="dia.fechado"
+                [attr.data-hoje]="dia.ehHoje ? 'true' : null"
+              >
+                <span class="num">{{ dia.numero }}</span>
+                <span class="sem">{{ dia.nomeSemana }}</span>
+              </div>
+
+              <ng-container *ngFor="let cel of dia.celulas">
+
+                <button
+                  *ngIf="cel.estado === 'livre'"
+                  type="button"
+                  class="celula livre"
+                  [class.passado]="dia.passado"
+                  (click)="abrirNovo(dia, cel)"
+                >
+                  <span class="txt-livre">Horário livre</span>
+                  <span class="txt-agendar">+ Agendar</span>
+                </button>
+
+                <button
+                  *ngIf="cel.estado === 'ocupado'"
+                  type="button"
+                  class="celula ocupado"
+                  [class.realizado]="cel.agendamentos[0].status === 'realizado'"
+                  [class.passado]="dia.passado"
+                  (click)="abrirDetalhe(dia, cel)"
+                >
+                  <strong>{{ nomeCliente(cel.agendamentos[0].clienteId) }}</strong>
+                  <div class="linha2">
+                    <span>{{ nomeServico(cel.agendamentos[0].servicoId) }}</span>
+                    <em class="mais" *ngIf="cel.agendamentos.length > 1">+{{ cel.agendamentos.length - 1 }}</em>
+                  </div>
+                </button>
+
+                <div *ngIf="cel.estado === 'fora'" class="celula fora" [class.passado]="dia.passado"></div>
+
+              </ng-container>
+            </ng-container>
+
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="right-column">
@@ -98,6 +179,70 @@
 
     </div>
 
+  </div>
+  <!-- MODAL: NOVO AGENDAMENTO (clique em horário livre) -->
+  <div class="modal-overlay" *ngIf="novo" (click)="fecharNovo()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2>Novo Agendamento</h2>
+        <button type="button" class="btn-x" (click)="fecharNovo()" aria-label="Fechar">×</button>
+      </div>
+
+      <p class="quando">{{ rotuloNovo }}</p>
+
+      <form class="modal-form" (ngSubmit)="salvarNovo($event)">
+        <div class="form-group">
+          <label>Cliente *</label>
+          <select [(ngModel)]="formNovo.clienteId" name="clienteId" required>
+            <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nome }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Serviço *</label>
+          <select [(ngModel)]="formNovo.servicoId" name="servicoId" required>
+            <option *ngFor="let s of servicos" [ngValue]="s.id">{{ s.nome }} — R$ {{ s.valor.toFixed(2) }}</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharNovo()">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar Agendamento</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+
+  <!-- MODAL: DETALHES (clique em horário ocupado) -->
+  <div class="modal-overlay" *ngIf="detalhe" (click)="fecharDetalhe()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2>Agendamento</h2>
+        <button type="button" class="btn-x" (click)="fecharDetalhe()" aria-label="Fechar">×</button>
+      </div>
+
+      <p class="quando">{{ rotuloDetalhe }}</p>
+
+      <div class="ag-item" *ngFor="let a of detalheAgendamentos">
+        <div class="ag-info">
+          <strong>{{ nomeCliente(a.clienteId) }}</strong>
+          <span>{{ nomeServico(a.servicoId) }} · {{ a.horario }}</span>
+        </div>
+
+        <div class="status-grupo">
+          <button type="button" [class.ativo]="a.status === 'agendado'" (click)="mudarStatus(a, 'agendado')">Agendado</button>
+          <button type="button" [class.ativo]="a.status === 'realizado'" (click)="mudarStatus(a, 'realizado')">Realizado</button>
+          <button type="button" class="cancelar" (click)="mudarStatus(a, 'cancelado')">Cancelar</button>
+        </div>
+
+        <button type="button" class="btn-remover" (click)="removerAgendamento(a)">Remover agendamento</button>
+      </div>
+
+    </div>
   </div>
 
 </main>

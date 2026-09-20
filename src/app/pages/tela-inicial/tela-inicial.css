@@ -45,7 +45,7 @@
 }
 .white-card:hover { box-shadow: var(--shadow-md); }
 
-.calendar-section { flex: 2; }
+.calendar-section { flex: 2; min-width: 0; }
 .right-column { flex: 1; display: flex; flex-direction: column; gap: 18px; }
 
 .card-title h4, .white-card h4 { margin: 0 0 12px 0; font-size: 0.95rem; color: var(--color-text); text-transform: capitalize; }
@@ -104,4 +104,217 @@
   border-radius: 999px;
   background: var(--color-primary);
   transition: width var(--transition);
+}
+/* =====================  GRADE DE DISPONIBILIDADE  ===================== */
+
+/* ---------- topo ---------- */
+.grade-topo {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.grade-titulo { display: flex; flex-direction: column; gap: 2px; }
+.grade-titulo h4 { margin: 0; font-size: 0.95rem; color: var(--color-text); }
+.link-horario {
+  font-size: 0.75rem; font-weight: 600; text-decoration: underline;
+  color: var(--color-primary-dark);
+}
+
+.grade-nav { display: flex; align-items: center; gap: 8px; }
+.mes { font-family: var(--font-display); font-size: 0.98rem; min-width: 150px; text-align: center; color: var(--color-text); }
+.nav-btn {
+  width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--color-bg); color: var(--color-text); font-size: 1.05rem; line-height: 1;
+  transition: background var(--transition);
+}
+.nav-btn:hover { background: var(--color-primary-light); }
+.btn-hoje {
+  border: 1.5px solid var(--color-border); background: var(--color-white); cursor: pointer;
+  padding: 6px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+  font-family: var(--font-body); color: var(--color-primary-dark);
+  transition: background var(--transition);
+}
+.btn-hoje:hover { background: var(--color-primary-light); }
+
+/* ---------- legenda e avisos ---------- */
+.legenda { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; font-size: 0.72rem; color: var(--color-text-muted); }
+.leg::before {
+  content: ''; display: inline-block; width: 11px; height: 11px; border-radius: 3px;
+  margin-right: 6px; vertical-align: -1px; box-sizing: border-box;
+}
+.leg-livre::before { background: #e9f0e1; border: 1px dashed #b3c5a3; }
+.leg-ocupado::before { background: #dfd5f2; border-left: 3px solid #7d5fc4; }
+.leg-realizado::before { background: #f0ecf7; border-left: 3px solid #b9a9dc; }
+.leg-fora::before { background: repeating-linear-gradient(135deg, #f4f5f1, #f4f5f1 3px, #e6e8e1 3px, #e6e8e1 6px); }
+
+.aviso-padrao, .sem-linhas {
+  margin: 0 0 10px 0; padding: 8px 12px; border-radius: var(--radius-md);
+  background: #F3EBD3; color: #6f5716; font-size: 0.76rem;
+}
+.aviso-padrao a, .sem-linhas a { color: inherit; font-weight: 700; }
+
+/* ---------- grade ---------- */
+.grade-area { position: relative; }
+
+.grade-rolagem {
+  position: relative;
+  overflow: auto;
+  max-height: 540px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+}
+
+/* colunas: horários + 1 por dia; o navegador preenche coluna por coluna */
+.grade { display: grid; grid-auto-flow: column; width: max-content; }
+
+.canto, .cab-dia, .hora { background: var(--color-white); }
+
+.canto {
+  position: sticky; top: 0; left: 0; z-index: 4;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+}
+
+.cab-dia {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  border-bottom: 1px solid var(--color-border);
+}
+.cab-dia .num { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--color-text); }
+.cab-dia .sem { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
+.cab-dia.fechado .num, .cab-dia.fechado .sem { color: #b0b6ad; }
+.cab-dia.hoje { background: var(--color-primary); }
+.cab-dia.hoje .num, .cab-dia.hoje .sem { color: var(--color-white); }
+
+.hora {
+  position: sticky; left: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  border-right: 1px solid var(--color-border);
+  font-size: 0.74rem; color: var(--color-text-muted); font-variant-numeric: tabular-nums;
+}
+
+/* ---------- células ---------- */
+.celula {
+  margin: 2px 3px; padding: 4px 9px;
+  border: none; border-radius: 8px;
+  display: flex; flex-direction: column; justify-content: center;
+  min-width: 0; overflow: hidden;
+  text-align: left; font-family: var(--font-body); font-size: 0.72rem; line-height: 1.25;
+}
+.celula strong, .celula span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.celula strong { font-size: 0.76rem; }
+
+button.celula { cursor: pointer; transition: background var(--transition), opacity var(--transition); }
+
+.celula.livre {
+  background: #e9f0e1; color: var(--color-primary-dark);
+  border: 1px dashed #b3c5a3;
+}
+.celula.livre .txt-agendar { display: none; font-weight: 700; }
+.celula.livre:hover { background: #d5e4c5; border-style: solid; }
+.celula.livre:hover .txt-livre { display: none; }
+.celula.livre:hover .txt-agendar { display: inline; }
+
+.celula.ocupado { background: #e3dbf3; color: #43336f; border-left: 3px solid #7d5fc4; }
+.celula.ocupado:hover { background: #d8ccef; }
+.celula.ocupado .linha2 span { color: #5d4d8a; }
+.celula.ocupado.realizado { background: #f0ecf7; color: #7a6f96; border-left-color: #b9a9dc; }
+.celula.ocupado.realizado .linha2 span { color: #9186ab; }
+.linha2 { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.linha2 span { flex: 1; min-width: 0; }
+.mais {
+  flex-shrink: 0; font-style: normal; font-weight: 700; font-size: 0.62rem;
+  background: #7d5fc4; color: #fff; border-radius: 999px; padding: 1px 6px;
+}
+
+.celula.fora {
+  background: repeating-linear-gradient(135deg, #f4f5f1, #f4f5f1 6px, #eceee8 6px, #eceee8 12px);
+}
+
+/* dias que já passaram ficam mais apagados, mas continuam clicáveis */
+.celula.passado { opacity: 0.55; }
+.celula.passado:hover { opacity: 1; }
+
+/* ---------- setas laterais ---------- */
+.seta {
+  position: absolute; top: 13px; z-index: 6; /* na altura do cabeçalho, para não cobrir os horários */
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid var(--color-border); background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-sm); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; line-height: 1; color: var(--color-text);
+  transition: background var(--transition);
+}
+.seta:hover { background: var(--color-primary-light); }
+.seta-esq { left: 70px; }
+.seta-dir { right: 8px; }
+
+/* ---------- modais ---------- */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(44, 55, 48, 0.45);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  background: var(--color-white);
+  width: 90%; max-width: 460px; max-height: 90vh; overflow: auto;
+  border-radius: var(--radius-xl); padding: 26px; box-shadow: var(--shadow-lg);
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.modal-header h2 { margin: 0; color: var(--color-text); font-size: 1.2rem; }
+.btn-x {
+  background: transparent; border: none; font-size: 1.3rem; color: #999; cursor: pointer;
+  padding: 2px 8px; border-radius: 50%; transition: background var(--transition);
+}
+.btn-x:hover { background: var(--color-bg); }
+
+.quando { margin: 0 0 18px 0; font-size: 0.85rem; color: var(--color-text-muted); }
+
+.modal-form { display: flex; flex-direction: column; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.form-group label { font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); }
+.form-group select {
+  width: 100%; min-width: 0; padding: 11px 14px;
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-md);
+  outline: none; font-size: 0.9rem; font-family: var(--font-body); background: var(--color-white);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.form-group select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(85, 99, 78, 0.12); }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; }
+.btn-primary {
+  background-color: var(--color-primary); color: white; border: none;
+  padding: 11px 20px; border-radius: var(--radius-md); font-weight: 600;
+  font-family: var(--font-body); cursor: pointer;
+  transition: background-color var(--transition);
+}
+.btn-primary:hover { background-color: var(--color-primary-dark); }
+.btn-secondary {
+  background-color: var(--color-bg); color: var(--color-text); border: none;
+  padding: 11px 20px; border-radius: var(--radius-md); font-weight: 600;
+  font-family: var(--font-body); cursor: pointer;
+}
+
+.ag-item { display: flex; flex-direction: column; gap: 12px; padding: 14px 0; border-top: 1px solid var(--color-border); }
+.ag-item:first-of-type { border-top: none; padding-top: 0; }
+.ag-info strong { display: block; font-size: 1rem; color: var(--color-text); }
+.ag-info span { font-size: 0.85rem; color: var(--color-text-muted); }
+
+.status-grupo { display: flex; gap: 8px; flex-wrap: wrap; }
+.status-grupo button {
+  flex: 1; min-width: 96px; padding: 9px 10px;
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-white); color: var(--color-text);
+  font-family: var(--font-body); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.status-grupo button:hover { background: var(--color-bg); }
+.status-grupo button.ativo { background: #e3dbf3; border-color: #7d5fc4; color: #43336f; }
+.status-grupo button.cancelar { color: #a8483c; }
+.status-grupo button.cancelar:hover { background: #f6dcd9; border-color: #e6b9b3; }
+
+.btn-remover {
+  align-self: flex-start; background: none; border: none; padding: 0; cursor: pointer;
+  font-family: var(--font-body); font-size: 0.8rem; font-weight: 600;
+  color: #a8483c; text-decoration: underline;
 }

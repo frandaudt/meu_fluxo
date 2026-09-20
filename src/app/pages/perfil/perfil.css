@@ -154,3 +154,45 @@
 
 .modal-form { display: flex; flex-direction: column; gap: 16px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; }
+/* ---------- horário de trabalho ---------- */
+.ajuda-horario { margin: 4px 0 0 0; font-size: 0.82rem; color: var(--color-text-muted); }
+
+.form-group select,
+.dia-horas input[type="time"] {
+  padding: 9px 8px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  font-size: 0.86rem;
+  font-family: var(--font-body);
+  background: var(--color-white);
+  min-width: 0;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.form-group select { padding: 11px 14px; font-size: 0.9rem; }
+.form-group select:focus,
+.dia-horas input[type="time"]:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(85, 99, 78, 0.12); }
+
+.horario-dias { display: flex; flex-direction: column; }
+.dia-linha {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.dia-linha:last-child { border-bottom: none; }
+
+.dia-toggle { display: flex; align-items: center; gap: 10px; white-space: nowrap; font-size: 0.88rem; font-weight: 500; color: var(--color-text); cursor: pointer; }
+.dia-toggle input { width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer; }
+
+.dia-horas { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dia-horas input { flex: 1; width: 0; }
+.ate { font-size: 0.8rem; color: var(--color-text-muted); }
+.folga { font-size: 0.82rem; color: var(--color-text-muted); }
+
+.link-esquerda { align-self: flex-start; padding: 0; text-align: left; }
+
+.erro-horario { margin: 0; padding: 8px 12px; border-radius: var(--radius-md); background: #F6DCD9; color: #a8483c; font-size: 0.82rem; }
+.ok-horario { margin: 0; padding: 8px 12px; border-radius: var(--radius-md); background: var(--color-primary-light); color: var(--color-primary-dark); font-size: 0.82rem; }

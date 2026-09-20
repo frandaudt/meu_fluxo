@@ -54,6 +54,52 @@
     </div>
 
     <div class="perfil-coluna-lateral">
+          <div class="perfil-coluna-lateral">
+
+      <form class="perfil-card" (ngSubmit)="salvarHorario()">
+        <div>
+          <h4 class="secao-titulo">Horário de trabalho</h4>
+          <p class="ajuda-horario">Define os horários que aparecem como livres na tela Início.</p>
+        </div>
+
+        <div class="form-group">
+          <label>Duração de cada horário</label>
+          <select [(ngModel)]="horario.blocoMin" name="blocoMin">
+            <option *ngFor="let b of blocos" [ngValue]="b">{{ b }} minutos</option>
+          </select>
+        </div>
+
+        <div class="horario-dias">
+          <div class="dia-linha" *ngFor="let i of ordemDias">
+            <label class="dia-toggle">
+              <input type="checkbox" [(ngModel)]="horario.dias[i].ativo" [name]="'ativo' + i" />
+              <span>{{ nomesDias[i] }}</span>
+            </label>
+
+            <div class="dia-horas" *ngIf="horario.dias[i].ativo; else folga">
+              <input type="time" [(ngModel)]="horario.dias[i].inicio" [name]="'inicio' + i" required />
+              <span class="ate">até</span>
+              <input type="time" [(ngModel)]="horario.dias[i].fim" [name]="'fim' + i" required />
+            </div>
+
+            <ng-template #folga><span class="folga">Não trabalho</span></ng-template>
+          </div>
+        </div>
+
+        <button type="button" class="link-acao link-esquerda" (click)="aplicarHorarioATodos()">
+          Usar o mesmo horário nos dias em que trabalho
+        </button>
+
+        <p class="erro-horario" *ngIf="erroHorario">{{ erroHorario }}</p>
+        <p class="ok-horario" *ngIf="mensagemHorario">{{ mensagemHorario }}</p>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Salvar horário</button>
+        </div>
+      </form>
+
+      <div class="perfil-card">
+        <h4 class="secao-titulo">Meus dados</h4>
       <div class="perfil-card">
         <h4 class="secao-titulo">Meus dados</h4>
 
@@ -113,4 +159,4 @@
     </div>
   </div>
 
-</main>
+
