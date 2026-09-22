@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 interface Cliente { id: number; nome: string; }
-interface Servico { id: number; nome: string; valor: number; }
+interface Servico { id: number; nome: string; valor: number; duracao?: number; } // duracao em minutos (serviços antigos podem não ter)
 interface Agendamento {
   id: number;
   clienteId: number;
@@ -54,7 +54,14 @@ interface HorarioTrabalho {
 interface CelulaGrade {
   horario: string; // início do bloco, 'HH:mm'
   estado: 'livre' | 'ocupado' | 'fora';
-  agendamentos: Agendamento[];
+  agendamentos: Agendamento[]; // começam neste bloco
+  cobertos: Agendamento[];     // começaram antes e, pela duração do serviço, ainda ocupam este bloco
+  todos: Agendamento[];        // agendamentos + cobertos (usado no modal de detalhes)
+  titulo: string;              // cliente exibido na célula
+  subtitulo: string;           // serviço (ou "continua") exibido na célula
+  realizado: boolean;
+  continuacao: boolean;        // true quando a célula só continua um agendamento que começou antes
+  mais: number;                // quantos outros agendamentos existem além do exibido
 }
 interface DiaGrade {
   data: string;
@@ -300,6 +307,56 @@ export class TelaInicial implements OnInit, AfterViewInit {
     const ultima = Math.floor(this.paraMinutos(dia.fim) / bloco) * bloco - bloco;
     return ultima >= primeira ? { primeira, ultima } : null;
   }
+    // =====================================================================
+  //  DURAÇÃO DOS SERVIÇOS E CONFLITOS DE HORÁRIO
+  // =====================================================================
+
+  /** Duração (min) do serviço. Serviços antigos, sem duração, valem 1 bloco da grade. */
+  private duracaoDoServico(servicoId: number): number {
+    const duracao = Number(this.servicos.find(s => s.id === servicoId)?.duracao);
+    return duracao > 0 ? duracao : this.horario.blocoMin;
+  }
+
+  /** Início e fim do atendimento, em minutos. */
+  private intervaloDe(horario: string, servicoId: number): { inicio: number; fim: number } {
+    const inicio = this.paraMinutos(horario);
+    return { inicio, fim: inicio + this.duracaoDoServico(servicoId) };
+  }
+
+  /** Texto no formato "08:00 às 08:30". */
+  private textoIntervalo(horario: string, servicoId: number): string {
+    const { inicio, fim } = this.intervaloDe(horario, servicoId);
+    return `${this.deMinutos(inicio)} às ${this.deMinutos(fim)}`;
+  }
+
+  intervalo(a: Agendamento): string {
+    return this.textoIntervalo(a.horario, a.servicoId);
+  }
+
+  /** Último bloco (início, em minutos) que o agendamento ainda ocupa. */
+  private ultimoBlocoDe(a: Agendamento): number {
+    const bloco = this.horario.blocoMin;
+    const { fim } = this.intervaloDe(a.horario, a.servicoId);
+    return Math.floor((fim - 1) / bloco) * bloco;
+  }
+
+  /** Agendamentos (não cancelados) do mesmo dia que se sobrepõem ao período do novo. */
+  private encontrarConflitos(data: string, horario: string, servicoId: number): Agendamento[] {
+    const novo = this.intervaloDe(horario, servicoId);
+    return this.agendamentos.filter(a => {
+      if (a.status === 'cancelado' || a.data !== data) return false;
+      const existente = this.intervaloDe(a.horario, a.servicoId);
+      return novo.inicio < existente.fim && existente.inicio < novo.fim;
+    });
+  }
+
+  private mensagemConflito(conflitos: Agendamento[], horario: string, servicoId: number): string {
+    const lista = conflitos
+      .map(a => `• ${this.intervalo(a)} — ${this.nomeCliente(a.clienteId)} (${this.nomeServico(a.servicoId)})`)
+      .join('\n');
+    return `Conflito de horário!\n\nJá existe agendamento neste período:\n${lista}\n\n`
+      + `O novo seria das ${this.textoIntervalo(horario, servicoId)}.\n\nMarcar mesmo assim?`;
+  }
 
   // =====================================================================
   //  GRADE DE DISPONIBILIDADE
@@ -346,16 +403,34 @@ export class TelaInicial implements OnInit, AfterViewInit {
       const faixa = this.faixaDoDia(config);
       const doDia = ativos.filter(a => a.data === data);
 
-      const celulas: CelulaGrade[] = linhasMin.map(t => {
+            const celulas: CelulaGrade[] = linhasMin.map(t => {
         const ags = doDia
           .filter(a => this.inicioDoBloco(a.horario) === t)
           .sort((a, b) => a.horario.localeCompare(b.horario) || a.id - b.id);
 
+        // começaram em um bloco anterior, mas a duração do serviço ainda ocupa este
+        // (ex.: serviço de 60 min com blocos de 30 min ocupa 2 blocos)
+        const cobertos = doDia.filter(a => this.inicioDoBloco(a.horario) < t && t <= this.ultimoBlocoDe(a));
+
+        const todos = [...ags, ...cobertos];
+        const principal = todos[0];
+
         let estado: CelulaGrade['estado'] = 'fora';
-        if (ags.length > 0) estado = 'ocupado';
+        if (principal) estado = 'ocupado';
         else if (faixa && t >= faixa.primeira && t <= faixa.ultima) estado = 'livre';
 
-        return { horario: this.deMinutos(t), estado, agendamentos: ags };
+        return {
+          horario: this.deMinutos(t),
+          estado,
+          agendamentos: ags,
+          cobertos,
+          todos,
+          titulo: principal ? this.nomeCliente(principal.clienteId) : '',
+          subtitulo: principal ? (ags.length > 0 ? this.nomeServico(principal.servicoId) : 'continua') : '',
+          realizado: !!principal && principal.status === 'realizado',
+          continuacao: ags.length === 0 && cobertos.length > 0,
+          mais: Math.max(0, todos.length - 1),
+        };
       });
 
       dias.push({
@@ -441,14 +516,10 @@ export class TelaInicial implements OnInit, AfterViewInit {
     const novo = this.novo;
     if (!novo) return;
 
-    const conflito = this.agendamentos.find(a =>
-      a.status !== 'cancelado' &&
-      a.data === novo.data &&
-      this.inicioDoBloco(a.horario) === this.inicioDoBloco(novo.horario));
-
-    if (conflito) {
-      alert(`Esse horário já está ocupado por ${this.nomeCliente(conflito.clienteId)}.`);
-      return;
+        const servicoId = Number(this.formNovo.servicoId);
+    const conflitos = this.encontrarConflitos(novo.data, novo.horario, servicoId);
+    if (conflitos.length > 0 && !confirm(this.mensagemConflito(conflitos, novo.horario, servicoId))) {
+      return; // a pessoa escolheu não marcar
     }
 
     const novoId = this.agendamentos.length > 0
@@ -458,7 +529,7 @@ export class TelaInicial implements OnInit, AfterViewInit {
     this.agendamentos.push({
       id: novoId,
       clienteId: Number(this.formNovo.clienteId),
-      servicoId: Number(this.formNovo.servicoId),
+      servicoId,
       data: novo.data,
       horario: novo.horario,
       status: 'agendado',
@@ -488,7 +559,7 @@ export class TelaInicial implements OnInit, AfterViewInit {
     if (!detalhe) return this.semAgendamentos;
     const dia = this.dias.find(d => d.data === detalhe.data);
     const celula = dia?.celulas.find(c => c.horario === detalhe.horario);
-    return celula?.agendamentos ?? this.semAgendamentos;
+        return celula?.todos ?? this.semAgendamentos;
   }
 
   mudarStatus(agendamento: Agendamento, status: Agendamento['status']) {

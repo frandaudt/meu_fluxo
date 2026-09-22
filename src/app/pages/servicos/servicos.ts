@@ -55,11 +55,11 @@ export class Servicos implements OnInit {
     this.novoServico = { nome: '', categoria: '', valor: null, duracao: null };
   }
 
-  salvarServico(event: Event) {
+      salvarServico(event: Event) {
     event.preventDefault();
 
-    if (!this.novoServico.nome || !this.novoServico.valor) {
-      alert('Preencha ao menos o nome e o valor do serviço!');
+    if (!this.novoServico.nome || !this.novoServico.valor || !this.novoServico.duracao) {
+      alert('Preencha o nome, o valor e a duração do serviço!');
       return;
     }
 
@@ -68,12 +68,12 @@ export class Servicos implements OnInit {
       : 1;
 
     this.servicos.push({
-    id: novoId,
-    nome: this.novoServico.nome,
-    categoria: this.novoServico.categoria,
-    valor: Number(this.novoServico.valor),
-    duracao: Number(this.novoServico.duracao) || 0,
-  });
+      id: novoId,
+      nome: this.novoServico.nome,
+      categoria: this.novoServico.categoria,
+      valor: Number(this.novoServico.valor),
+      duracao: Number(this.novoServico.duracao),
+    });
     this.salvarNoStorage();
     this.fecharModal();
   }

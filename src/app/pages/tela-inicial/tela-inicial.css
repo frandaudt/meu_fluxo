@@ -220,6 +220,11 @@ button.celula { cursor: pointer; transition: background var(--transition), opaci
 .celula.ocupado .linha2 span { color: #5d4d8a; }
 .celula.ocupado.realizado { background: #f0ecf7; color: #7a6f96; border-left-color: #b9a9dc; }
 .celula.ocupado.realizado .linha2 span { color: #9186ab; }
+/* continuação: o serviço começou em um bloco acima e ainda ocupa este */
+.celula.ocupado.continuacao { background: #ece6f7; border-left-style: dashed; }
+.celula.ocupado.continuacao strong { font-weight: 600; opacity: 0.75; }
+.celula.ocupado.continuacao .linha2 span { font-style: italic; }
+.celula.ocupado.continuacao.realizado { background: #f5f2fa; }
 .linha2 { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .linha2 span { flex: 1; min-width: 0; }
 .mais {

@@ -115,14 +115,15 @@
                   *ngIf="cel.estado === 'ocupado'"
                   type="button"
                   class="celula ocupado"
-                  [class.realizado]="cel.agendamentos[0].status === 'realizado'"
+                  [class.realizado]="cel.realizado"
+                  [class.continuacao]="cel.continuacao"
                   [class.passado]="dia.passado"
                   (click)="abrirDetalhe(dia, cel)"
                 >
-                  <strong>{{ nomeCliente(cel.agendamentos[0].clienteId) }}</strong>
+                  <strong>{{ cel.titulo }}</strong>
                   <div class="linha2">
-                    <span>{{ nomeServico(cel.agendamentos[0].servicoId) }}</span>
-                    <em class="mais" *ngIf="cel.agendamentos.length > 1">+{{ cel.agendamentos.length - 1 }}</em>
+                    <span>{{ cel.subtitulo }}</span>
+                    <em class="mais" *ngIf="cel.mais > 0">+{{ cel.mais }}</em>
                   </div>
                 </button>
 
@@ -230,7 +231,7 @@
       <div class="ag-item" *ngFor="let a of detalheAgendamentos">
         <div class="ag-info">
           <strong>{{ nomeCliente(a.clienteId) }}</strong>
-          <span>{{ nomeServico(a.servicoId) }} · {{ a.horario }}</span>
+            <span>{{ nomeServico(a.servicoId) }} · {{ intervalo(a) }}</span>
         </div>
 
         <div class="status-grupo">

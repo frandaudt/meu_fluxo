@@ -171,6 +171,12 @@ export class Agenda implements OnInit {
       alert('Escolha uma data e um horário para o agendamento!');
       return;
     }
+     const servicoId = Number(this.novoAgendamento.servicoId);
+    const conflitos = this.encontrarConflitos(this.novoAgendamento.data, this.novoAgendamento.horario, servicoId);
+    if (conflitos.length > 0 &&
+        !confirm(this.mensagemConflito(conflitos, this.novoAgendamento.horario, servicoId))) {
+      return; // a pessoa escolheu não marcar
+    }
 
     const novoId = this.agendamentos.length > 0
       ? Math.max(...this.agendamentos.map(a => a.id)) + 1
@@ -179,7 +185,7 @@ export class Agenda implements OnInit {
     this.agendamentos.push({
       id: novoId,
       clienteId: Number(this.novoAgendamento.clienteId),
-      servicoId: Number(this.novoAgendamento.servicoId),
+       servicoId,
       data: this.novoAgendamento.data,
       horario: this.novoAgendamento.horario,
       status: this.novoAgendamento.status,
@@ -188,6 +194,58 @@ export class Agenda implements OnInit {
     this.salvarNoStorage();
     this.navegarParaData(this.novoAgendamento.data);
     this.fecharModal();
+  }
+    // ---------- conflito de horário ----------
+
+  private paraMinutos(hhmm: string): number {
+    const [h, m] = String(hhmm).split(':');
+    return (Number(h) || 0) * 60 + (Number(m) || 0);
+  }
+
+  private deMinutos(min: number): string {
+    return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+  }
+
+  /** Tamanho de cada horário da grade (definido no Perfil); vale como duração para serviços antigos sem duração. */
+  private blocoMinutos(): number {
+    try {
+      const salvo = JSON.parse(localStorage.getItem('meufluxo_horario_trabalho') || 'null');
+      const bloco = Number(salvo?.blocoMin);
+      return [15, 30, 45, 60].includes(bloco) ? bloco : 30;
+    } catch {
+      return 30;
+    }
+  }
+
+  private duracaoDoServico(servicoId: number): number {
+    const duracao = Number(this.servicos.find(s => s.id === servicoId)?.duracao);
+    return duracao > 0 ? duracao : this.blocoMinutos();
+  }
+
+  /** Texto no formato "08:00 às 08:30". */
+  private textoIntervalo(horario: string, servicoId: number): string {
+    const inicio = this.paraMinutos(horario);
+    return `${this.deMinutos(inicio)} às ${this.deMinutos(inicio + this.duracaoDoServico(servicoId))}`;
+  }
+
+  /** Agendamentos (não cancelados) do mesmo dia que se sobrepõem ao período do novo. */
+  private encontrarConflitos(data: string, horario: string, servicoId: number): Agendamento[] {
+    const inicioNovo = this.paraMinutos(horario);
+    const fimNovo = inicioNovo + this.duracaoDoServico(servicoId);
+    return this.agendamentos.filter(a => {
+      if (a.status === 'cancelado' || a.data !== data) return false;
+      const inicio = this.paraMinutos(a.horario);
+      const fim = inicio + this.duracaoDoServico(a.servicoId);
+      return inicioNovo < fim && inicio < fimNovo;
+    });
+  }
+
+  private mensagemConflito(conflitos: Agendamento[], horario: string, servicoId: number): string {
+    const lista = conflitos
+      .map(a => `• ${this.textoIntervalo(a.horario, a.servicoId)} — ${this.nomeCliente(a.clienteId)} (${this.nomeServico(a.servicoId)})`)
+      .join('\n');
+    return `Conflito de horário!\n\nJá existe agendamento neste período:\n${lista}\n\n`
+      + `O novo seria das ${this.textoIntervalo(horario, servicoId)}.\n\nMarcar mesmo assim?`;
   }
 
   alterarStatus(id: number, status: Agendamento['status']) {
