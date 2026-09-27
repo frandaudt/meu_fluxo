@@ -1,0 +1,64 @@
+<header class="top-bar-verde" *ngIf="mostrarLayout">
+  <div class="brand-logo">
+    <img src="assets/icons/icone-logo-meufluxo.png" alt="" class="brand-logo-icon" />
+    <h2>MeuFluxo</h2>
+  </div>
+
+  <div class="top-bar-right">
+    <div class="search-input-wrap" (click)="$event.stopPropagation()">
+      <div class="search-input">
+        <img src="assets/icons/icone-busca.png" class="icone-busca" alt="" />
+        <input
+          type="text"
+          placeholder="Buscar em tudo..."
+          [(ngModel)]="termoBusca"
+          (input)="aoDigitarBusca()"
+          (focus)="onFocusBusca()"
+          (keyup.enter)="selecionarPrimeiroResultado()"
+        />
+      </div>
+
+      <div class="busca-dropdown" *ngIf="buscaAberta">
+        <button
+          type="button"
+          class="busca-item"
+          *ngFor="let r of resultadosBusca"
+          (click)="irParaResultado(r)"
+        >
+          <span class="busca-tipo">{{ r.tipo }}</span>
+          <span class="busca-titulo">{{ r.titulo }}</span>
+          <span class="busca-subtitulo">{{ r.subtitulo }}</span>
+        </button>
+
+        <p class="busca-vazio" *ngIf="resultadosBusca.length === 0">
+          Nada encontrado para "{{ termoBusca }}".
+        </p>
+      </div>
+    </div>
+
+      <div class="user-pill" (click)="toggleMenuUsuario($event)">
+      <div class="user-avatar-iniciais">{{ inicialUsuario }}</div>
+      <span>{{ primeiroNomeUsuario }}</span>
+      <small>▼</small>
+
+      <div class="user-dropdown" *ngIf="menuUsuarioAberto" (click)="$event.stopPropagation()">
+                <a routerLink="/perfil" class="dropdown-item">
+          <img src="assets/icons/icone-perfil.png" class="icone-perfil-inline" alt="" />
+          Meu Perfil
+        </a>
+        <button class="dropdown-item dropdown-sair" (click)="sair()">
+        <img src="assets/icons/icone-sair.png" class="icone-sair-inline" alt="" />
+        Sair
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="app-body" [class.no-layout]="!mostrarLayout">
+  <app-menu-lateral *ngIf="mostrarLayout"></app-menu-lateral>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

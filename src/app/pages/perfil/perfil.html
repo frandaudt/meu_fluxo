@@ -1,0 +1,172 @@
+<main class="perfil-page">
+
+  <h1>Meu Perfil</h1>
+
+  <p class="carregando" *ngIf="carregando">Carregando perfil...</p>
+
+  <div class="perfil-grid" *ngIf="!carregando">
+
+    <div class="perfil-coluna-principal">
+
+      <div class="perfil-card avatar-card">
+        <div class="avatar-wrapper">
+          <div class="avatar-iniciais">{{ inicialNome }}</div>
+        </div>
+        <div>
+          <h3>{{ form.nome || 'Seu nome' }}</h3>
+          <p>{{ form.email }}</p>
+        </div>
+      </div>
+
+      <form class="perfil-card" (ngSubmit)="salvarPerfil($event)">
+        <div class="card-erro" *ngIf="erroPerfil">{{ erroPerfil }}</div>
+        <div class="card-ok" *ngIf="mensagemPerfil">{{ mensagemPerfil }}</div>
+
+        <div class="form-group">
+          <label>Nome completo *</label>
+          <input type="text" [(ngModel)]="form.nome" name="nome" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>E-mail *</label>
+            <input type="email" [(ngModel)]="form.email" name="email" required />
+          </div>
+          <div class="form-group">
+            <label>Telefone</label>
+            <input type="tel" placeholder="(11) 99999-9999" [(ngModel)]="form.telefone" name="telefone" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Nome do negócio</label>
+          <input type="text" placeholder="Ex: Studio Nicole Beauty" [(ngModel)]="form.nomeNegocio" name="nomeNegocio" />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" [disabled]="salvandoPerfil">
+            {{ salvandoPerfil ? 'Salvando...' : 'Salvar alterações' }}
+          </button>
+        </div>
+      </form>
+
+      <div class="perfil-card senha-card">
+        <div>
+          <h4>Senha</h4>
+          <p>••••••••</p>
+        </div>
+        <button type="button" class="link-acao" (click)="abrirModalSenha()">Alterar senha</button>
+      </div>
+
+<div class="perfil-card">
+  <h4 class="secao-titulo">Minha conta</h4>
+
+  <div class="card-erro" *ngIf="erroConta">{{ erroConta }}</div>
+
+  <div class="config-item">
+    <div>
+      <strong class="texto-perigo">Excluir conta</strong>
+      <p>Apaga sua conta e todos os seus dados (clientes, serviços, agendamentos, despesas, metas e horário de trabalho) permanentemente. Não pode ser desfeito.</p>
+    </div>
+    <button class="btn-perigo" (click)="excluirConta()" [disabled]="excluindoConta">
+      {{ excluindoConta ? 'Excluindo...' : 'Excluir conta' }}
+    </button>
+  </div>
+</div>
+
+    </div>
+
+    <div class="perfil-coluna-lateral">
+
+      <form class="perfil-card" (ngSubmit)="salvarHorario()">
+        <div>
+          <h4 class="secao-titulo">Horário de trabalho</h4>
+          <p class="ajuda-horario">Define os horários que aparecem como livres na tela Início.</p>
+        </div>
+
+        <div class="form-group">
+          <label>Duração de cada horário</label>
+          <select [(ngModel)]="horario.blocoMin" name="blocoMin">
+            <option *ngFor="let b of blocos" [ngValue]="b">{{ b }} minutos</option>
+          </select>
+        </div>
+
+        <div class="horario-dias">
+          <div class="dia-linha" *ngFor="let i of ordemDias">
+            <label class="dia-toggle">
+              <input type="checkbox" [(ngModel)]="horario.dias[i].ativo" [name]="'ativo' + i" />
+              <span>{{ nomesDias[i] }}</span>
+            </label>
+
+            <div class="dia-horas" *ngIf="horario.dias[i].ativo; else folga">
+              <input type="time" [(ngModel)]="horario.dias[i].inicio" [name]="'inicio' + i" required />
+              <span class="ate">até</span>
+              <input type="time" [(ngModel)]="horario.dias[i].fim" [name]="'fim' + i" required />
+            </div>
+
+            <ng-template #folga><span class="folga">Não trabalho</span></ng-template>
+          </div>
+        </div>
+
+        <button type="button" class="link-acao link-esquerda" (click)="aplicarHorarioATodos()">
+          Usar o mesmo horário nos dias em que trabalho
+        </button>
+
+        <p class="erro-horario" *ngIf="erroHorario">{{ erroHorario }}</p>
+        <p class="ok-horario" *ngIf="mensagemHorario">{{ mensagemHorario }}</p>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Salvar horário</button>
+        </div>
+      </form>
+
+      <div class="perfil-card sobre-card">
+        <span>MeuFluxo</span>
+        <small>versão 1.0 · TCC</small>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- MODAL TROCAR SENHA -->
+  <div class="modal-overlay" *ngIf="modalSenhaAberto">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Alterar Senha</h2>
+        <button class="btn-icon" (click)="fecharModalSenha()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="salvarNovaSenha($event)">
+        <div class="modal-erro" *ngIf="erroSenha">{{ erroSenha }}</div>
+
+        <div class="form-group">
+          <label>Senha atual *</label>
+          <input type="password" [(ngModel)]="senhaAtual" name="senhaAtual" required />
+        </div>
+        <div class="form-group">
+          <label>Nova senha *</label>
+          <input type="password" [(ngModel)]="novaSenha" name="novaSenha" required />
+          <ul class="checklist-senha">
+          <li [class.ok]="senhaTemComprimento">{{ senhaTemComprimento ? '✓' : '○' }} Pelo menos 6 caracteres</li>
+          <li [class.ok]="senhaTemMaiuscula">{{ senhaTemMaiuscula ? '✓' : '○' }} Uma letra maiúscula</li>
+          <li [class.ok]="senhaTemEspecial">{{ senhaTemEspecial ? '✓' : '○' }} Um caractere especial</li>
+          </ul>
+        </div>
+        <div class="form-group">
+          <label>Confirmar nova senha *</label>
+          <input type="password" [(ngModel)]="confirmarSenha" name="confirmarSenha" required />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharModalSenha()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="salvandoSenha">
+            {{ salvandoSenha ? 'Salvando...' : 'Salvar Senha' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</main>

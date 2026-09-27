@@ -1,0 +1,43 @@
+<div class="auth-container">
+  <div class="auth-card">
+       <div class="auth-brand">
+      <div class="auth-brand-icon">
+        <img src="assets/icons/icone-logo-meufluxo.png" alt="" />
+      </div>
+      <span class="auth-brand-name">MeuFluxo</span>
+    </div>
+
+    <h2 class="auth-heading">Criar conta</h2>
+    <p class="subtitle">Comece a organizar clientes, agenda e financeiro</p>
+
+        <form class="auth-form" (ngSubmit)="fazerCadastro($event)">
+      <div class="auth-erro" *ngIf="erro">{{ erro }}</div>
+
+      <div class="input-group">
+        <label>Nome completo</label>
+        <input type="text" placeholder="Seu nome" [(ngModel)]="nome" name="nome" />
+      </div>
+      <div class="input-group">
+        <label>E-mail</label>
+        <input type="email" placeholder="seuemail@exemplo.com" [(ngModel)]="email" name="email" />
+      </div>
+      <div class="input-group">
+      <label>Senha</label>
+      <input type="password" placeholder="••••••••" [(ngModel)]="senha" name="senha" />
+      <ul class="checklist-senha">
+        <li [class.ok]="senhaTemComprimento">{{ senhaTemComprimento ? '✓' : '○' }} Pelo menos 6 caracteres</li>
+        <li [class.ok]="senhaTemMaiuscula">{{ senhaTemMaiuscula ? '✓' : '○' }} Uma letra maiúscula</li>
+        <li [class.ok]="senhaTemEspecial">{{ senhaTemEspecial ? '✓' : '○' }} Um caractere especial</li>
+     </ul>
+      </div>
+
+      <button type="submit" class="btn-primary" [disabled]="carregando">
+        {{ carregando ? 'Criando conta...' : 'Criar conta' }}
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Já tem uma conta? <a routerLink="/login">Fazer login</a>
+    </div>
+  </div>
+</div>

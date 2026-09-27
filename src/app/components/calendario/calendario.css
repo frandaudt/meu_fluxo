@@ -1,0 +1,85 @@
+.calendario {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  width: 100%;
+}
+
+.calendario-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.calendario-header h3 { margin: 0; font-size: 1.3rem; color: var(--color-text); text-transform: capitalize; }
+
+.btn-nav {
+  background: var(--color-bg);
+  border: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--color-primary-dark);
+  transition: background var(--transition);
+}
+.btn-nav:hover { background: var(--color-primary-light); }
+
+.dias-semana { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 6px; }
+.dias-semana span {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+
+.dia-cell {
+  min-height: 92px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 6px;
+  gap: 4px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-text);
+  text-align: left;
+  transition: background var(--transition), border-color var(--transition);
+}
+.dia-cell:hover { background: var(--color-bg); }
+
+.dia-cell.fora-do-mes { color: var(--color-text-muted); opacity: 0.4; }
+
+.dia-numero { font-weight: 600; }
+.dia-cell.hoje .dia-numero {
+  background: var(--color-primary-light);
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.dia-cell.selecionado { background: var(--color-primary-light); border-color: var(--color-primary); }
+
+.dia-eventos { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+
+.evento-chip {
+  font-size: 0.66rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+.evento-chip.status-agendado { background: #ece1f7; color: #6a3fa0; }
+.evento-chip.status-realizado { background: #d3ead0; color: #1f5c22; }
+.evento-chip.status-cancelado { background: #f6dcd9; color: #b5645a; }
+
+.evento-extra { font-size: 0.65rem; color: var(--color-text-muted); font-weight: 600; padding-left: 4px; }
+.dia-cell.tem-evento { background: var(--color-bg); }
+.dia-cell.selecionado { background: var(--color-primary-light); border-color: var(--color-primary); }

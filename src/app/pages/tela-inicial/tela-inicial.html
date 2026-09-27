@@ -1,0 +1,311 @@
+<main class="dashboard-container">
+
+  <div class="dashboard-header">
+    <div class="title-with-icon">
+      <span class="header-icon"></span>
+      <h1>Início</h1>
+    </div>
+  </div>
+
+  <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
+
+  <p class="carregando" *ngIf="carregando">Carregando...</p>
+
+
+  <div class="metrics-grid" *ngIf="!carregando">
+  <div class="metric-card card-lucro">
+    <img src="assets/icons/icone-dashboard-lucro.png" class="card-icon-img" alt="" />
+    <div>
+      <p>Saldo do mês</p>
+      <div class="valor-com-olho">
+        <h3>{{ lucroOculto ? 'R$ ••••' : 'R$ ' + lucroDoMes.toFixed(2) }}</h3>
+        <button
+          type="button"
+          class="btn-olho-valor"
+          (click)="alternarLucro()"
+          [attr.aria-label]="lucroOculto ? 'Mostrar lucro' : 'Ocultar lucro'"
+          [title]="lucroOculto ? 'Mostrar lucro' : 'Ocultar lucro'"
+        >
+          <svg *ngIf="!lucroOculto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          <svg *ngIf="lucroOculto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.06-6.06M9.9 4.24A10.8 10.8 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-3.22 4.56M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="metric-card card-despesas">
+    <img src="assets/icons/icone-dashboard-despesas.png" class="card-icon-img" alt="" />
+    <div>
+      <p>Despesas do mês</p>
+      <div class="valor-com-olho">
+        <h3>{{ despesasOculto ? 'R$ ••••' : 'R$ ' + despesasDoMes.toFixed(2) }}</h3>
+        <button
+          type="button"
+          class="btn-olho-valor"
+          (click)="alternarDespesas()"
+          [attr.aria-label]="despesasOculto ? 'Mostrar despesas' : 'Ocultar despesas'"
+          [title]="despesasOculto ? 'Mostrar despesas' : 'Ocultar despesas'"
+        >
+          <svg *ngIf="!despesasOculto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          <svg *ngIf="despesasOculto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.06-6.06M9.9 4.24A10.8 10.8 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-3.22 4.56M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="metric-card card-agendamentos">
+    <img src="assets/icons/icone-dashboard-agendamentos.png" class="card-icon-img" alt="" />
+    <div>
+      <p>Agendamentos hoje</p>
+      <h3>{{ agendamentosHoje }}</h3>
+    </div>
+  </div>
+
+  <div class="metric-card card-metas">
+    <img src="assets/icons/icone-dashboard-metas.png" class="card-icon-img" alt="" />
+    <div>
+      <p>Metas cadastradas</p>
+      <h3>{{ totalMetas }}</h3>
+    </div>
+  </div>
+</div>
+
+  <div class="content-grid" *ngIf="!carregando">
+
+    <div class="white-card calendar-section">
+            <div class="grade-topo">
+        <div class="grade-titulo">
+          <h4>Disponibilidade</h4>
+          <a routerLink="/perfil" class="link-horario">Ajustar horário de trabalho</a>
+        </div>
+
+        <div class="grade-nav">
+          <button type="button" class="nav-btn" (click)="mudarMes(-1)" aria-label="Mês anterior">‹</button>
+          <strong class="mes">{{ nomeMesGrade }}</strong>
+          <button type="button" class="nav-btn" (click)="mudarMes(1)" aria-label="Próximo mês">›</button>
+          <button type="button" class="btn-hoje" (click)="irParaHoje()">Hoje</button>
+        </div>
+      </div>
+
+      <div class="legenda">
+        <span class="leg leg-livre">Horário livre</span>
+        <span class="leg leg-ocupado">Agendado</span>
+        <span class="leg leg-realizado">Realizado</span>
+        <span class="leg leg-fora">Fora do expediente</span>
+      </div>
+
+      <p class="aviso-padrao" *ngIf="usandoHorarioPadrao">
+        Usando o horário padrão (segunda a sábado, 08:00 às 18:00).
+        <a routerLink="/perfil">Defina o seu horário de trabalho</a>.
+      </p>
+
+      <p class="aviso-padrao" *ngIf="linhas.length === 0">
+        Nenhum dia de trabalho configurado.
+        <a routerLink="/perfil">Ajustar horário de trabalho</a>.
+      </p>
+
+      <div class="grade-area" *ngIf="linhas.length > 0">
+        <button type="button" class="seta seta-esq" (click)="rolar(-1)" aria-label="Ver dias anteriores">‹</button>
+        <button type="button" class="seta seta-dir" (click)="rolar(1)" aria-label="Ver próximos dias">›</button>
+
+        <div class="grade-rolagem" #rolagem>
+          <div class="grade" [style.grid-template-columns]="colunasCss" [style.grid-template-rows]="linhasCss">
+
+            <!-- 1ª coluna: horários -->
+            <div class="canto"></div>
+            <div class="hora" *ngFor="let h of linhas">{{ h }}</div>
+
+            <!-- uma coluna por dia -->
+            <ng-container *ngFor="let dia of dias">
+              <div
+                class="cab-dia"
+                [class.hoje]="dia.ehHoje"
+                [class.fechado]="dia.fechado"
+                [attr.data-hoje]="dia.ehHoje ? 'true' : null"
+              >
+                <span class="num">{{ dia.numero }}</span>
+                <span class="sem">{{ dia.nomeSemana }}</span>
+              </div>
+
+              <ng-container *ngFor="let cel of dia.celulas">
+
+                <button
+                  *ngIf="cel.estado === 'livre'"
+                  type="button"
+                  class="celula livre"
+                  [class.passado]="dia.passado"
+                  (click)="abrirNovo(dia, cel)"
+                >
+                  <span class="txt-livre">Horário livre</span>
+                  <span class="txt-agendar">+ Agendar</span>
+                </button>
+
+                <button
+                  *ngIf="cel.estado === 'ocupado'"
+                  type="button"
+                  class="celula ocupado"
+                  [class.realizado]="cel.agendamentos[0].status === 'realizado'"
+                  [class.passado]="dia.passado"
+                  (click)="abrirDetalhe(dia, cel)"
+                >
+                  <strong>{{ nomeCliente(cel.agendamentos[0].clienteId) }}</strong>
+                  <div class="linha2">
+                    <span>{{ nomeServico(cel.agendamentos[0].servicoId) }}</span>
+                    <em class="mais" *ngIf="cel.agendamentos.length > 1">+{{ cel.agendamentos.length - 1 }}</em>
+                  </div>
+                </button>
+
+                <div *ngIf="cel.estado === 'fora'" class="celula fora" [class.passado]="dia.passado"></div>
+
+              </ng-container>
+            </ng-container>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-column">
+
+      <div class="white-card">
+        <div class="card-title">
+          <h4>Próximos Agendamentos</h4>
+        </div>
+
+        <div class="item-list">
+          <div class="list-item" *ngFor="let ag of proximosAgendamentos">
+            <div class="circle-avatar" [class.hoje-avatar]="ag.ehHoje">{{ ag.clienteNome.charAt(0) }}</div>
+            <div class="item-info">
+              <strong>{{ ag.horario }} {{ ag.clienteNome }}</strong>
+              <p>{{ ag.servicoNome }} · {{ ag.label }}</p>
+            </div>
+          </div>
+
+          <p class="empty-state" *ngIf="proximosAgendamentos.length === 0">
+            Nenhum agendamento futuro.
+          </p>
+        </div>
+      </div>
+
+      <div class="white-card">
+        <h4>Progresso das Metas — {{ nomeMesRealExtenso }}</h4>
+
+<div class="meta-mini" *ngFor="let m of metasDoMesResumo">
+  <ng-container *ngIf="m.percentual < 100; else metaConcluidaMini">
+    <div class="meta-mini-topo">
+      <span *ngIf="m.tipo === 'faturamento'">R$ {{ m.progresso.toFixed(2) }} de R$ {{ m.valorAlvo.toFixed(2) }}</span>
+      <span *ngIf="m.tipo === 'clientes'">{{ m.progresso }} de {{ m.valorAlvo }} clientes</span>
+      <span class="meta-mini-percentual">{{ m.percentual }}%</span>
+    </div>
+    <div class="barra-progresso">
+      <div class="barra-preenchida" [style.width.%]="m.percentual"></div>
+    </div>
+  </ng-container>
+
+  <ng-template #metaConcluidaMini>
+    <p class="meta-concluida">
+      <span class="icone-check">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </span>
+      Parabéns, você concluiu sua meta de {{ m.tipo === 'faturamento' ? 'faturamento' : 'clientes' }}!
+    </p>
+  </ng-template>
+</div>
+
+  <ng-template #metaConcluidaMini>
+    <p class="meta-concluida">Parabéns, você concluiu sua meta!</p>
+  </ng-template>
+</div>
+
+        <p class="empty-state" *ngIf="metasDoMesResumo.length === 0">
+          Nenhuma meta cadastrada para este mês.
+        </p>
+      </div>
+
+    </div>
+  <!-- MODAL: NOVO AGENDAMENTO (clique em horário livre) -->
+  <div class="modal-overlay" *ngIf="novo" (click)="fecharNovo()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2>Novo Agendamento</h2>
+        <button type="button" class="btn-x" (click)="fecharNovo()" aria-label="Fechar">×</button>
+      </div>
+
+      <p class="quando">{{ rotuloNovo }}</p>
+
+      <form class="modal-form" (ngSubmit)="salvarNovo($event)">
+        <div class="modal-erro" *ngIf="erroModal">{{ erroModal }}</div>
+
+        <div class="form-group">
+          <label>Cliente *</label>
+            <select [(ngModel)]="formNovo.clienteId" name="clienteId" required>
+            <option [ngValue]="0" disabled>Selecione um cliente</option>
+            <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nome }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Serviço *</label>
+            <select [(ngModel)]="formNovo.servicoId" name="servicoId" required>
+            <option [ngValue]="0" disabled>Selecione um serviço</option>
+            <option *ngFor="let s of servicos" [ngValue]="s.id">{{ s.nome }} — R$ {{ s.valor.toFixed(2) }}</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharNovo()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="salvandoNovo">
+            {{ salvandoNovo ? 'Salvando...' : 'Salvar Agendamento' }}
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+
+  <!-- MODAL: DETALHES (clique em horário ocupado) -->
+  <div class="modal-overlay" *ngIf="detalhe" (click)="fecharDetalhe()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2>Agendamento</h2>
+        <button type="button" class="btn-x" (click)="fecharDetalhe()" aria-label="Fechar">×</button>
+      </div>
+
+      <p class="quando">{{ rotuloDetalhe }}</p>
+
+      <div class="ag-item" *ngFor="let a of detalheAgendamentos">
+        <div class="ag-info">
+          <strong>{{ nomeCliente(a.clienteId) }}</strong>
+          <span>{{ nomeServico(a.servicoId) }} · {{ a.horario }}</span>
+        </div>
+
+        <div class="status-grupo">
+          <button type="button" [class.ativo]="a.status === 'agendado'" (click)="mudarStatus(a, 'agendado')">Agendado</button>
+          <button type="button" [class.ativo]="a.status === 'realizado'" (click)="mudarStatus(a, 'realizado')">Realizado</button>
+          <button type="button" class="cancelar" (click)="mudarStatus(a, 'cancelado')">Cancelar</button>
+        </div>
+
+        <button type="button" class="btn-remover" (click)="removerAgendamento(a)">Remover agendamento</button>
+      </div>
+
+    </div>
+  </div>
+
+</main>
