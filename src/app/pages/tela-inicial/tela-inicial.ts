@@ -585,7 +585,7 @@ const celulas: CelulaGrade[] = linhasMin.map(t => {
           console.error(erro);
           agendamento.status = statusAnterior;
           this.atualizarAposMudanca();
-          this.erro = 'Não foi possível atualizar o status.';
+          this.erro = erro?.error?.erro || 'Não foi possível atualizar o status.';
           this.cdr.markForCheck();
         },
       });

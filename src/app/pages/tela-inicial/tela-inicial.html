@@ -18,7 +18,7 @@
     <div>
       <p>Saldo do mês</p>
       <div class="valor-com-olho">
-        <h3>{{ lucroOculto ? 'R$ ••••' : 'R$ ' + lucroDoMes.toFixed(2) }}</h3>
+      <h3>{{ lucroOculto ? 'R$ ••••' : (lucroDoMes | currency) }}</h3>
         <button
           type="button"
           class="btn-olho-valor"
@@ -44,7 +44,7 @@
     <div>
       <p>Despesas do mês</p>
       <div class="valor-com-olho">
-        <h3>{{ despesasOculto ? 'R$ ••••' : 'R$ ' + despesasDoMes.toFixed(2) }}</h3>
+          <h3>{{ despesasOculto ? 'R$ ••••' : (despesasDoMes | currency) }}</h3>
         <button
           type="button"
           class="btn-olho-valor"
@@ -200,12 +200,12 @@
       </div>
 
       <div class="white-card">
-        <h4>Progresso das Metas — {{ nomeMesRealExtenso }}</h4>
+                <h4>Progresso das metas — {{ nomeMesRealExtenso }}</h4>
 
 <div class="meta-mini" *ngFor="let m of metasDoMesResumo">
   <ng-container *ngIf="m.percentual < 100; else metaConcluidaMini">
     <div class="meta-mini-topo">
-      <span *ngIf="m.tipo === 'faturamento'">R$ {{ m.progresso.toFixed(2) }} de R$ {{ m.valorAlvo.toFixed(2) }}</span>
+      <span *ngIf="m.tipo === 'faturamento'">{{ m.progresso | currency }} de{{ m.valorAlvo | currency }}</span>
       <span *ngIf="m.tipo === 'clientes'">{{ m.progresso }} de {{ m.valorAlvo }} clientes</span>
       <span class="meta-mini-percentual">{{ m.percentual }}%</span>
     </div>

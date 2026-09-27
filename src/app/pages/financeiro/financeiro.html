@@ -16,57 +16,60 @@
     <button class="btn-nav" (click)="mudarMes(-1)">‹</button>
     <h2>{{ nomeMesAtualExtenso }}</h2>
     <button class="btn-nav" (click)="mudarMes(1)">›</button>
+  </div>
 
-  </div>  <div class="grafico-card" *ngIf="!carregando">
+  <div class="grafico-card" *ngIf="!carregando">
     <h3>Saldo nos últimos meses</h3>
 
-    <svg viewBox="0 0 600 140" class="grafico-svg">
-      <polyline [attr.points]="pontosSvg" fill="none" stroke-width="3" class="linha-lucro" />
-      <circle
+    <div class="grafico-area">
+      <svg viewBox="0 0 600 140" preserveAspectRatio="none" class="grafico-svg">
+        <polyline [attr.points]="pontosSvg" fill="none" stroke-width="3" vector-effect="non-scaling-stroke" class="linha-lucro" />
+      </svg>
+      <span
         *ngFor="let p of historico; let i = index"
-        [attr.cx]="posicaoX(i)"
-        [attr.cy]="posicaoY(p.lucro)"
-        r="4"
         class="ponto-lucro"
-      />
-    </svg>
+        [style.left.%]="posicaoX(i) / 6"
+        [style.top.%]="posicaoY(p.lucro) / 1.4"
+        [title]="p.label + ': ' + (p.lucro | currency)"
+      ></span>
+    </div>
 
     <div class="grafico-legendas">
-      <span *ngFor="let p of historico">{{ p.label }}</span>
+      <span *ngFor="let p of historico; let i = index" [style.left.%]="posicaoX(i) / 6">{{ p.label }}</span>
     </div>
   </div>
 
   <div class="mes-resumo-grid" *ngIf="!carregando">
 
     <div class="grafico-diario-card">
-  <h3>Ganhos por dia — {{ nomeMesAtualExtenso }}</h3>
-  <div class="barras-diarias">
-    <div class="barra-coluna" *ngFor="let d of ganhosPorDia">
-      <span class="barra-valor" *ngIf="d.valor > 0">R$ {{ d.valor.toFixed(0) }}</span>
-      <div class="barra-dia" [style.height.%]="d.alturaPercentual" [title]="'Dia ' + d.dia + ': R$ ' + d.valor.toFixed(2)"></div>
-      <span class="barra-dia-numero">{{ d.dia }}</span>
+      <h3>Ganhos por dia — {{ nomeMesAtualExtenso }}</h3>
+      <div class="barras-diarias">
+        <div class="barra-coluna" *ngFor="let d of ganhosPorDia">
+          <span class="barra-valor" *ngIf="d.valor > 0">R$ {{ d.valor.toFixed(0) }}</span>
+          <div class="barra-dia" [style.height.%]="d.alturaPercentual" [title]="'Dia ' + d.dia + ': ' + (d.valor | currency)"></div>
+          <span class="barra-dia-numero">{{ d.dia }}</span>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
     <div class="cards-resumo">
       <div class="card-resumo card-ganhos">
         <span class="card-label">Ganhos</span>
-        <span class="card-valor">R$ {{ ganhosDoMes.toFixed(2) }}</span>
+        <span class="card-valor">{{ ganhosDoMes | currency }}</span>
       </div>
       <div class="card-resumo card-gastos">
         <span class="card-label">Gastos</span>
-        <span class="card-valor">R$ {{ gastosDoMes.toFixed(2) }}</span>
+        <span class="card-valor">{{ gastosDoMes | currency }}</span>
       </div>
       <div class="card-resumo card-lucro" [class.negativo]="lucroDoMes < 0">
-        <span class="card-label">Lucro</span>
-        <span class="card-valor">R$ {{ lucroDoMes.toFixed(2) }}</span>
+        <span class="card-label">Saldo</span>
+        <span class="card-valor">{{ lucroDoMes | currency }}</span>
       </div>
     </div>
 
   </div>
 
-   <div class="despesas-card" *ngIf="!carregando">
+  <div class="despesas-card" *ngIf="!carregando">
     <div class="despesas-header">
       <h3>Despesas de {{ nomeMesAtualExtenso }}</h3>
     </div>
@@ -78,8 +81,8 @@
           {{ d.tipo === 'fixa' ? 'fixa' : 'emergencial' }}
         </span>
       </span>
-      <span class="despesa-valor">R$ {{ d.valor.toFixed(2) }}</span>
-            <button class="btn-icon" title="Remover" (click)="removerDespesa(d.id)">
+      <span class="despesa-valor">{{ d.valor | currency }}</span>
+      <button class="btn-icon" title="Remover" (click)="removerDespesa(d.id)">
         <img src="assets/icons/icone-lixeira.png" class="btn-icon-img" alt="Remover" />
       </button>
     </div>

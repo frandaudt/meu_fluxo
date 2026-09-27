@@ -8,7 +8,8 @@
 }
 
 .calendario-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.calendario-header h3 { margin: 0; font-size: 1.3rem; color: var(--color-text); text-transform: capitalize; }
+.calendario-header h3 { margin: 0; font-size: 1.3rem; color: var(--color-text); 
+.calendario-header h3::first-letter { text-transform: uppercase; } }
 
 .btn-nav {
   background: var(--color-bg);

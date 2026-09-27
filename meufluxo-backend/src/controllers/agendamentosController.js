@@ -1,5 +1,64 @@
 const { pool } = require('../config/db');
 
+function paraMinutos(hhmm) {
+  const [h, m] = String(hhmm).split(':');
+  return (Number(h) || 0) * 60 + (Number(m) || 0);
+}
+
+// Confere expediente e conflito de horário (mesma regra do front-end).
+// Devolve a mensagem do problema, ou null se puder agendar.
+// idIgnorado: usado ao reativar um agendamento, para ele não conflitar consigo mesmo.
+async function validarHorario(usuarioId, data, horario, servicoId, idIgnorado = null) {
+  const [servicoRows] = await pool.query(
+    'SELECT duracao_min FROM servicos WHERE id = ? AND usuario_id = ?',
+    [servicoId, usuarioId]
+  );
+  const duracao = servicoRows[0]?.duracao_min || 30;
+  const inicioNovo = paraMinutos(horario);
+  const fimNovo = inicioNovo + duracao;
+
+  // expediente: só confere se o usuário já salvou um horário de trabalho no Perfil
+  const [horarioRows] = await pool.query(
+    'SELECT dias FROM horarios_trabalho WHERE usuario_id = ?',
+    [usuarioId]
+  );
+  if (horarioRows.length > 0) {
+    const bruto = horarioRows[0].dias;
+    const dias = typeof bruto === 'string' ? JSON.parse(bruto) : bruto;
+    const [ano, mes, dia] = data.split('-').map(Number);
+    const diaConfig = dias[new Date(ano, mes - 1, dia).getDay()];
+
+    if (!diaConfig || !diaConfig.ativo) {
+      return 'Você não atende nesse dia da semana.';
+    }
+    if (inicioNovo < paraMinutos(diaConfig.inicio) || fimNovo > paraMinutos(diaConfig.fim)) {
+      return `Esse horário fica fora do seu expediente (${diaConfig.inicio} às ${diaConfig.fim}).`;
+    }
+  }
+
+  // conflito: busca os agendamentos do mesmo dia (menos os cancelados) com a duração de cada serviço
+  const [outros] = await pool.query(
+    `SELECT a.id, a.horario, s.duracao_min, c.nome AS cliente_nome
+       FROM agendamentos a
+       JOIN servicos s ON s.id = a.servico_id
+       JOIN clientes c ON c.id = a.cliente_id
+      WHERE a.usuario_id = ? AND a.data = ? AND a.status <> 'cancelado' AND a.id <> ?`,
+    [usuarioId, data, idIgnorado || 0]
+  );
+
+  const conflito = outros.find(o => {
+    const inicioOutro = paraMinutos(o.horario);
+    const fimOutro = inicioOutro + (o.duracao_min || 30);
+    return inicioNovo < fimOutro && inicioOutro < fimNovo;
+  });
+
+  if (conflito) {
+    return `Esse horário conflita com o agendamento de ${conflito.cliente_nome} às ${String(conflito.horario).slice(0, 5)}.`;
+  }
+
+  return null;
+}
+
 function formatarAgendamento(linha) {
   return {
     id: linha.id,

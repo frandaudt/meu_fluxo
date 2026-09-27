@@ -16,7 +16,7 @@
     <div class="meta-anual-header">
       <div>
         <span class="meta-anual-label">Meta de {{ anoAtual }}</span>
-        <h2 *ngIf="metaAnualDoAno">R$ {{ metaAnualDoAno.valorAlvo.toFixed(2) }}</h2>
+        <h2 *ngIf="metaAnualDoAno">{{ metaAnualDoAno.valorAlvo | currency }}</h2>
         <p *ngIf="!metaAnualDoAno" class="sem-meta">Nenhuma meta definida para este ano.</p>
       </div>
       <button class="btn-secondary" (click)="abrirModalAnual()">
@@ -29,7 +29,7 @@
     <div class="barra-preenchida" [style.width.%]="larguraBarraAnual"></div>
   </div>
   <div class="progresso-legenda">
-    <span>R$ {{ progressoAnual.toFixed(2) }} alcançados</span>
+    <span>{{ progressoAnual | currency }} alcançados</span>
     <span class="progresso-percentual" [class.acima]="percentualAnual > 100">{{ percentualAnual }}%</span>
   </div>
 
@@ -54,7 +54,7 @@
             <span class="badge-atual" *ngIf="m.atual">mês atual</span>
           </span>
           <h3>
-            <span *ngIf="m.tipo === 'faturamento'">R$ {{ m.valorAlvo.toFixed(2) }}</span>
+            <span *ngIf="m.tipo === 'faturamento'">{{ m.valorAlvo | currency }}</span>
             <span *ngIf="m.tipo === 'clientes'">{{ m.valorAlvo }} clientes</span>
           </h3>
         </div>
@@ -67,7 +67,7 @@
   <div class="barra-preenchida" [style.width.%]="m.larguraBarra"></div>
 </div>
 <div class="progresso-legenda">
-  <span *ngIf="m.tipo === 'faturamento'">R$ {{ m.progresso.toFixed(2) }} alcançados</span>
+  <span *ngIf="m.tipo === 'faturamento'">{{ m.progresso | currency }} alcançados</span>
   <span *ngIf="m.tipo === 'clientes'">{{ m.progresso }} atendidos</span>
   <span class="progresso-percentual" [class.acima]="m.percentual > 100">{{ m.percentual }}%</span>
 </div>

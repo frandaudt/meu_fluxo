@@ -40,7 +40,8 @@ app-calendario { display: block; }
   max-height: calc(100vh - 230px);
 }
 
-.mes-painel-header h2 { margin: 0; font-size: 1.05rem; color: var(--color-text); text-transform: capitalize; }
+.mes-painel-header h2 { margin: 0; font-size: 1.05rem; color: var(--color-text); 
+.calendario-header h3::first-letter { text-transform: uppercase; } }
 .mes-painel-header p { margin: 4px 0 0 0; font-size: 0.8rem; color: var(--color-text-muted); }
 
 .mes-painel-lista {
