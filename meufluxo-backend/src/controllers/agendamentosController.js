@@ -5,9 +5,6 @@ function paraMinutos(hhmm) {
   return (Number(h) || 0) * 60 + (Number(m) || 0);
 }
 
-// Confere expediente e conflito de horário (mesma regra do front-end).
-// Devolve a mensagem do problema, ou null se puder agendar.
-// idIgnorado: usado ao reativar um agendamento, para ele não conflitar consigo mesmo.
 async function validarHorario(usuarioId, data, horario, servicoId, idIgnorado = null) {
   const [servicoRows] = await pool.query(
     'SELECT duracao_min FROM servicos WHERE id = ? AND usuario_id = ?',
@@ -17,7 +14,7 @@ async function validarHorario(usuarioId, data, horario, servicoId, idIgnorado = 
   const inicioNovo = paraMinutos(horario);
   const fimNovo = inicioNovo + duracao;
 
-  // expediente: só confere se o usuário já salvou um horário de trabalho no Perfil
+
   const [horarioRows] = await pool.query(
     'SELECT dias FROM horarios_trabalho WHERE usuario_id = ?',
     [usuarioId]

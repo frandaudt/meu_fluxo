@@ -87,6 +87,17 @@ async function remover(req, res) {
   const { id } = req.params;
 
   try {
+    // o banco apaga os agendamentos junto (ON DELETE CASCADE), o que mudaria o histórico financeiro
+    const [uso] = await pool.query(
+      'SELECT COUNT(*) AS total FROM agendamentos WHERE cliente_id = ? AND usuario_id = ?',
+      [id, req.usuarioId]
+    );
+    if (uso[0].total > 0) {
+      return res.status(409).json({
+        erro: `Esse cliente tem ${uso[0].total} agendamento(s) e não pode ser excluído, para não apagar o histórico de atendimentos e ganhos.`,
+      });
+    }
+
     const [resultado] = await pool.query(
       'DELETE FROM clientes WHERE id = ? AND usuario_id = ?',
       [id, req.usuarioId]

@@ -79,6 +79,17 @@ async function remover(req, res) {
   const { id } = req.params;
 
   try {
+    // excluir o serviço apagaria os agendamentos feitos com ele, mudando o histórico financeiro
+    const [uso] = await pool.query(
+      'SELECT COUNT(*) AS total FROM agendamentos WHERE servico_id = ? AND usuario_id = ?',
+      [id, req.usuarioId]
+    );
+    if (uso[0].total > 0) {
+      return res.status(409).json({
+        erro: `Esse serviço está em ${uso[0].total} agendamento(s) e não pode ser excluído, para não apagar o histórico de atendimentos e ganhos.`,
+      });
+    }
+
     const [resultado] = await pool.query(
       'DELETE FROM servicos WHERE id = ? AND usuario_id = ?',
       [id, req.usuarioId]
