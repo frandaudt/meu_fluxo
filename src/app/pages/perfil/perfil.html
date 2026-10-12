@@ -120,6 +120,61 @@
         </div>
       </form>
 
+            <div class="perfil-card tema-card">
+        <div>
+          <h4 class="secao-titulo">Cores do sistema</h4>
+          <p class="ajuda-horario">Escolha a cor principal. As cores de acento e destaque são calculadas pelo círculo cromático. As cores salvam automaticamente.</p>
+        </div>
+
+        <div class="tema-opcoes">
+          <button
+            type="button"
+            class="tema-opcao"
+            *ngFor="let t of temasProntos"
+            [class.ativo]="temaEstaAtivo(t)"
+            (click)="escolherTema(t)"
+          >
+            <span class="tema-amostras">
+              <span *ngFor="let cor of amostrasDoTema(t)" [style.background]="cor"></span>
+            </span>
+            {{ t.nome }}
+          </button>
+
+          <label class="tema-opcao tema-personalizada" [class.ativo]="tema.nome === 'Personalizada'">
+            <input
+              type="color"
+              [value]="corPersonalizada"
+              (input)="escolherCorPersonalizada($any($event.target).value)"
+            />
+            Personalizada
+          </label>
+        </div>
+
+        <div class="harmonia">
+          <div class="roda-cromatica">
+            <span
+              class="roda-marcador"
+              *ngFor="let c of angulosHarmonia"
+              [class.base]="c.papel === 'Base'"
+              [style.transform]="'rotate(' + c.angulo + 'deg) translateY(-46px) rotate(' + (-c.angulo) + 'deg)'"
+              [style.background]="'hsl(' + c.angulo + ' 60% 55%)'"
+            ></span>
+            <span class="roda-centro"></span>
+          </div>
+
+          <ul class="harmonia-legenda">
+            <li *ngFor="let c of angulosHarmonia">
+              <strong>{{ c.papel }}</strong> {{ c.angulo }}°
+            </li>
+            <li class="harmonia-nome">Complementar dividida</li>
+          </ul>
+        </div>
+
+        <button type="button" class="link-acao link-esquerda" (click)="restaurarTemaPadrao()">
+          Voltar às cores padrão
+        </button>
+      </div>
+
       <div class="perfil-card sobre-card">
         <span>MeuFluxo</span>
         <small>versão 1.0 · TCC</small>

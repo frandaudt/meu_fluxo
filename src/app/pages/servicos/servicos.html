@@ -20,7 +20,7 @@
     <div class="servico-card" *ngFor="let servico of servicos">
       <div class="card-header">
         <div class="servico-icon">
-        <img src="assets/icons/icone-engrenagem.png" class="servico-icon-img" alt="" />
+        <span class="icone servico-icon-img" aria-hidden="true">content_cut</span>
         </div>
         <div class="card-title">
           <h3>{{ servico.nome }}</h3>
@@ -28,16 +28,16 @@
         </div>
 
         <button class="btn-icon" title="Editar" (click)="abrirModalEdicao(servico)">
-        <img src="assets/icons/icone-lapis.png" class="btn-icon-img" alt="Editar" />
+        <span class="icone btn-icon-img" aria-hidden="true">edit</span>
         </button>
         <button class="btn-icon" title="Remover" (click)="removerServico(servico.id)">
-        <img src="assets/icons/icone-lixeira.png" class="btn-icon-img" alt="Remover" />
+        <span class="icone btn-icon-img icone-remover" aria-hidden="true">delete</span>
         </button>
       </div>
 
       <div class="card-body">
-        <p class="info-item"><img src="assets/icons/icone-financas.png" class="info-icon" alt="" /> R$ {{ servico.valor.toFixed(2) }}</p>
-                <p class="info-item" *ngIf="servico.duracao"><img src="assets/icons/icone-tempo.png" class="info-icon" alt="" /> {{ servico.duracao }} min</p>
+        <span class="icone info-icon" aria-hidden="true">payments</span>
+                <span class="icone info-icon" aria-hidden="true">schedule</span>
       </div>
     </div>
 

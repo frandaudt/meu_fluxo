@@ -32,17 +32,17 @@
         </div>
 
         <button class="btn-icon" title="Editar" (click)="abrirModalEdicao(cliente)">
-          <img src="assets/icons/icone-lapis.png" class="btn-icon-img" alt="Editar" />
+          <span class="icone btn-icon-img" aria-hidden="true">edit</span>
         </button>
         <button class="btn-icon" title="Remover" (click)="removerCliente(cliente.id)">
-          <img src="assets/icons/icone-lixeira.png" class="btn-icon-img" alt="Remover" />
+          <span class="icone btn-icon-img icone-remover" aria-hidden="true">delete</span>
         </button>
       </div>
 
       <div class="card-body">
-        <p class="info-item"><img src="assets/icons/icone-telefone.png" class="info-icon" alt="" /> {{ cliente.telefone }}</p>
-               <p class="info-item" *ngIf="cliente.email"><img src="assets/icons/icone-email.png" class="info-icon" alt="" /> {{ cliente.email }}</p>
-        <p class="info-item" *ngIf="cliente.endereco"><img src="assets/icons/icone-endereco.png" class="info-icon" alt="" /> {{ cliente.endereco }}</p>
+        <span class="icone info-icon" aria-hidden="true">call</span>
+               <span class="icone info-icon" aria-hidden="true">mail</span>
+       <span class="icone info-icon" aria-hidden="true">location_on</span>
       </div>
     </div>
 

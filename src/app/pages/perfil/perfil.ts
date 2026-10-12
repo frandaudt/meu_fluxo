@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { TemaCores, TEMA_PADRAO, TEMAS_PRONTOS, carregarTemaSalvo, salvarTema, aplicarTema, temaDeHex, hexDoTema } from '../../app';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -43,6 +44,10 @@ excluindoConta = false;
   horario: HorarioTrabalho = this.horarioPadrao();
   erroHorario = '';
   mensagemHorario = '';
+
+  readonly temasProntos = TEMAS_PRONTOS;
+  tema: TemaCores = carregarTemaSalvo();
+  corPersonalizada = hexDoTema(this.tema);
 
   usuario: Usuario = { nome: '', email: '' };
   form = { nome: '', email: '', telefone: '', nomeNegocio: '' };
@@ -211,6 +216,46 @@ excluindoConta = false;
     });
   }
 
+get angulosHarmonia() {
+    const h = this.tema.h;
+    return [
+      { papel: 'Base', angulo: h },
+      { papel: 'Acento', angulo: (h + 150) % 360 },
+      { papel: 'Destaque', angulo: (h + 210) % 360 },
+    ];
+  }
+
+  /** Cores de exemplo de um tema (base, acento e destaque), para as bolinhas dos botões. */
+  amostrasDoTema(t: TemaCores): string[] {
+    return [
+      `hsl(${t.h} ${t.s}% 35%)`,
+      `hsl(${(t.h + 150) % 360} 45% 56%)`,
+      `hsl(${(t.h + 210) % 360} 34% 45%)`,
+    ];
+  }
+
+  temaEstaAtivo(t: TemaCores): boolean {
+    return this.tema.h === t.h && this.tema.s === t.s;
+  }
+
+  escolherTema(t: TemaCores) {
+    this.tema = { ...t };
+    this.corPersonalizada = hexDoTema(this.tema);
+    aplicarTema(this.tema);
+    salvarTema(this.tema);
+  }
+
+  escolherCorPersonalizada(hex: string) {
+    this.corPersonalizada = hex;
+    this.tema = temaDeHex(hex);
+    aplicarTema(this.tema);
+    salvarTema(this.tema);
+  }
+
+  restaurarTemaPadrao() {
+    this.escolherTema(TEMA_PADRAO);
+  }
+  
   get inicialNome(): string {
     return this.form.nome ? this.form.nome.charAt(0).toUpperCase() : 'U';
   }

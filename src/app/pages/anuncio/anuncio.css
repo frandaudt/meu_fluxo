@@ -8,9 +8,9 @@
   z-index: 0;
   pointer-events: none;
 }
-.blob-1 { width: 300px; height: 300px; background: #2f6690; top: -180px; right: -140px; }
-.blob-2 { width: 260px; height: 260px; background: #a67c27; top: 420px; left: -160px; }
-.blob-3 { width: 340px; height: 340px; background: #6a3fa0; opacity: 0.1; top: -160px; left: 50%; transform: translateX(-50%); }
+.blob-1 { width: 300px; height: 300px; background: var(--color-acento); top: -180px; right: -140px; }
+.blob-2 { width: 260px; height: 260px; background: var(--color-primary); top: 420px; left: -160px; }
+.blob-3 { width: 340px; height: 340px; background: var(--color-destaque); opacity: 0.1; top: -160px; left: 50%; transform: translateX(-50%); }
 
 /* nav */
 .anuncio-nav {
@@ -202,11 +202,17 @@
 }
 .funcionalidade-item.aberto { box-shadow: var(--shadow-md); }
 
-.funcionalidade-item.cor-agenda { border-left-color: #a67c27; }
-.funcionalidade-item.cor-clientes { border-left-color: #2f6690; }
+.funcionalidade-item.cor-agenda { border-left-color: var(--color-acento); }
+.funcionalidade-item.cor-clientes { border-left-color: var(--color-destaque); }
 .funcionalidade-item.cor-servicos { border-left-color: var(--color-primary); }
-.funcionalidade-item.cor-financeiro { border-left-color: #b5645a; }
-.funcionalidade-item.cor-metas { border-left-color: #6a3fa0; }
+.funcionalidade-item.cor-financeiro { border-left-color: var(--color-primary-dark); }
+.funcionalidade-item.cor-metas { border-left-color: var(--color-acento-escuro); }
+
+.cor-agenda .funcionalidade-icone-img { color: var(--color-acento); }
+.cor-clientes .funcionalidade-icone-img { color: var(--color-destaque); }
+.cor-servicos .funcionalidade-icone-img { color: var(--color-primary); }
+.cor-financeiro .funcionalidade-icone-img { color: var(--color-primary-dark); }
+.cor-metas .funcionalidade-icone-img { color: var(--color-acento-escuro); }
 
 .funcionalidade-cabecalho {
   width: 100%;
@@ -223,7 +229,8 @@
 
 .funcionalidade-icone-img {
   width: 36px; height: 36px;
-  object-fit: contain;
+  font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
   padding: 7px;
   border-radius: 50%;
   background: var(--color-white);

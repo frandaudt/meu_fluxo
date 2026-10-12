@@ -77,9 +77,9 @@
   text-overflow: ellipsis;
   width: 100%;
 }
-.evento-chip.status-agendado { background: #ece1f7; color: #6a3fa0; }
-.evento-chip.status-realizado { background: #d3ead0; color: #1f5c22; }
-.evento-chip.status-cancelado { background: #f6dcd9; color: #b5645a; }
+.evento-chip.status-agendado { background: var(--color-agendado-claro); color: var(--color-agendado-escuro); }
+.evento-chip.status-realizado { background: var(--color-sucesso-claro); color: var(--color-sucesso); }
+.evento-chip.status-cancelado { background: var(--color-perigo-claro); color: var(--color-perigo); }
 
 .evento-extra { font-size: 0.65rem; color: var(--color-text-muted); font-weight: 600; padding-left: 4px; }
 .dia-cell.tem-evento { background: var(--color-bg); }

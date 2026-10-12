@@ -14,7 +14,7 @@
 
   <div class="metrics-grid" *ngIf="!carregando">
   <div class="metric-card card-lucro">
-    <img src="assets/icons/icone-dashboard-lucro.png" class="card-icon-img" alt="" />
+    <span class="icone card-icon-img" aria-hidden="true">savings</span>
     <div>
       <p>Saldo do mês</p>
       <div class="valor-com-olho">
@@ -40,7 +40,7 @@
   </div>
 
   <div class="metric-card card-despesas">
-    <img src="assets/icons/icone-dashboard-despesas.png" class="card-icon-img" alt="" />
+    <span class="icone card-icon-img" aria-hidden="true">trending_down</span>
     <div>
       <p>Despesas do mês</p>
       <div class="valor-com-olho">
@@ -66,7 +66,7 @@
   </div>
 
   <div class="metric-card card-agendamentos">
-    <img src="assets/icons/icone-dashboard-agendamentos.png" class="card-icon-img" alt="" />
+    <span class="icone card-icon-img" aria-hidden="true">event</span>
     <div>
       <p>Agendamentos hoje</p>
       <h3>{{ agendamentosHoje }}</h3>
@@ -74,7 +74,7 @@
   </div>
 
   <div class="metric-card card-metas">
-    <img src="assets/icons/icone-dashboard-metas.png" class="card-icon-img" alt="" />
+    <span class="icone card-icon-img" aria-hidden="true">flag</span>
     <div>
       <p>Metas cadastradas</p>
       <h3>{{ totalMetas }}</h3>

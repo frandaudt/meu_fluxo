@@ -62,7 +62,7 @@
         *ngFor="let f of funcionalidades; let i = index"
       >
         <button type="button" class="funcionalidade-cabecalho" (click)="alternar(i)">
-          <img [src]="f.icone" alt="" class="funcionalidade-icone-img" />
+          <span class="icone funcionalidade-icone-img" aria-hidden="true">{{ f.icone }}</span>
           <span class="funcionalidade-nome">{{ f.nome }}</span>
           <span class="funcionalidade-seta">⌄</span>
         </button>

@@ -18,7 +18,10 @@
 .metric-card .card-icon-img {
   width: 30px;
   height: 30px;
-  object-fit: contain;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px;
   border-radius: 14px;
   background: rgba(255,255,255,0.55);
@@ -26,13 +29,13 @@
   box-sizing: content-box;
 }
 
-.metric-card p { margin: 0; font-size: 0.78rem; color: #5c6459; font-weight: 500; }
-.metric-card h3 { margin: 2px 0 0 0; font-size: 1.2rem; color: #222; font-family: var(--font-display); }
+.metric-card p { margin: 0; font-size: 0.78rem; color: var(--color-text-soft); font-weight: 500; }
+.metric-card h3 { margin: 2px 0 0 0; font-size: 1.2rem; color: var(--color-text); font-family: var(--font-display); }
 
-.card-lucro { background-color: #bde0eb; }
-.card-despesas { background-color: #F6DCD9; }
-.card-agendamentos { background-color: #F3EBD3; }
-.card-metas { background-color: #E2DFE8; }
+.card-lucro { background-color: var(--color-primary-light); }
+.card-despesas { background-color: var(--color-perigo-claro); }
+.card-agendamentos { background-color: var(--color-acento-claro); }
+.card-metas { background-color: var(--color-destaque-claro); }
 
 .content-grid { display: flex; gap: 18px; align-items: flex-start; }
 
@@ -57,7 +60,7 @@
   color: white; font-weight: bold; font-size: 0.85rem; flex-shrink: 0;
   background-color: var(--color-primary);
 }
-.circle-avatar.hoje-avatar { background-color: var(--color-accent); }
+.circle-avatar.hoje-avatar { background-color: var(--color-destaque); }
 
 .list-item {
   display: flex; align-items: center; gap: 10px;
@@ -112,7 +115,7 @@
   margin-bottom: 6px;
 }
 .meta-mini-percentual { font-weight: 700; color: var(--color-primary-dark); }
-.meta-mini-percentual.acima { color: #1f5c22; }
+.meta-mini-percentual.acima { color: var(--color-sucesso); }
 
 .barra-progresso {
   width: 100%;
@@ -160,14 +163,14 @@
   content: ''; display: inline-block; width: 11px; height: 11px; border-radius: 3px;
   margin-right: 6px; vertical-align: -1px; box-sizing: border-box;
 }
-.leg-livre::before { background: #e9f0e1; border: 1px dashed #b3c5a3; }
-.leg-ocupado::before { background: #dfd5f2; border-left: 3px solid #7d5fc4; }
-.leg-realizado::before { background: #f0ecf7; border-left: 3px solid #b9a9dc; }
-.leg-fora::before { background: repeating-linear-gradient(135deg, #f4f5f1, #f4f5f1 3px, #e6e8e1 3px, #e6e8e1 6px); }
+.leg-livre::before { background: var(--color-livre); border: 1px dashed var(--color-livre-borda); }
+.leg-ocupado::before { background: var(--color-agendado-claro); border-left: 3px solid var(--color-agendado); }
+.leg-realizado::before { background: var(--color-agendado-suave); border-left: 3px solid var(--color-agendado-medio); }
+.leg-fora::before { background: repeating-linear-gradient(135deg, var(--color-listra-1), var(--color-listra-1) 3px, var(--color-listra-2) 3px, var(--color-listra-2) 6px); }
 
 .aviso-padrao, .sem-linhas {
   margin: 0 0 10px 0; padding: 8px 12px; border-radius: var(--radius-md);
-  background: #F3EBD3; color: #6f5716; font-size: 0.76rem;
+  background: var(--color-aviso-claro); color: var(--color-aviso); font-size: 0.76rem;
 }
 .aviso-padrao a, .sem-linhas a { color: inherit; font-weight: 700; }
 
@@ -199,7 +202,7 @@
 }
 .cab-dia .num { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--color-text); }
 .cab-dia .sem { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
-.cab-dia.fechado .num, .cab-dia.fechado .sem { color: #b0b6ad; }
+.cab-dia.fechado .num, .cab-dia.fechado .sem { color: var(--color-text-faint); }
 .cab-dia.hoje { background: var(--color-primary); }
 .cab-dia.hoje .num, .cab-dia.hoje .sem { color: var(--color-white); }
 
@@ -223,28 +226,28 @@
 button.celula { cursor: pointer; transition: background var(--transition), opacity var(--transition); }
 
 .celula.livre {
-  background: #e9f0e1; color: var(--color-primary-dark);
-  border: 1px dashed #b3c5a3;
+  background: var(--color-livre); color: var(--color-primary-dark);
+  border: 1px dashed var(--color-livre-borda);
 }
 .celula.livre .txt-agendar { display: none; font-weight: 700; }
-.celula.livre:hover { background: #d5e4c5; border-style: solid; }
+.celula.livre:hover { background: var(--color-livre-hover); border-style: solid; }
 .celula.livre:hover .txt-livre { display: none; }
 .celula.livre:hover .txt-agendar { display: inline; }
 
-.celula.ocupado { background: #e3dbf3; color: #43336f; border-left: 3px solid #7d5fc4; }
-.celula.ocupado:hover { background: #d8ccef; }
-.celula.ocupado .linha2 span { color: #5d4d8a; }
-.celula.ocupado.realizado { background: #f0ecf7; color: #7a6f96; border-left-color: #b9a9dc; }
-.celula.ocupado.realizado .linha2 span { color: #9186ab; }
+.celula.ocupado { background: var(--color-agendado-claro); color: var(--color-agendado-escuro); border-left: 3px solid var(--color-agendado); }
+.celula.ocupado:hover { background: var(--color-agendado-hover); }
+.celula.ocupado .linha2 span { color: var(--color-agendado-escuro); }
+.celula.ocupado.realizado { background: var(--color-agendado-suave); color: var(--color-agendado-apagado); border-left-color: var(--color-agendado-medio); }
+.celula.ocupado.realizado .linha2 span { color: var(--color-agendado-apagado); }
 .linha2 { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .linha2 span { flex: 1; min-width: 0; }
 .mais {
   flex-shrink: 0; font-style: normal; font-weight: 700; font-size: 0.62rem;
-  background: #7d5fc4; color: #fff; border-radius: 999px; padding: 1px 6px;
+  background: var(--color-agendado); color: #fff; border-radius: 999px; padding: 1px 6px;
 }
 
 .celula.fora {
-  background: repeating-linear-gradient(135deg, #f4f5f1, #f4f5f1 6px, #eceee8 6px, #eceee8 12px);
+  background: repeating-linear-gradient(135deg, var(--color-listra-1), var(--color-listra-1) 6px, var(--color-listra-2) 6px, var(--color-listra-2) 12px);
 }
 
 /* dias que já passaram ficam mais apagados, mas continuam clicáveis */
@@ -268,7 +271,7 @@ button.celula { cursor: pointer; transition: background var(--transition), opaci
 /* ---------- modais ---------- */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 1000;
-  background: rgba(44, 55, 48, 0.45);
+  background: var(--color-overlay);
   display: flex; align-items: center; justify-content: center;
 }
 .modal {
@@ -279,7 +282,7 @@ button.celula { cursor: pointer; transition: background var(--transition), opaci
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .modal-header h2 { margin: 0; color: var(--color-text); font-size: 1.2rem; }
 .btn-x {
-  background: transparent; border: none; font-size: 1.3rem; color: #999; cursor: pointer;
+  background: transparent; border: none; font-size: 1.3rem; color: var(--color-text-faint); cursor: pointer;
   padding: 2px 8px; border-radius: 50%; transition: background var(--transition);
 }
 .btn-x:hover { background: var(--color-bg); }
@@ -295,7 +298,7 @@ button.celula { cursor: pointer; transition: background var(--transition), opaci
   outline: none; font-size: 0.9rem; font-family: var(--font-body); background: var(--color-white);
   transition: border-color var(--transition), box-shadow var(--transition);
 }
-.form-group select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(85, 99, 78, 0.12); }
+.form-group select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-foco); }
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; }
 .btn-primary {
@@ -325,21 +328,21 @@ button.celula { cursor: pointer; transition: background var(--transition), opaci
   transition: background var(--transition), border-color var(--transition);
 }
 .status-grupo button:hover { background: var(--color-bg); }
-.status-grupo button.ativo { background: #e3dbf3; border-color: #7d5fc4; color: #43336f; }
-.status-grupo button.cancelar { color: #a8483c; }
-.status-grupo button.cancelar:hover { background: #f6dcd9; border-color: #e6b9b3; }
+.status-grupo button.ativo { background: var(--color-agendado-claro); border-color: var(--color-agendado); color: var(--color-agendado-escuro); }
+.status-grupo button.cancelar { color: var(--color-perigo-escuro); }
+.status-grupo button.cancelar:hover { background: var(--color-perigo-claro); border-color: var(--color-perigo-borda); }
 
 .btn-remover {
   align-self: flex-start; background: none; border: none; padding: 0; cursor: pointer;
   font-family: var(--font-body); font-size: 0.8rem; font-weight: 600;
-  color: #a8483c; text-decoration: underline;
+  color: var(--color-perigo-escuro); text-decoration: underline;
 }
 
 
 .pagina-erro {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background: var(--color-perigo-claro);
+  color: var(--color-perigo-escuro);
+  border: 1px solid var(--color-perigo-borda);
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 16px;
@@ -347,9 +350,9 @@ button.celula { cursor: pointer; transition: background var(--transition), opaci
 }
 
 .modal-erro {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background: var(--color-perigo-claro);
+  color: var(--color-perigo-escuro);
+  border: 1px solid var(--color-perigo-borda);
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 16px;
@@ -357,7 +360,7 @@ button.celula { cursor: pointer; transition: background var(--transition), opaci
 }
 
 .carregando {
-  color: #6b7280;
+  color: var(--color-text-muted);
   padding: 24px 0;
   text-align: center;
 }
@@ -381,13 +384,13 @@ button.celula { cursor: pointer; transition: background var(--transition), opaci
   padding: 2px;
   margin: 0;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--color-text-muted);
   flex-shrink: 0;
   transition: color var(--transition);
 }
 
 .btn-olho-valor:hover {
-  color: #222;
+  color: var(--color-text);
 }
 
 .btn-olho-valor svg {

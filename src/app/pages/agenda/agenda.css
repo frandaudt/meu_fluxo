@@ -106,12 +106,12 @@ app-calendario { display: block; }
   font-family: var(--font-body);
   cursor: pointer;
 }
-.status-select.status-agendado { background: #ece1f7; color: #6a3fa0; }
-.status-select.status-realizado { background: #d3ead0; color: #1f5c22; }
-.status-select.status-cancelado { background: #f6dcd9; color: #b5645a; }
+.status-select.status-agendado { background: var(--color-agendado-claro); color: var(--color-agendado-escuro); }
+.status-select.status-realizado { background: var(--color-sucesso-claro); color: var(--color-sucesso); }
+.status-select.status-cancelado { background: var(--color-perigo-claro); color: var(--color-perigo); }
 
 .btn-icon {
-  background: transparent; border: none; font-size: 1rem; color: #999;
+  background: transparent; border: none; font-size: 1rem; color: var(--color-text-faint);
   cursor: pointer; padding: 4px; border-radius: 50%;
   transition: background var(--transition);
 }
@@ -122,7 +122,7 @@ app-calendario { display: block; }
 /* Modal — mesmo padrão usado em Clientes/Serviços */
 .modal-overlay {
   position: fixed; inset: 0;
-  background-color: rgba(30, 35, 28, 0.45);
+  background-color: var(--color-overlay);
   backdrop-filter: blur(4px);
   display: flex; align-items: center; justify-content: center;
   z-index: 1000;
@@ -152,13 +152,13 @@ app-calendario { display: block; }
   font-family: var(--font-body);
   transition: border-color var(--transition), box-shadow var(--transition);
 }
-.form-group input:focus, .form-group select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(85, 99, 78, 0.12); }
+.form-group input:focus, .form-group select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-foco); }
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; }
 
 .btn-secondary {
   background: var(--color-bg);
-  color: #555;
+  color: var(--color-text-soft);
   border: none;
   padding: 10px 18px;
   border-radius: var(--radius-md);
@@ -167,13 +167,13 @@ app-calendario { display: block; }
   font-family: var(--font-body);
   transition: background var(--transition);
 }
-.btn-secondary:hover { background: #d7dbcf; }
+.btn-secondary:hover { background: var(--color-border-strong); }
 
 .pagina-erro,
 .modal-erro {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background: var(--color-perigo-claro);
+  color: var(--color-perigo-escuro);
+  border: 1px solid var(--color-perigo-borda);
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 16px;
@@ -181,7 +181,7 @@ app-calendario { display: block; }
 }
 
 .carregando {
-  color: #6b7280;
+  color: var(--color-text-muted);
   padding: 24px 0;
   text-align: center;
 }
@@ -191,9 +191,4 @@ app-calendario { display: block; }
   cursor: not-allowed;
 }
 
-.btn-icon-img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  vertical-align: middle;
-}
+.btn-icon-img { font-size: 20px; display: block; }

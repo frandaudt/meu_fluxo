@@ -21,7 +21,7 @@
 
 .btn-secondary {
   background: var(--color-bg);
-  color: #555;
+  color: var(--color-text-soft);
   border: none;
   padding: 10px 18px;
   border-radius: var(--radius-md);
@@ -31,7 +31,7 @@
   transition: background var(--transition);
   white-space: nowrap;
 }
-.btn-secondary:hover { background: #d7dbcf; }
+.btn-secondary:hover { background: var(--color-border-strong); }
 
 .meta-anual-card {
   background: var(--color-white);
@@ -101,7 +101,7 @@
   color: var(--color-text-muted);
 }
 .progresso-percentual { font-weight: 700; color: var(--color-primary-dark); }
-.progresso-percentual.acima { color: #1f5c22; }
+.progresso-percentual.acima { color: var(--color-sucesso); }
 
 .empty-state {
   text-align: center;
@@ -112,7 +112,7 @@
 }
 
 .btn-icon {
-  background: transparent; border: none; font-size: 1rem; color: #999;
+  background: transparent; border: none; font-size: 1rem; color: var(--color-text-faint);
   cursor: pointer; padding: 4px; border-radius: 50%;
   transition: background var(--transition);
 }
@@ -120,7 +120,7 @@
 
 .modal-overlay {
   position: fixed; inset: 0;
-  background-color: rgba(30, 35, 28, 0.45);
+  background-color: var(--color-overlay);
   backdrop-filter: blur(4px);
   display: flex; align-items: center; justify-content: center;
   z-index: 1000;
@@ -150,15 +150,15 @@
   font-family: var(--font-body);
   transition: border-color var(--transition), box-shadow var(--transition);
 }
-.form-group input:focus, .form-group select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(85, 99, 78, 0.12); }
+.form-group input:focus, .form-group select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-foco); }
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; }
 
 .pagina-erro,
 .modal-erro {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background: var(--color-perigo-claro);
+  color: var(--color-perigo-escuro);
+  border: 1px solid var(--color-perigo-borda);
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 16px;
@@ -166,7 +166,7 @@
 }
 
 .carregando {
-  color: #6b7280;
+  color: var(--color-text-muted);
   padding: 24px 0;
   text-align: center;
 }
@@ -176,9 +176,4 @@
   cursor: not-allowed;
 }
 
-.btn-icon-img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  vertical-align: middle;
-}
+.btn-icon-img { font-size: 20px; display: block; }

@@ -21,7 +21,7 @@
   border-bottom: 1px solid var(--color-border);
 }
 .logo h2 { margin: 0; font-size: 1.15rem; color: var(--color-primary-dark); }
-.logo-icon-img { width: 26px; height: 26px; object-fit: contain; }
+.logo-icon-img { font-size: 26px; color: var(--color-primary-dark); }
 
 .nav-menu { display: flex; flex-direction: column; gap: 4px; }
 
@@ -50,17 +50,16 @@
 }
 
 .nav-icon-img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  transition: filter var(--transition);
+  font-size: 22px;
+  color: inherit;
 }
 
 /* item ativo tem fundo verde escuro — deixa o ícone branco pra não sumir */
-.nav-item.active .nav-icon-img {
-  filter: brightness(0) invert(1);
+.nav-icon-img {
+  font-size: 22px;
+  color: inherit;
 }
 
 .sidebar-footer { border-top: 1px solid var(--color-border); padding-top: 12px; margin-top: auto; }
-.logout { color: #b5645a; }
-.logout:hover { background-color: #f6dcd9; color: #a8483c; }
+.logout { color: var(--color-perigo); }
+.logout:hover { background-color: var(--color-perigo-claro); color: var(--color-perigo-escuro); }

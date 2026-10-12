@@ -7,7 +7,7 @@
   <div class="top-bar-right">
     <div class="search-input-wrap" (click)="$event.stopPropagation()">
       <div class="search-input">
-        <img src="assets/icons/icone-busca.png" class="icone-busca" alt="" />
+       <span class="icone icone-busca notranslate" translate="no" aria-hidden="true">search</span>
         <input
           type="text"
           placeholder="Buscar em tudo..."
@@ -43,11 +43,11 @@
 
       <div class="user-dropdown" *ngIf="menuUsuarioAberto" (click)="$event.stopPropagation()">
                 <a routerLink="/perfil" class="dropdown-item">
-          <img src="assets/icons/icone-perfil.png" class="icone-perfil-inline" alt="" />
+         <span class="icone icone-perfil-inline" aria-hidden="true">person</span>
           Meu Perfil
         </a>
         <button class="dropdown-item dropdown-sair" (click)="sair()">
-        <img src="assets/icons/icone-sair.png" class="icone-sair-inline" alt="" />
+        <span class="icone icone-sair-inline" aria-hidden="true">logout</span>
         Sair
         </button>
       </div>
