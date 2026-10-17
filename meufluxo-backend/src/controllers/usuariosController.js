@@ -2,9 +2,15 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
+const { PERMISSOES, lerPermissoes } = require('../middlewares/auth');
 
-function gerarToken(usuarioId) {
-  return jwt.sign({ id: usuarioId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+// o token leva o papel e o dono, para o middleware saber de quem são os dados
+function gerarToken(usuarioDb) {
+  return jwt.sign(
+    { id: usuarioDb.id, papel: usuarioDb.papel || 'dono', donoId: usuarioDb.dono_id || null },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
 }
 
 // converte a linha do banco (nome_negocio) pro formato que o front usa (nomeNegocio)
@@ -15,7 +21,17 @@ function formatarUsuario(usuarioDb) {
     email: usuarioDb.email,
     telefone: usuarioDb.telefone,
     nomeNegocio: usuarioDb.nome_negocio,
+    papel: usuarioDb.papel || 'dono',
+    trocarSenha: !!usuarioDb.trocar_senha,
   };
+}
+
+/** Regra de senha (a mesma do front): mínimo 8 caracteres, uma maiúscula e um caractere especial. */
+function validarSenha(senha) {
+  if (typeof senha !== 'string' || senha.length < 8) return 'A senha precisa ter pelo menos 8 caracteres.';
+  if (!/[A-Z]/.test(senha)) return 'A senha precisa ter pelo menos uma letra maiúscula.';
+  if (!/[^A-Za-z0-9]/.test(senha)) return 'A senha precisa ter pelo menos um caractere especial.';
+  return null;
 }
 
 async function cadastrar(req, res) {
@@ -29,19 +45,10 @@ async function cadastrar(req, res) {
   if (!EMAIL_REGEX.test(email)) {
     return res.status(400).json({ erro: 'Digite um e-mail válido.' });
   }
-  if (senha.length < 6) {
-    return res.status(400).json({ erro: 'A senha precisa ter pelo menos 6 caracteres.' });
+  const erroSenha = validarSenha(senha);
+  if (erroSenha) {
+    return res.status(400).json({ erro: erroSenha });
   }
-  if (senha.length < 6) {
-    return res.status(400).json({ erro: 'A senha precisa ter pelo menos 6 caracteres.' });
-  }
-  if (!/[A-Z]/.test(senha)) {
-    return res.status(400).json({ erro: 'A senha precisa ter pelo menos uma letra maiúscula.' });
-  }
-  if (!/[^A-Za-z0-9]/.test(senha)) {
-    return res.status(400).json({ erro: 'A senha precisa ter pelo menos um caractere especial.' });
-  }
-
 
   try {
     const senhaHash = await bcrypt.hash(senha, 10);
@@ -51,16 +58,19 @@ async function cadastrar(req, res) {
       [nome, email, senhaHash, telefone || null, nomeNegocio || null]
     );
 
-    const usuario = {
+    // quem se cadastra pela tela de cadastro é sempre o dono do negócio
+    const usuarioDb = {
       id: resultado.insertId,
       nome,
       email,
       telefone: telefone || null,
-      nomeNegocio: nomeNegocio || null,
+      nome_negocio: nomeNegocio || null,
+      papel: 'dono',
+      dono_id: null,
+      trocar_senha: 0,
     };
 
-    const token = gerarToken(usuario.id);
-    res.status(201).json({ usuario, token });
+    res.status(201).json({ usuario: formatarUsuario(usuarioDb), token: gerarToken(usuarioDb) });
   } catch (erro) {
     if (erro.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ erro: 'Esse email já está cadastrado.' });
@@ -85,13 +95,20 @@ async function login(req, res) {
       return res.status(401).json({ erro: 'Email ou senha incorretos.' });
     }
 
+    // conta criada pelo "Continuar com Google" ainda não tem senha
+    if (!usuarioDb.senha_hash) {
+      return res.status(401).json({ erro: 'Essa conta entra pelo botão "Continuar com Google".' });
+    }
+
     const senhaConfere = await bcrypt.compare(senha, usuarioDb.senha_hash);
     if (!senhaConfere) {
       return res.status(401).json({ erro: 'Email ou senha incorretos.' });
     }
 
-    const token = gerarToken(usuarioDb.id);
-    res.json({ usuario: formatarUsuario(usuarioDb), token });
+    // usado na aba Equipe ("último acesso hoje")
+    await pool.query('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = ?', [usuarioDb.id]);
+
+    res.json({ usuario: formatarUsuario(usuarioDb), token: gerarToken(usuarioDb) });
   } catch (erro) {
     console.error(erro);
     res.status(500).json({ erro: 'Erro ao fazer login.' });
@@ -101,8 +118,8 @@ async function login(req, res) {
 async function obterPerfil(req, res) {
   try {
     const [linhas] = await pool.query(
-      'SELECT id, nome, email, telefone, nome_negocio FROM usuarios WHERE id = ?',
-      [req.usuarioId]
+      'SELECT id, nome, email, telefone, nome_negocio, papel, trocar_senha FROM usuarios WHERE id = ?',
+      [req.usuarioLogadoId]
     );
     const usuarioDb = linhas[0];
     if (!usuarioDb) {
@@ -130,18 +147,14 @@ async function atualizarPerfil(req, res) {
   try {
     await pool.query(
       'UPDATE usuarios SET nome = ?, email = ?, telefone = ?, nome_negocio = ? WHERE id = ?',
-      [nome, email, telefone || null, nomeNegocio || null, req.usuarioId]
+      [nome, email, telefone || null, nomeNegocio || null, req.usuarioLogadoId]
     );
 
-    res.json({
-      usuario: {
-        id: req.usuarioId,
-        nome,
-        email,
-        telefone: telefone || null,
-        nomeNegocio: nomeNegocio || null,
-      },
-    });
+    const [linhas] = await pool.query(
+      'SELECT id, nome, email, telefone, nome_negocio, papel, trocar_senha FROM usuarios WHERE id = ?',
+      [req.usuarioLogadoId]
+    );
+    res.json({ usuario: formatarUsuario(linhas[0]) });
   } catch (erro) {
     if (erro.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ erro: 'Esse email já está em uso por outra conta.' });
@@ -157,22 +170,19 @@ async function trocarSenha(req, res) {
   if (!senhaAtual || !novaSenha) {
     return res.status(400).json({ erro: 'Informe a senha atual e a nova senha.' });
   }
-  if (novaSenha.length < 6) {
-    return res.status(400).json({ erro: 'A nova senha precisa ter pelo menos 6 caracteres.' });
-  }
-  if (novaSenha.length < 6) {
-  return res.status(400).json({ erro: 'A nova senha precisa ter pelo menos 6 caracteres.' });
-  }
-  if (!/[A-Z]/.test(novaSenha)) {
-    return res.status(400).json({ erro: 'A nova senha precisa ter pelo menos uma letra maiúscula.' });
-  }
-  if (!/[^A-Za-z0-9]/.test(novaSenha)) {
-    return res.status(400).json({ erro: 'A nova senha precisa ter pelo menos um caractere especial.' });
+  const erroSenha = validarSenha(novaSenha);
+  if (erroSenha) {
+    return res.status(400).json({ erro: erroSenha });
   }
 
   try {
-    const [linhas] = await pool.query('SELECT senha_hash FROM usuarios WHERE id = ?', [req.usuarioId]);
+    // sempre a senha de quem está logado (nunca a do dono, se for atendente)
+    const [linhas] = await pool.query('SELECT senha_hash FROM usuarios WHERE id = ?', [req.usuarioLogadoId]);
     const usuarioDb = linhas[0];
+
+    if (!usuarioDb || !usuarioDb.senha_hash) {
+      return res.status(400).json({ erro: 'Essa conta entra pelo Google e ainda não tem senha.' });
+    }
 
     const senhaConfere = await bcrypt.compare(senhaAtual, usuarioDb.senha_hash);
     if (!senhaConfere) {
@@ -180,7 +190,11 @@ async function trocarSenha(req, res) {
     }
 
     const novaSenhaHash = await bcrypt.hash(novaSenha, 10);
-    await pool.query('UPDATE usuarios SET senha_hash = ? WHERE id = ?', [novaSenhaHash, req.usuarioId]);
+    // trocar_senha = 0: o atendente que entrou com senha provisória já trocou
+    await pool.query(
+      'UPDATE usuarios SET senha_hash = ?, trocar_senha = 0 WHERE id = ?',
+      [novaSenhaHash, req.usuarioLogadoId]
+    );
 
     res.json({ mensagem: 'Senha alterada com sucesso.' });
   } catch (erro) {
@@ -189,6 +203,7 @@ async function trocarSenha(req, res) {
   }
 }
 
+// só o dono chega aqui (rota protegida com somenteDono)
 async function excluirConta(req, res) {
   const usuarioId = req.usuarioId;
   const conexao = await pool.getConnection();
@@ -196,14 +211,17 @@ async function excluirConta(req, res) {
   try {
     await conexao.beginTransaction();
 
-    // Ordem importa por causa das FKs: agendamentos referencia
-    // clientes e serviços, então ele sai primeiro.
+    // Ordem importa por causa das FKs: lista de espera e agendamentos
+    // referenciam clientes e serviços, então saem primeiro.
+    // (bloqueios, notificações, WhatsApp e códigos saem sozinhos pelo ON DELETE CASCADE)
+    await conexao.query('DELETE FROM lista_espera WHERE usuario_id = ?', [usuarioId]);
     await conexao.query('DELETE FROM agendamentos WHERE usuario_id = ?', [usuarioId]);
     await conexao.query('DELETE FROM clientes WHERE usuario_id = ?', [usuarioId]);
     await conexao.query('DELETE FROM servicos WHERE usuario_id = ?', [usuarioId]);
     await conexao.query('DELETE FROM despesas WHERE usuario_id = ?', [usuarioId]);
     await conexao.query('DELETE FROM metas WHERE usuario_id = ?', [usuarioId]);
     await conexao.query('DELETE FROM horarios_trabalho WHERE usuario_id = ?', [usuarioId]);
+    await conexao.query('DELETE FROM usuarios WHERE dono_id = ?', [usuarioId]); // atendentes
     await conexao.query('DELETE FROM usuarios WHERE id = ?', [usuarioId]);
 
     await conexao.commit();
@@ -224,4 +242,5 @@ module.exports = {
   atualizarPerfil,
   trocarSenha,
   excluirConta,
+  validarSenha,
 };

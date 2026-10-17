@@ -37,6 +37,11 @@
 .card-agendamentos { background-color: var(--color-acento-claro); }
 .card-metas { background-color: var(--color-destaque-claro); }
 
+.card-lucro .card-icon-img { color: var(--color-primary); }
+.card-despesas .card-icon-img { color: var(--color-perigo); }
+.card-agendamentos .card-icon-img { color: var(--color-acento-escuro); }
+.card-metas .card-icon-img { color: var(--color-destaque); }
+
 .content-grid { display: flex; gap: 18px; align-items: flex-start; }
 
 .white-card {

@@ -8,7 +8,7 @@ const {
   trocarSenha,
   excluirConta,
 } = require('../controllers/usuariosController');
-const { autenticar } = require('../middlewares/auth');
+const { autenticar, somenteDono } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -17,6 +17,6 @@ router.post('/login', login);
 router.get('/perfil', autenticar, obterPerfil);
 router.put('/perfil', autenticar, atualizarPerfil);
 router.put('/senha', autenticar, trocarSenha);
-router.delete('/conta', autenticar, excluirConta);
+router.delete('/conta', autenticar, somenteDono, excluirConta);
 
 module.exports = router;

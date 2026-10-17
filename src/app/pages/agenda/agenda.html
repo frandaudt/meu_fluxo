@@ -1,87 +1,284 @@
 <main class="agenda-page">
 
+  <!-- topo: título, ‹ período ›, Hoje | Dia · Semana · Mês, + Novo agendamento -->
   <div class="agenda-header">
-    <div>
+    <div class="agenda-header-esquerda">
       <h1>Agenda</h1>
-      <p>Acompanhe seus agendamentos</p>
+      <div class="navegacao">
+        <button type="button" class="btn-nav" (click)="navegar(-1)" aria-label="Anterior">‹</button>
+        <span class="navegacao-titulo">{{ tituloPeriodo }}</span>
+        <button type="button" class="btn-nav" (click)="navegar(1)" aria-label="Próximo">›</button>
+      </div>
+      <button type="button" class="btn-hoje" (click)="irParaHoje()">Hoje</button>
     </div>
-    <button class="btn-primary" (click)="abrirModal()">+ Novo Agendamento</button>
+
+    <div class="agenda-header-direita">
+      <div class="seletor-visao" role="group" aria-label="Visão">
+        <button type="button" [class.ativo]="visao === 'dia'" (click)="mudarVisao('dia')">Dia</button>
+        <button type="button" [class.ativo]="visao === 'semana'" (click)="mudarVisao('semana')">Semana</button>
+        <button type="button" [class.ativo]="visao === 'mes'" (click)="mudarVisao('mes')">Mês</button>
+      </div>
+      <button type="button" class="btn-primary" (click)="abrirModal()">+ Novo agendamento</button>
+    </div>
   </div>
 
   <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
 
   <p class="carregando" *ngIf="carregando">Carregando agenda...</p>
 
-  <div class="agenda-grid" *ngIf="!carregando">
+  <app-calendario
+    *ngIf="!carregando"
+    [visao]="visao"
+    [dataRef]="dataRef"
+    [diaSelecionado]="diaSelecionado"
+    [eventosPorDia]="eventosPorDia"
+    [horario]="horario"
+    (selecionarDia)="selecionarDia($event)"
+    (abrirEvento)="abrirDetalhe($event)"
+    (acaoEvento)="acaoRapida($event)"
+    (agendarEm)="agendarEm($event)"
+  ></app-calendario>
+  <!-- ================================================================
+       JANELA: DETALHES DO AGENDAMENTO
+       ================================================================ -->
+  <div class="modal-overlay" *ngIf="detalhe as ag" (click)="fecharDetalhe()">
+    <div class="modal modal-detalhe" (click)="$event.stopPropagation()">
 
-    <app-calendario
-      [ano]="anoAtual"
-      [mes]="mesAtual"
-      [diaSelecionado]="diaSelecionado"
-      [eventosPorDia]="eventosPorDia"
-      (selecionarDia)="selecionarDia($event)"
-      (mesAnterior)="mudarMes(-1)"
-      (mesProximo)="mudarMes(1)"
-    ></app-calendario>
-
-    <div class="mes-painel">
-      <div class="mes-painel-header">
-        <h2>{{ nomeMesAtualExtenso }}</h2>
-        <p>{{ gruposDoMes.length }} dia(s) com agendamento</p>
+      <!-- cabeçalho -->
+      <div class="detalhe-topo">
+        <div class="detalhe-titulos">
+          <small>{{ tituloDetalhe(ag) }}</small>
+          <h2>{{ nomeCliente(ag.clienteId) }}</h2>
+          <p>{{ nomeServico(ag.servicoId) }} · {{ duracaoServico(ag.servicoId) }} min · {{ valorServico(ag.servicoId) | currency }}</p>
+        </div>
+        <span class="etiqueta"
+              [class.et-agendado]="ag.status === 'agendado'"
+              [class.et-realizado]="ag.status === 'realizado' && ag.statusPagamento === 'pago'"
+              [class.et-receber]="ag.status === 'realizado' && ag.statusPagamento === 'pendente'"
+              [class.et-cancelado]="ag.status === 'cancelado'"
+              [class.et-falta]="ag.status === 'nao_compareceu'">{{ rotuloStatus(ag) }}</span>
+        <button type="button" class="btn-fechar" (click)="fecharDetalhe()" aria-label="Fechar">
+          <span class="icone" aria-hidden="true">close</span>
+        </button>
       </div>
 
-      <div class="mes-painel-lista">
-        <div
-          class="grupo-dia"
-          *ngFor="let grupo of gruposDoMes"
-          [id]="'dia-' + grupo.data"
-          [class.grupo-selecionado]="grupo.data === diaSelecionado"
-        >
-          <h3 class="grupo-dia-label">{{ grupo.label }}</h3>
+      <p class="detalhe-origem">
+        {{ textoOrigem(ag) }}
+        <a [routerLink]="['/clientes']" [queryParams]="{ busca: nomeCliente(ag.clienteId) }">Ver ficha do cliente</a>
+      </p>
 
-          <div class="agendamento-card" *ngFor="let ag of grupo.itens">
-            <div class="agendamento-horario">{{ ag.horario }}</div>
+      <div class="modal-erro" *ngIf="erroDetalhe">{{ erroDetalhe }}</div>
 
-            <div class="agendamento-info">
-              <h4>{{ nomeCliente(ag.clienteId) }}</h4>
-              <p>{{ nomeServico(ag.servicoId) }} · R$ {{ valorServico(ag.servicoId).toFixed(2) }}</p>
-            </div>
+      <!-- ---------- AGENDADO: 4 ações ---------- -->
+      <ng-container *ngIf="ag.status === 'agendado'">
+        <div class="acoes-grid">
+          <button type="button" class="btn-acao btn-acao-principal" [class.ativo]="acao === 'concluir'"
+                  [disabled]="!jaComecou(ag)" (click)="escolherAcao('concluir')">Concluir</button>
+          <button type="button" class="btn-acao" [class.ativo]="acao === 'falta'"
+                  [disabled]="!jaComecou(ag)" (click)="escolherAcao('falta')">Não compareceu</button>
+          <button type="button" class="btn-acao" [class.ativo]="acao === 'reagendar'"
+                  (click)="escolherAcao('reagendar')">Reagendar</button>
+          <button type="button" class="btn-acao btn-acao-perigo" [class.ativo]="acao === 'cancelar'"
+                  (click)="escolherAcao('cancelar')">Cancelar</button>
+        </div>
+        <p class="dica" *ngIf="!jaComecou(ag)">"Concluir" e "Não compareceu" ficam disponíveis a partir das {{ ag.horario }} do dia do atendimento.</p>
 
-            <select
-              class="status-select"
-              [class.status-agendado]="ag.status === 'agendado'"
-              [class.status-realizado]="ag.status === 'realizado'"
-              [class.status-cancelado]="ag.status === 'cancelado'"
-              [(ngModel)]="ag.status"
-              (ngModelChange)="alterarStatus(ag.id, $event)"
-            >
-              <option value="agendado">Agendado</option>
-              <option value="realizado">Realizado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-
-            <button class="btn-icon" title="Remover" (click)="removerAgendamento(ag.id)">
-            <span class="icone btn-icon-img icone-remover" aria-hidden="true">delete</span>
-            </button>
+        <!-- Concluir: a cliente já pagou? -->
+        <div class="bloco bloco-verde" *ngIf="acao === 'concluir'">
+          <h3>Concluir atendimento</h3>
+          <label class="rotulo">A cliente já pagou?</label>
+          <div class="chips">
+            <button type="button" class="chip" [class.ativo]="formConcluir.pagouAgora" (click)="formConcluir.pagouAgora = true">Sim, pagou agora</button>
+            <button type="button" class="chip" [class.ativo]="!formConcluir.pagouAgora" (click)="formConcluir.pagouAgora = false">Não, vai pagar depois</button>
           </div>
+
+          <ng-container *ngIf="formConcluir.pagouAgora; else vaiPagarDepois">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Valor cobrado (R$)</label>
+                <input type="number" min="0" step="0.01" [(ngModel)]="formConcluir.valorCobrado" name="concluirValor" />
+              </div>
+              <div class="form-group">
+                <label>Desconto (R$)</label>
+                <input type="number" min="0" step="0.01" [(ngModel)]="formConcluir.desconto" name="concluirDesconto" />
+              </div>
+            </div>
+            <label class="rotulo">Forma de pagamento</label>
+            <div class="chips">
+              <button type="button" class="chip" *ngFor="let f of formasPagamento"
+                      [class.ativo]="formConcluir.formaPagamento === f.valor"
+                      (click)="formConcluir.formaPagamento = f.valor">{{ f.rotulo }}</button>
+            </div>
+            <div class="total">
+              <span>Total recebido</span>
+              <strong>{{ totalComDesconto(formConcluir.valorCobrado, formConcluir.desconto) | currency }}</strong>
+            </div>
+          </ng-container>
+          <ng-template #vaiPagarDepois>
+            <div class="form-group">
+              <label>Valor cobrado (R$)</label>
+              <input type="number" min="0" step="0.01" [(ngModel)]="formConcluir.valorCobrado" name="concluirValorDepois" />
+            </div>
+            <p class="aviso-amarelo">O valor de {{ formConcluir.valorCobrado | currency }} vai para <strong>Financeiro › A receber</strong>.</p>
+          </ng-template>
+
+          <button type="button" class="btn-primary btn-largo" [disabled]="salvandoDetalhe" (click)="confirmarConcluir()">
+            {{ salvandoDetalhe ? 'Salvando...' : 'Confirmar' }}
+          </button>
         </div>
 
-        <p class="empty-state" *ngIf="gruposDoMes.length === 0">
-          Nenhum agendamento neste mês.
-        </p>
-      </div>
-    </div>
+        <!-- Não compareceu -->
+        <div class="bloco" *ngIf="acao === 'falta'">
+          <h3>Marcar como "não compareceu"?</h3>
+          <p class="texto-bloco">O horário fica registrado como falta na ficha do cliente.</p>
+          <button type="button" class="btn-primary btn-largo" [disabled]="salvandoDetalhe" (click)="confirmarFalta()">
+            {{ salvandoDetalhe ? 'Salvando...' : 'Confirmar falta' }}
+          </button>
+        </div>
 
+        <!-- Reagendar -->
+        <div class="bloco" *ngIf="acao === 'reagendar'">
+          <h3>Reagendar</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nova data</label>
+              <input type="date" [(ngModel)]="formReagendar.data" name="reagendarData" (ngModelChange)="formReagendar.avisoConflito = ''" />
+            </div>
+            <div class="form-group">
+              <label>Novo horário</label>
+              <input type="time" [(ngModel)]="formReagendar.horario" name="reagendarHorario" (ngModelChange)="formReagendar.avisoConflito = ''" />
+            </div>
+          </div>
+
+          <div class="aviso-conflito" *ngIf="formReagendar.avisoConflito">
+            <p>{{ formReagendar.avisoConflito }}</p>
+            <div class="aviso-conflito-botoes">
+              <button type="button" class="btn-secondary" (click)="formReagendar.avisoConflito = ''">Escolher outro horário</button>
+              <button type="button" class="btn-primary" [disabled]="salvandoDetalhe" (click)="confirmarReagendar(true)">Marcar mesmo assim</button>
+            </div>
+          </div>
+
+          <button type="button" class="btn-primary btn-largo" *ngIf="!formReagendar.avisoConflito"
+                  [disabled]="salvandoDetalhe" (click)="confirmarReagendar()">
+            {{ salvandoDetalhe ? 'Salvando...' : 'Confirmar novo horário' }}
+          </button>
+        </div>
+
+        <!-- Cancelar -->
+        <div class="bloco bloco-vermelho" *ngIf="acao === 'cancelar'">
+          <h3>Cancelar agendamento</h3>
+          <label class="rotulo">Quem cancelou?</label>
+          <div class="chips">
+            <button type="button" class="chip" [class.ativo]="formCancelar.canceladoPor === 'cliente'" (click)="formCancelar.canceladoPor = 'cliente'">Cliente</button>
+            <button type="button" class="chip" [class.ativo]="formCancelar.canceladoPor === 'profissional'" (click)="formCancelar.canceladoPor = 'profissional'">Profissional</button>
+          </div>
+          <div class="form-group">
+            <label>Motivo (opcional)</label>
+            <input type="text" maxlength="255" placeholder="Ex.: viagem, imprevisto..." [(ngModel)]="formCancelar.motivo" name="cancelarMotivo" />
+          </div>
+          <button type="button" class="btn-perigo btn-largo" [disabled]="salvandoDetalhe" (click)="confirmarCancelar()">
+            {{ salvandoDetalhe ? 'Salvando...' : 'Confirmar cancelamento' }}
+          </button>
+        </div>
+      </ng-container>
+
+      <!-- ---------- REALIZADO: pagamento ---------- -->
+      <div class="bloco" *ngIf="ag.status === 'realizado'">
+        <div class="bloco-titulo">
+          <h3>Pagamento</h3>
+          <span class="etiqueta" [class.et-realizado]="ag.statusPagamento === 'pago'" [class.et-receber]="ag.statusPagamento === 'pendente'">
+            {{ ag.statusPagamento === 'pago' ? 'Pago' : 'Pendente' }}
+          </span>
+        </div>
+
+        <p class="texto-bloco" *ngIf="ag.statusPagamento === 'pago'">
+          <strong>{{ totalComDesconto(ag.valorCobrado || 0, ag.desconto) | currency }}</strong> via {{ rotuloForma(ag.formaPagamento) }}
+          <ng-container *ngIf="ag.desconto > 0"> (desconto de {{ ag.desconto | currency }})</ng-container>
+          <ng-container *ngIf="ag.pagoEm"> · recebido<ng-container *ngIf="ag.recebidoPorNome"> por {{ ag.recebidoPorNome }}</ng-container>
+            em {{ dataCurta(ag.pagoEm.slice(0, 10)) }} às {{ ag.pagoEm.slice(11, 16) }}</ng-container>
+        </p>
+
+        <ng-container *ngIf="ag.statusPagamento === 'pendente'">
+          <p class="texto-bloco"><strong>{{ (ag.valorCobrado || 0) | currency }}</strong> ainda não foi pago. O valor está em Financeiro › A receber.</p>
+
+          <button type="button" class="btn-primary btn-largo" *ngIf="acao !== 'pagamento'" (click)="escolherAcao('pagamento')">Registrar pagamento</button>
+
+          <div class="registrar" *ngIf="acao === 'pagamento'">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Valor cobrado (R$)</label>
+                <input type="number" min="0" step="0.01" [(ngModel)]="formPagamento.valorCobrado" name="pagValor" />
+              </div>
+              <div class="form-group">
+                <label>Desconto (R$)</label>
+                <input type="number" min="0" step="0.01" [(ngModel)]="formPagamento.desconto" name="pagDesconto" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Data do pagamento</label>
+              <input type="date" [min]="ag.data" [(ngModel)]="formPagamento.pagoEm" name="pagData" />
+            </div>
+            <label class="rotulo">Forma de pagamento</label>
+            <div class="chips">
+              <button type="button" class="chip" *ngFor="let f of formasPagamento"
+                      [class.ativo]="formPagamento.formaPagamento === f.valor"
+                      (click)="formPagamento.formaPagamento = f.valor">{{ f.rotulo }}</button>
+            </div>
+            <div class="total">
+              <span>Total recebido</span>
+              <strong>{{ totalComDesconto(formPagamento.valorCobrado, formPagamento.desconto) | currency }}</strong>
+            </div>
+            <div class="aviso-conflito-botoes">
+              <button type="button" class="btn-secondary" (click)="escolherAcao('pagamento')">Cancelar</button>
+              <button type="button" class="btn-primary" [disabled]="salvandoDetalhe" (click)="confirmarPagamento()">
+                {{ salvandoDetalhe ? 'Salvando...' : 'Confirmar pagamento' }}
+              </button>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- ---------- CANCELADO / NÃO COMPARECEU ---------- -->
+      <div class="bloco bloco-vermelho" *ngIf="ag.status === 'cancelado'">
+        <h3>Cancelado pelo {{ ag.canceladoPor === 'cliente' ? 'cliente' : 'profissional' }}</h3>
+        <p class="texto-bloco" *ngIf="ag.motivoCancelamento">Motivo: "{{ ag.motivoCancelamento }}"</p>
+      </div>
+      <div class="bloco bloco-amarelo" *ngIf="ag.status === 'nao_compareceu'">
+        <h3>O cliente não compareceu</h3>
+      </div>
+
+      <button type="button" class="link-desfazer" *ngIf="ag.status !== 'agendado' && ehDono" (click)="desfazer()">
+        Marcou errado? Voltar para "agendado"
+      </button>
+
+      <!-- ---------- observação ---------- -->
+      <div class="form-group">
+        <label>Observação</label>
+        <textarea rows="2" maxlength="255" placeholder="Ex.: quer manter o comprimento"
+                  [(ngModel)]="observacaoEditada" name="observacao"></textarea>
+      </div>
+      <button type="button" class="link-acao" *ngIf="observacaoEditada !== (ag.observacao || '')"
+              [disabled]="salvandoDetalhe" (click)="salvarObservacao()">Salvar observação</button>
+
+      <!-- ---------- histórico ---------- -->
+      <ul class="historico" *ngIf="historico(ag).length > 0">
+        <li *ngFor="let linha of historico(ag)">{{ linha }}</li>
+      </ul>
+    </div>
   </div>
 
 
-  <!-- MODAL -->
+  <!-- ================================================================
+       JANELA: NOVO AGENDAMENTO
+       ================================================================ -->
   <div class="modal-overlay" *ngIf="modalAberto">
     <div class="modal">
 
       <div class="modal-header">
-        <h2>Novo Agendamento</h2>
-        <button class="btn-icon" (click)="fecharModal()">×</button>
+        <h2>Novo agendamento</h2>
+        <button type="button" class="btn-fechar" (click)="fecharModal()" aria-label="Fechar">
+          <span class="icone" aria-hidden="true">close</span>
+        </button>
       </div>
 
       <form class="modal-form" (ngSubmit)="salvarAgendamento($event)">
@@ -90,7 +287,7 @@
 
         <div class="form-group">
           <label>Data *</label>
-          <input type="date" [(ngModel)]="novoAgendamento.data" name="data" required />
+          <input type="date" [(ngModel)]="novoAgendamento.data" name="data" (ngModelChange)="limparAvisoNovo()" required />
         </div>
 
         <div class="form-group">
@@ -102,20 +299,34 @@
 
         <div class="form-group">
           <label>Serviço *</label>
-          <select [(ngModel)]="novoAgendamento.servicoId" name="servicoId" required>
-            <option *ngFor="let s of servicos" [value]="s.id">{{ s.nome }} — R$ {{ s.valor.toFixed(2) }}</option>
+          <select [(ngModel)]="novoAgendamento.servicoId" name="servicoId" (ngModelChange)="limparAvisoNovo()" required>
+            <option *ngFor="let s of servicos" [value]="s.id">{{ s.nome }} — {{ s.duracao }} min · {{ s.valor | currency }}</option>
           </select>
         </div>
 
         <div class="form-group">
           <label>Horário *</label>
-          <input type="time" [(ngModel)]="novoAgendamento.horario" name="horario" required />
+          <input type="time" [(ngModel)]="novoAgendamento.horario" name="horario" (ngModelChange)="limparAvisoNovo()" required />
         </div>
 
-        <div class="modal-actions">
+        <div class="form-group">
+          <label>Observação</label>
+          <input type="text" maxlength="255" placeholder="Opcional" [(ngModel)]="novoAgendamento.observacao" name="observacaoNovo" />
+        </div>
+
+        <!-- RN02: conflito só avisa -->
+        <div class="aviso-conflito" *ngIf="avisoConflitoNovo">
+          <p>{{ avisoConflitoNovo }}</p>
+          <div class="aviso-conflito-botoes">
+            <button type="button" class="btn-secondary" (click)="limparAvisoNovo()">Escolher outro horário</button>
+            <button type="button" class="btn-primary" [disabled]="salvando" (click)="salvarAgendamento(null, true)">Marcar mesmo assim</button>
+          </div>
+        </div>
+
+        <div class="modal-actions" *ngIf="!avisoConflitoNovo">
           <button type="button" class="btn-secondary" (click)="fecharModal()">Cancelar</button>
           <button type="submit" class="btn-primary" [disabled]="salvando">
-            {{ salvando ? 'Salvando...' : 'Salvar Agendamento' }}
+            {{ salvando ? 'Salvando...' : 'Salvar agendamento' }}
           </button>
         </div>
 

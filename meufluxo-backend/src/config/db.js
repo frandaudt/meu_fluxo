@@ -14,6 +14,12 @@ const pool = mysql.createPool({
   dateStrings: true,
 });
 
+// Todo o sistema trabalha no horário de Brasília: assim NOW() e CURRENT_TIMESTAMP
+// (pago_em, criado_em...) ficam com a hora certa, mesmo com o servidor em outro fuso.
+pool.pool.on('connection', (conexao) => {
+  conexao.query("SET time_zone = '-03:00'");
+});
+
 async function testarConexao() {
   const conn = await pool.getConnection();
   try {

@@ -3,12 +3,17 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterOutlet, RouterLink, NavigationEnd } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { MenuLateral } from './components/menu-lateral/menu-lateral';
 import { Cabecalho } from './components/cabecalho/cabecalho';
 
-const API_URL = 'http://localhost:3001/api';
+/**
+ * Endereço da API, usado por todas as telas.
+ * - Rodando com "ng serve" (porta 4200): a API está em localhost:3001.
+ * - No Render: o mesmo servidor entrega o site e a API, então basta "/api".
+ */
+export const API_URL = window.location.port === '4200' ? 'http://localhost:3001/api' : '/api';
 
 interface Cliente { id: number; nome: string; }
 interface Servico { id: number; nome: string; valor: number; }
@@ -197,12 +202,17 @@ export class App {
 
     this.dadosBuscaCarregados = true;
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+        // metas são só do dono: para o atendente a API responde 403, então nem pede
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
+    const ehDono = usuario.papel !== 'atendente';
 
     forkJoin({
       clientes: this.http.get<{ clientes: Cliente[] }>(`${API_URL}/clientes`, { headers }),
       servicos: this.http.get<{ servicos: Servico[] }>(`${API_URL}/servicos`, { headers }),
       agendamentos: this.http.get<{ agendamentos: Agendamento[] }>(`${API_URL}/agendamentos`, { headers }),
-      metasMensais: this.http.get<{ metas: MetaMensal[] }>(`${API_URL}/metas/mensais`, { headers }),
+      metasMensais: ehDono
+        ? this.http.get<{ metas: MetaMensal[] }>(`${API_URL}/metas/mensais`, { headers })
+        : of({ metas: [] as MetaMensal[] }),
     }).subscribe({
       next: ({ clientes, servicos, agendamentos, metasMensais }) => {
         this.clientesCache = clientes.clientes;
@@ -315,6 +325,7 @@ export class App {
 
   sair() {
     localStorage.removeItem('usuarioLogado');
+    localStorage.removeItem('meufluxo_token');
     this.dadosBuscaCarregados = false;
     this.clientesCache = [];
     this.servicosCache = [];

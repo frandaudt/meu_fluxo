@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const metasController = require('../controllers/metasController');
-const { autenticar } = require('../middlewares/auth');
+const { autenticar, permitir } = require('../middlewares/auth');
 
-router.use(autenticar);
+router.use(autenticar, permitir('metas'));
 
 router.get('/mensais', metasController.listarMensais);
 router.post('/mensais', metasController.criarMensal);

@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 
-const API_URL = 'http://localhost:3001/api';
+import { API_URL } from '../../app';
 
 @Component({
   selector: 'app-cadastro',
@@ -20,7 +20,7 @@ export class Cadastro {
   carregando = false;
   erro: string | null = null;
 
-  get senhaTemComprimento(): boolean { return this.senha.length >= 6; }
+  get senhaTemComprimento(): boolean { return this.senha.length >= 8; }
   get senhaTemMaiuscula(): boolean { return /[A-Z]/.test(this.senha); }
   get senhaTemEspecial(): boolean { return /[^A-Za-z0-9]/.test(this.senha); }
   get senhaValida(): boolean {
@@ -45,7 +45,7 @@ export class Cadastro {
     }
 
     if (!this.senhaValida) {
-      this.erro = 'A senha precisa ter no mínimo 6 caracteres, uma letra maiúscula e um caractere especial.';
+      this.erro = 'A senha precisa ter no mínimo 8 caracteres, uma letra maiúscula e um caractere especial.';
       return;
     }
 

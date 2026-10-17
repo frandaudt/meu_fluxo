@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const despesasController = require('../controllers/despesasController');
-const { autenticar } = require('../middlewares/auth');
+const { autenticar, permitir } = require('../middlewares/auth');
 
-router.use(autenticar);
+router.use(autenticar, permitir('financeiro'));
 
 router.get('/', despesasController.listar);
 router.post('/', despesasController.criar);

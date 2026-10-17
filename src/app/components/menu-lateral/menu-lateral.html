@@ -1,8 +1,8 @@
 <aside class="sidebar">
   <div class="logo">
-  <span class="icone logo-icon-img" aria-hidden="true">menu</span>
-  <h2>Menu</h2>
-</div>
+    <span class="icone logo-icon-img" aria-hidden="true">menu</span>
+    <h2>Menu</h2>
+  </div>
 
   <nav class="nav-menu">
     <a routerLink="/tela-inicial" routerLinkActive="active" class="nav-item">
@@ -14,27 +14,34 @@
       <span class="label">Agenda</span>
     </a>
     <a routerLink="/clientes" routerLinkActive="active" class="nav-item">
-  <span class="icone nav-icon-img" aria-hidden="true">group</span>
-  <span class="label">Clientes</span>
-</a>
-<a routerLink="/servicos" routerLinkActive="active" class="nav-item">
-  <span class="icone nav-icon-img" aria-hidden="true">content_cut</span>
-  <span class="label">Serviços</span>
-</a>
-<a routerLink="/financeiro" routerLinkActive="active" class="nav-item">
-  <span class="icone nav-icon-img" aria-hidden="true">account_balance_wallet</span>
-  <span class="label">Financeiro</span>
-</a>
-    <a routerLink="/metas" routerLinkActive="active" class="nav-item">
-     <span class="icone nav-icon-img" aria-hidden="true">track_changes</span>
-      <span class="label">Metas</span>
+      <span class="icone nav-icon-img" aria-hidden="true">group</span>
+      <span class="label">Clientes</span>
     </a>
+
+    @if (pode('servicos')) {
+      <a routerLink="/servicos" routerLinkActive="active" class="nav-item">
+        <span class="icone nav-icon-img" aria-hidden="true">content_cut</span>
+        <span class="label">Serviços</span>
+      </a>
+    }
+    @if (pode('financeiro')) {
+      <a routerLink="/financeiro" routerLinkActive="active" class="nav-item">
+        <span class="icone nav-icon-img" aria-hidden="true">account_balance_wallet</span>
+        <span class="label">Financeiro</span>
+      </a>
+    }
+    @if (pode('metas')) {
+      <a routerLink="/metas" routerLinkActive="active" class="nav-item">
+        <span class="icone nav-icon-img" aria-hidden="true">track_changes</span>
+        <span class="label">Metas</span>
+      </a>
+    }
   </nav>
 
   <div class="sidebar-footer">
-  <a routerLink="/login" class="nav-item logout" (click)="sair()">
-   <span class="icone nav-icon-img" aria-hidden="true">logout</span>
-    <span class="label">Sair</span>
-  </a>
-</div>
+    <a routerLink="/login" class="nav-item logout" (click)="sair()">
+      <span class="icone nav-icon-img" aria-hidden="true">logout</span>
+      <span class="label">Sair</span>
+    </a>
+  </div>
 </aside>

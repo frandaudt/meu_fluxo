@@ -25,7 +25,7 @@
       <label>Senha</label>
       <input type="password" placeholder="••••••••" [(ngModel)]="senha" name="senha" />
       <ul class="checklist-senha">
-        <li [class.ok]="senhaTemComprimento">{{ senhaTemComprimento ? '✓' : '○' }} Pelo menos 6 caracteres</li>
+        <li [class.ok]="senhaTemComprimento">{{ senhaTemComprimento ? '✓' : '○' }} Pelo menos 8 caracteres</li>
         <li [class.ok]="senhaTemMaiuscula">{{ senhaTemMaiuscula ? '✓' : '○' }} Uma letra maiúscula</li>
         <li [class.ok]="senhaTemEspecial">{{ senhaTemEspecial ? '✓' : '○' }} Um caractere especial</li>
      </ul>
