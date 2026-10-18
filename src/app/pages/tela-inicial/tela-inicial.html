@@ -1,0 +1,133 @@
+<main class="inicio">
+
+  <!-- ===== TOPO: saudação + Dia | Semana | Mês + Ocultar valores ===== -->
+  <div class="inicio-topo">
+    <div>
+      <h1>{{ saudacao }}</h1>
+      <p class="subtitulo">{{ subtitulo }}</p>
+    </div>
+
+    <div class="topo-direita">
+      <button type="button" class="btn-hoje" *ngIf="dataRef !== hoje" (click)="voltarParaHoje()">Voltar para hoje</button>
+
+      <div class="seletor-visao" role="group" aria-label="Visão">
+        <button type="button" [class.ativo]="visao === 'dia'" (click)="mudarVisao('dia')">Dia</button>
+        <button type="button" [class.ativo]="visao === 'semana'" (click)="mudarVisao('semana')">Semana</button>
+        <button type="button" [class.ativo]="visao === 'mes'" (click)="mudarVisao('mes')">Mês</button>
+      </div>
+
+      <button type="button" class="btn-ocultar" *ngIf="veValores" (click)="alternarValores()">
+        <span class="icone" aria-hidden="true">{{ ocultarValores ? 'visibility_off' : 'visibility' }}</span>
+        {{ ocultarValores ? 'Mostrar valores' : 'Ocultar valores' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
+  <p class="carregando" *ngIf="carregando">Carregando...</p>
+
+  <ng-container *ngIf="!carregando">
+
+    <!-- ===== 6 NÚMEROS (mudam com a visão e com o papel) ===== -->
+    <div class="numeros">
+      <div class="numero" *ngFor="let n of numeros">
+        <span class="numero-rotulo">{{ n.rotulo }}</span>
+        <strong class="numero-valor">{{ n.valor }}</strong>
+        <small class="numero-detalhe" *ngIf="n.detalhe">{{ n.detalhe }}</small>
+      </div>
+    </div>
+
+    <div class="inicio-grid">
+
+      <!-- ===== BLOCO PRINCIPAL: o mesmo calendário da Agenda ===== -->
+      <app-calendario
+        [titulo]="tituloPeriodo"
+        [resumoMes]="true"
+        [visao]="visao"
+        [dataRef]="dataRef"
+        [diaSelecionado]="dataRef"
+        [eventosPorDia]="eventosPorDia"
+        [horario]="horario"
+        (selecionarDia)="selecionarDia($event)"
+        (abrirEvento)="abrirEvento($event)"
+        (acaoEvento)="acaoRapida($event)"
+        (agendarEm)="agendarEm($event)"
+      ></app-calendario>
+
+      <!-- ===== COLUNA DA DIREITA ===== -->
+      <div class="coluna-direita">
+
+        <!-- 1. Precisa da sua atenção -->
+        <section class="card">
+          <div class="card-topo">
+            <h2>Precisa da sua atenção</h2>
+            <span class="contador" *ngIf="alertas.length > 0">{{ alertas.length }}</span>
+          </div>
+          <div class="atencao-lista">
+            <div class="aviso-item" *ngFor="let a of alertas">
+              <span class="aviso-bolinha" [attr.data-cor]="a.cor"></span>
+              <div class="aviso-textos">
+                <p>{{ a.texto }}</p>
+                <button type="button" class="aviso-acao" *ngIf="a.acao" (click)="abrirAlerta(a)">{{ a.acao.rotulo }}</button>
+              </div>
+            </div>
+            <p class="vazio" *ngIf="alertas.length === 0">Tudo em dia. Nenhum aviso agora.</p>
+          </div>
+        </section>
+
+        <!-- 2. Lembretes de amanhã -->
+        <section class="card">
+          <div class="card-topo">
+            <h2>Lembretes de amanhã</h2>
+            <small class="card-contagem">{{ lembretes.length }} {{ lembretes.length === 1 ? 'cliente' : 'clientes' }}</small>
+          </div>
+          <p class="card-dica">Abre o seu WhatsApp com a mensagem pronta</p>
+
+          <div class="lembrete" *ngFor="let l of lembretes">
+            <div class="lembrete-info">
+              <strong><span class="lembrete-hora">{{ l.ag.horario }}</span> {{ l.cliente }}</strong>
+              <small>{{ l.servico }}</small>
+            </div>
+            <span class="enviado" *ngIf="l.ag.lembreteEnviadoEm; else botaoEnviar">Enviado ✓</span>
+            <ng-template #botaoEnviar>
+              <button type="button" class="btn-enviar" [disabled]="!l.link"
+                      [title]="l.link ? 'Abrir o WhatsApp com o lembrete' : 'Cliente sem telefone cadastrado'"
+                      (click)="enviarLembrete(l)">Enviar</button>
+            </ng-template>
+          </div>
+          <p class="vazio" *ngIf="lembretes.length === 0">Nenhum atendimento marcado para amanhã.</p>
+        </section>
+
+        <!-- 3. Metas do mês (só quem pode ver metas) -->
+        <section class="card" *ngIf="veMetas">
+          <div class="card-topo">
+            <h2>Metas de {{ nomeMesAtual }}</h2>
+          </div>
+
+          <div class="meta" *ngFor="let m of metasDoMes">
+            <ng-container *ngIf="m.percentual < 100; else metaConcluida">
+              <div class="meta-linha">
+                <span>{{ m.tipo === 'faturamento' ? 'Faturamento' : 'Clientes atendidos' }}</span>
+                <strong *ngIf="m.tipo === 'faturamento'">{{ moeda(m.progresso) }} de {{ moeda(m.valorAlvo) }}</strong>
+                <strong *ngIf="m.tipo === 'clientes'">{{ m.progresso }} de {{ m.valorAlvo }}</strong>
+              </div>
+              <div class="meta-barra"><div class="meta-barra-cheia" [style.width.%]="m.percentual"></div></div>
+              <small class="meta-detalhe">{{ m.percentual }}% · faltam {{ diasRestantesNoMes }} {{ diasRestantesNoMes === 1 ? 'dia' : 'dias' }}</small>
+            </ng-container>
+
+            <ng-template #metaConcluida>
+              <p class="meta-concluida">
+                <span class="icone" aria-hidden="true">check_circle</span>
+                Parabéns, você concluiu sua meta de {{ m.tipo === 'faturamento' ? 'faturamento' : 'clientes' }}!
+              </p>
+            </ng-template>
+          </div>
+
+          <p class="vazio" *ngIf="metasDoMes.length === 0">Nenhuma meta cadastrada para este mês.</p>
+          <a routerLink="/metas" class="link-metas">Ver todas as metas</a>
+        </section>
+
+      </div>
+    </div>
+  </ng-container>
+</main>

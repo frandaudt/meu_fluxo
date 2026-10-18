@@ -1,0 +1,173 @@
+<div class="calendario">
+
+  <!-- título + legenda no topo (Início) -->
+  <div class="cal-topo" *ngIf="titulo">
+    <h3>{{ titulo }}</h3>
+    <div class="legenda legenda-topo">
+      <span class="leg leg-agendado">Agendado</span>
+      <span class="leg leg-realizado">Realizado</span>
+      <span class="leg leg-livre" *ngIf="visao !== 'mes'">Livre</span>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       VISÃO MÊS
+       ================================================================ -->
+  <ng-container *ngIf="visao === 'mes'">
+    <div class="dias-semana">
+      <span *ngFor="let d of diasSemana">{{ d }}</span>
+    </div>
+
+    <div class="semana" *ngFor="let semana of semanas">
+      <!-- div (e não button) porque os agendamentos dentro dela também são clicáveis -->
+      <div
+        *ngFor="let dia of semana"
+        class="dia-cell"
+        [class.fora-do-mes]="dia.foraDoMes"
+        [class.hoje]="dia.hoje"
+        [class.selecionado]="dia.data === diaSelecionado"
+        [class.tem-evento]="temEvento(dia.data)"
+        [class.resumo]="resumoMes"
+        (click)="selecionarDia.emit(dia.data)"
+      >
+        <span class="dia-numero">{{ dia.numero }}</span>
+
+        <!-- Início: resumo do dia (quantos atendimentos e ocupação) -->
+        <div class="dia-resumo" *ngIf="resumoMes && !dia.foraDoMes">
+          <ng-container *ngIf="!diaFechadoEm(dia.data); else resumoFechado">
+            <span class="resumo-qtd">{{ qtdAtendimentos(dia.data) > 0 ? qtdAtendimentos(dia.data) + ' atend.' : 'livre' }}</span>
+            <span class="resumo-ocupacao">{{ ocupacaoDoDia(dia.data) }}%</span>
+            <span class="barra"><span class="barra-cheia" [attr.data-nivel]="nivelOcupacao(dia.data)" [style.width.%]="ocupacaoDoDia(dia.data)"></span></span>
+          </ng-container>
+          <ng-template #resumoFechado><span class="resumo-qtd resumo-fechado">fechado</span></ng-template>
+        </div>
+
+        <div class="dia-eventos" *ngIf="!resumoMes">
+          <button
+            type="button"
+            class="evento-chip"
+            *ngFor="let ev of eventosDoDia(dia.data)"
+            [class.status-agendado]="ev.status === 'agendado'"
+            [class.status-realizado]="ev.status === 'realizado'"
+            [class.status-cancelado]="ev.status === 'cancelado'"
+            [class.status-nao_compareceu]="ev.status === 'nao_compareceu'"
+            [title]="ev.horario + ' ' + (ev.nomeCompleto || ev.texto)"
+            (click)="$event.stopPropagation(); abrirEvento.emit(ev.id)"
+          >{{ ev.horario }} {{ ev.texto }}</button>
+
+          <span class="evento-extra" *ngIf="eventosExtras(dia.data) > 0">
+            +{{ eventosExtras(dia.data) }} mais
+          </span>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ================================================================
+       VISÃO SEMANA (7 colunas, segunda a domingo)
+       ================================================================ -->
+  <div class="semana-grade" *ngIf="visao === 'semana'">
+    <div class="coluna" *ngFor="let col of colunasSemana">
+      <button type="button" class="coluna-topo" [class.hoje]="col.hoje" (click)="selecionarDia.emit(col.data)">
+        <span class="coluna-sigla">{{ col.nomeSemana }}</span>
+        <span class="coluna-numero">{{ col.numero }}</span>
+        <ng-container *ngIf="!col.fechado; else topoFechado">
+          <span class="barra"><span class="barra-cheia" [style.width.%]="col.ocupacao"></span></span>
+          <span class="coluna-ocupacao">{{ col.ocupacao }}% ocupado</span>
+        </ng-container>
+        <ng-template #topoFechado><span class="coluna-ocupacao">fechado</span></ng-template>
+      </button>
+
+      <div class="coluna-itens">
+        <span class="nao-trabalha" *ngIf="col.fechado && col.itens.length === 0">Não trabalha</span>
+
+        <ng-container *ngFor="let item of col.itens">
+          <button type="button" class="chip-semana" *ngIf="item.tipo === 'agendamento' && item.evento as ev"
+                  [class.status-agendado]="ev.status === 'agendado'"
+                  [class.status-realizado]="ev.status === 'realizado'"
+                  [class.status-cancelado]="ev.status === 'cancelado'"
+                  [class.status-nao_compareceu]="ev.status === 'nao_compareceu'"
+                  [title]="ev.horario + ' ' + (ev.nomeCompleto || ev.texto) + ' · ' + (ev.servico || '')"
+                  (click)="abrirEvento.emit(ev.id)">
+            <strong>{{ ev.horario }}</strong> {{ ev.texto }}<ng-container *ngIf="ev.servico"> · {{ ev.servico }}</ng-container>
+          </button>
+
+          <button type="button" class="chip-semana chip-livre" *ngIf="item.tipo === 'livre'"
+                  [title]="'Livre de ' + item.inicio + ' às ' + item.fim + ' — clique para agendar'"
+                  (click)="agendarEm.emit({ data: col.data, horario: item.inicio })">
+            <strong>{{ item.inicio }}</strong> livre
+          </button>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       VISÃO DIA (linha do tempo)
+       ================================================================ -->
+  <div class="linha-tempo" *ngIf="visao === 'dia'">
+    <p class="dia-vazio" *ngIf="itensDia.length === 0">
+      {{ diaFechado ? 'Você não trabalha nesse dia.' : 'Nenhum agendamento nesse dia.' }}
+    </p>
+
+    <div class="linha" *ngFor="let item of itensDia">
+      <span class="linha-hora">{{ item.inicio }}</span>
+
+      <!-- agendamento -->
+      <div class="cartao" *ngIf="item.tipo === 'agendamento' && item.evento as ev"
+           [class.status-agendado]="ev.status === 'agendado'"
+           [class.status-realizado]="ev.status === 'realizado'"
+           [class.status-cancelado]="ev.status === 'cancelado'"
+           [class.status-nao_compareceu]="ev.status === 'nao_compareceu'"
+           (click)="abrirEvento.emit(ev.id)">
+        <div class="cartao-info">
+          <strong>{{ ev.nomeCompleto || ev.texto }}</strong>
+          <small>
+            {{ ev.servico }} · {{ ev.duracao }} min
+            <ng-container *ngIf="ev.origem === 'whatsapp'"> · agendou pelo WhatsApp</ng-container>
+            <ng-container *ngIf="ev.origem === 'link'"> · agendou pelo link</ng-container>
+          </small>
+        </div>
+
+        <span class="etiqueta"
+              [class.et-agendado]="ev.status === 'agendado'"
+              [class.et-realizado]="ev.status === 'realizado' && ev.statusPagamento === 'pago'"
+              [class.et-receber]="ev.status === 'realizado' && ev.statusPagamento !== 'pago'"
+              [class.et-cancelado]="ev.status === 'cancelado'"
+              [class.et-falta]="ev.status === 'nao_compareceu'">{{ rotuloStatus(ev) }}</span>
+
+        <ng-container *ngIf="ev.status === 'agendado'">
+          <button type="button" class="btn-mini btn-mini-escuro" [disabled]="!jaComecou(dataRef, ev.horario)"
+                  [title]="jaComecou(dataRef, ev.horario) ? '' : 'Disponível a partir das ' + ev.horario"
+                  (click)="$event.stopPropagation(); acaoEvento.emit({ id: ev.id, acao: 'concluir' })">Concluir</button>
+          <button type="button" class="btn-mini" [disabled]="!jaComecou(dataRef, ev.horario)"
+                  (click)="$event.stopPropagation(); acaoEvento.emit({ id: ev.id, acao: 'falta' })">Não compareceu</button>
+        </ng-container>
+        <button type="button" class="btn-mini" *ngIf="ev.status === 'realizado' && ev.statusPagamento !== 'pago'"
+                (click)="$event.stopPropagation(); acaoEvento.emit({ id: ev.id, acao: 'pagamento' })">Registrar pagamento</button>
+      </div>
+
+      <!-- horário livre -->
+      <div class="cartao cartao-livre" *ngIf="item.tipo === 'livre'">
+        <div class="cartao-info">
+          <strong>Horário livre</strong>
+          <small>{{ item.inicio }} às {{ item.fim }}</small>
+        </div>
+        <span class="etiqueta et-livre">Livre</span>
+        <button type="button" class="btn-mini" (click)="agendarEm.emit({ data: dataRef, horario: item.inicio })">Agendar aqui</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       LEGENDA (embaixo, dentro do card)
+       ================================================================ -->
+  <div class="legenda" *ngIf="!titulo">
+    <span class="leg leg-agendado">Agendado</span>
+    <span class="leg leg-realizado">Realizado</span>
+    <span class="leg leg-cancelado">Cancelado</span>
+    <span class="leg leg-falta">Não compareceu</span>
+    <span class="leg leg-livre" *ngIf="visao !== 'mes'">Livre</span>
+    <span class="leg-dica">Clique num agendamento para abrir os detalhes</span>
+  </div>
+</div>

@@ -1,0 +1,69 @@
+<aside class="sidebar">
+  <nav class="nav-menu">
+
+    <!-- ===== DIA A DIA ===== -->
+    <p class="grupo">Dia a dia</p>
+    <a routerLink="/tela-inicial" routerLinkActive="active" class="nav-item">
+      <span class="icone nav-icon-img" aria-hidden="true">home</span>
+      <span class="label">Início</span>
+    </a>
+    <a routerLink="/agenda" routerLinkActive="active" class="nav-item">
+      <span class="icone nav-icon-img" aria-hidden="true">calendar_month</span>
+      <span class="label">Agenda</span>
+    </a>
+    <a routerLink="/clientes" routerLinkActive="active" class="nav-item">
+      <span class="icone nav-icon-img" aria-hidden="true">group</span>
+      <span class="label">Clientes</span>
+    </a>
+    <a routerLink="/lista-espera" routerLinkActive="active" class="nav-item">
+      <span class="icone nav-icon-img" aria-hidden="true">schedule</span>
+      <span class="label">Lista de espera</span>
+      @if (aguardandoNaLista > 0) {
+        <span class="bolinha" [attr.aria-label]="aguardandoNaLista + ' aguardando'">{{ aguardandoNaLista }}</span>
+      }
+    </a>
+
+    <!-- ===== GESTÃO (o atendente só vê o que o dono liberou) ===== -->
+    @if (pode('financeiro') || pode('servicos') || pode('metas')) {
+      <p class="grupo">Gestão</p>
+    }
+    @if (pode('financeiro')) {
+      <a routerLink="/financeiro" routerLinkActive="active" class="nav-item">
+        <span class="icone nav-icon-img" aria-hidden="true">account_balance_wallet</span>
+        <span class="label">Financeiro</span>
+      </a>
+    }
+    @if (pode('servicos')) {
+      <a routerLink="/servicos" routerLinkActive="active" class="nav-item">
+        <span class="icone nav-icon-img" aria-hidden="true">sell</span>
+        <span class="label">Serviços</span>
+      </a>
+    }
+    @if (pode('metas')) {
+      <a routerLink="/metas" routerLinkActive="active" class="nav-item">
+        <span class="icone nav-icon-img" aria-hidden="true">track_changes</span>
+        <span class="label">Metas</span>
+      </a>
+    }
+
+    <!-- ===== CONFIGURAR ===== -->
+    <p class="grupo">Configurar</p>
+    @if (pode('whatsapp')) {
+      <a routerLink="/whatsapp" routerLinkActive="active" class="nav-item">
+        <span class="icone nav-icon-img" aria-hidden="true">chat</span>
+        <span class="label">WhatsApp</span>
+      </a>
+    }
+    <a routerLink="/perfil" routerLinkActive="active" class="nav-item">
+      <span class="icone nav-icon-img" aria-hidden="true">person</span>
+      <span class="label">Meu perfil</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <a routerLink="/login" class="nav-item logout" (click)="sair()">
+      <span class="icone nav-icon-img" aria-hidden="true">logout</span>
+      <span class="label">Sair</span>
+    </a>
+  </div>
+</aside>

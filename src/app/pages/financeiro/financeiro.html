@@ -1,0 +1,235 @@
+<main class="financeiro">
+
+  <!-- ===== TOPO ===== -->
+  <div class="fin-topo">
+    <div class="fin-topo-esquerda">
+      <h1>Financeiro</h1>
+      <div class="navegacao">
+        <button type="button" class="btn-nav" (click)="mudarMes(-1)" aria-label="Mês anterior">‹</button>
+        <span class="navegacao-titulo">{{ tituloMes }}</span>
+        <button type="button" class="btn-nav" (click)="mudarMes(1)" aria-label="Próximo mês">›</button>
+      </div>
+    </div>
+    <div class="fin-topo-direita">
+      <button type="button" class="btn-ocultar" (click)="alternarValores()">
+        <span class="icone" aria-hidden="true">{{ ocultarValores ? 'visibility_off' : 'visibility' }}</span>
+        {{ ocultarValores ? 'Mostrar valores' : 'Ocultar valores' }}
+      </button>
+      <button type="button" class="btn-primary" (click)="abrirDespesa()">+ Adicionar despesa</button>
+    </div>
+  </div>
+  <p class="frase">O dinheiro conta na <strong>data do pagamento</strong>. {{ fraseComparacao }}</p>
+
+  <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
+  <p class="carregando" *ngIf="carregando">Carregando dados financeiros...</p>
+
+  <ng-container *ngIf="!carregando">
+
+    <!-- ===== 5 CARDS ===== -->
+    <div class="cards">
+      <div class="card-num" *ngFor="let c of cards"
+           [class.card-saldo]="c.tipo === 'saldo'" [class.card-receber]="c.tipo === 'receber'">
+        <span class="card-rotulo">{{ c.rotulo }}</span>
+        <strong class="card-valor">{{ c.valor }}</strong>
+        <small class="card-legenda" *ngIf="c.variacao !== null; else semVariacao"
+               [class.sobe]="c.variacao > 0" [class.desce]="c.variacao < 0">
+          {{ c.variacao > 0 ? '↑' : c.variacao < 0 ? '↓' : '=' }} {{ c.variacao < 0 ? -c.variacao : c.variacao }}% {{ c.legenda }}
+        </small>
+        <ng-template #semVariacao>
+          <small class="card-legenda" *ngIf="c.tipo">{{ c.legenda }}</small>
+        </ng-template>
+      </div>
+    </div>
+
+    <!-- ===== GRÁFICO + FORMAS DE PAGAMENTO ===== -->
+    <div class="linha-dupla">
+      <section class="card">
+        <h2>Faturamento, despesas e saldo — últimos 6 meses</h2>
+        <div class="legenda">
+          <span class="leg leg-fat">Faturamento</span>
+          <span class="leg leg-desp">Despesas</span>
+          <span class="leg-texto">Saldo (número em cima)</span>
+        </div>
+
+        <div class="grafico">
+          <div class="grafico-mes" *ngFor="let m of grafico">
+            <span class="grafico-saldo" [class.negativo]="m.saldo < 0">{{ moedaCurta(m.saldo) }}</span>
+            <div class="grafico-barras">
+              <div class="barra barra-fat" [style.height.%]="m.alturaFat"
+                   [title]="'Faturamento: ' + moeda(m.faturamento)"></div>
+              <div class="barra barra-desp" [style.height.%]="m.alturaDesp"
+                   [title]="'Despesas: ' + moeda(m.despesas)"></div>
+            </div>
+            <span class="grafico-rotulo">{{ m.rotulo }}</span>
+          </div>
+        </div>
+        <p class="nota" *ngIf="grafico.length && grafico[grafico.length - 1].rotulo.endsWith('*')">* mês atual, ainda em andamento</p>
+      </section>
+
+      <section class="card">
+        <h2>Como seus clientes pagam</h2>
+        <ng-container *ngIf="formas.length > 0; else semPagamentos">
+          <div class="barra-empilhada">
+            <span *ngFor="let f of formas" [attr.data-forma]="f.forma" [style.width.%]="f.percentual" [title]="f.rotulo"></span>
+          </div>
+          <ul class="formas">
+            <li *ngFor="let f of formas">
+              <span class="forma-nome"><i [attr.data-forma]="f.forma"></i>{{ f.rotulo }}</span>
+              <span><strong>{{ moedaInteira(f.valor) }}</strong> · {{ f.percentual }}%</span>
+            </li>
+          </ul>
+        </ng-container>
+        <ng-template #semPagamentos>
+          <p class="vazio">Nenhum pagamento registrado em {{ nomeMes }}.</p>
+        </ng-template>
+        <p class="descontos">Descontos concedidos no mês: <strong>{{ moeda(descontosDoMes) }}</strong></p>
+      </section>
+    </div>
+
+    <!-- ===== A RECEBER + DESPESAS ===== -->
+    <div class="linha-dupla linha-baixo">
+      <section class="card">
+        <div class="card-topo">
+          <div>
+            <h2>A receber</h2>
+            <p class="card-sub">Atendimentos concluídos que ainda não foram pagos</p>
+          </div>
+          <span class="selo-pendentes" *ngIf="aReceber.length > 0">{{ aReceber.length }} {{ aReceber.length === 1 ? 'pendente' : 'pendentes' }}</span>
+        </div>
+
+        <div class="tabela">
+          <div class="linha-receber" *ngFor="let a of aReceber">
+            <div class="receber-cliente">
+              <strong>{{ nomeCliente(a.clienteId) }}</strong>
+              <small>{{ nomeServico(a.servicoId) }} · atendido em</small>
+            </div>
+            <span class="receber-data">{{ quando(a.data) }}</span>
+            <strong class="receber-valor">{{ moeda(a.valorCobrado ?? 0) }}</strong>
+            <button type="button" class="btn-registrar" (click)="abrirPagamento(a)">Registrar</button>
+          </div>
+          <p class="vazio" *ngIf="aReceber.length === 0">Nada a receber. Todos os atendimentos estão pagos.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-topo">
+          <h2>Despesas de {{ nomeMes }}</h2>
+          <span class="total-despesas">Total <strong>{{ moeda(totalDespesasDoMes) }}</strong></span>
+        </div>
+
+        <div class="tabela">
+          <div class="linha-despesa" *ngFor="let d of despesasDoMes">
+            <strong class="despesa-nome">{{ d.descricao }}</strong>
+            <span class="tag" [class.tag-emergencial]="d.tipo === 'emergencial'">{{ d.tipo === 'fixa' ? 'Fixa' : 'Emergencial' }}</span>
+            <strong class="despesa-valor">{{ moeda(d.valor) }}</strong>
+            <button type="button" class="btn-icon" title="Remover" (click)="removerDespesa(d)">
+              <span class="icone icone-remover" aria-hidden="true">delete</span>
+            </button>
+          </div>
+          <p class="vazio" *ngIf="despesasDoMes.length === 0">Nenhuma despesa registrada neste mês.</p>
+        </div>
+      </section>
+    </div>
+  </ng-container>
+
+
+  <!-- ===== JANELA: REGISTRAR PAGAMENTO ===== -->
+  <div class="modal-overlay" *ngIf="pagamento as ag" (click)="fecharPagamento()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h2>Registrar pagamento</h2>
+          <p class="modal-sub">{{ nomeCliente(ag.clienteId) }} · {{ nomeServico(ag.servicoId) }} · atendido em {{ quando(ag.data) }}</p>
+        </div>
+        <button type="button" class="btn-fechar" (click)="fecharPagamento()" aria-label="Fechar">
+          <span class="icone" aria-hidden="true">close</span>
+        </button>
+      </div>
+
+      <div class="modal-form">
+        <div class="modal-erro" *ngIf="erroPagamento">{{ erroPagamento }}</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="valorCobrado">Valor cobrado (R$)</label>
+            <input id="valorCobrado" type="number" min="0" step="0.01" [(ngModel)]="formPagamento.valorCobrado" name="valorCobrado" />
+          </div>
+          <div class="form-group">
+            <label for="desconto">Desconto (R$)</label>
+            <input id="desconto" type="number" min="0" step="0.01" [(ngModel)]="formPagamento.desconto" name="desconto" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="pagoEm">Data do pagamento</label>
+          <input id="pagoEm" type="date" [min]="ag.data" [max]="hoje" [(ngModel)]="formPagamento.pagoEm" name="pagoEm" />
+        </div>
+
+        <span class="rotulo">Forma de pagamento</span>
+        <div class="chips">
+          <button type="button" class="chip" *ngFor="let f of formasPagamento"
+                  [class.ativo]="formPagamento.formaPagamento === f.valor"
+                  (click)="formPagamento.formaPagamento = f.valor">{{ f.rotulo }}</button>
+        </div>
+
+        <div class="total">
+          <span>Total recebido</span>
+          <strong>{{ moeda(totalRecebido) }}</strong>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharPagamento()">Cancelar</button>
+          <button type="button" class="btn-primary" [disabled]="salvandoPagamento" (click)="confirmarPagamento()">
+            {{ salvandoPagamento ? 'Salvando...' : 'Confirmar pagamento' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===== JANELA: NOVA DESPESA (a que já existia) ===== -->
+  <div class="modal-overlay" *ngIf="modalDespesa" (click)="fecharDespesa()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h2>Nova despesa</h2>
+          <p class="modal-sub">Para {{ nomeMes }} de {{ anoAtual }}</p>
+        </div>
+        <button type="button" class="btn-fechar" (click)="fecharDespesa()" aria-label="Fechar">
+          <span class="icone" aria-hidden="true">close</span>
+        </button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="salvarDespesa($event)">
+        <div class="modal-erro" *ngIf="erroDespesa">{{ erroDespesa }}</div>
+
+        <div class="form-group">
+          <label for="descricao">Descrição *</label>
+          <input id="descricao" type="text" placeholder="Ex: aluguel da sala, produtos..." [(ngModel)]="novaDespesa.descricao" name="descricao" required />
+        </div>
+
+        <div class="form-group">
+          <label for="valor">Valor (R$) *</label>
+          <input id="valor" type="number" min="0" step="0.01" [(ngModel)]="novaDespesa.valor" name="valor" required />
+        </div>
+
+        <div class="form-group">
+          <label for="tipo">Tipo *</label>
+          <select id="tipo" [(ngModel)]="novaDespesa.tipo" name="tipo" required>
+            <option value="fixa">Fixa (repete todo mês, ex: aluguel)</option>
+            <option value="emergencial">Emergencial (só neste mês, gasto não planejado)</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharDespesa()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="salvandoDespesa">
+            {{ salvandoDespesa ? 'Salvando...' : 'Salvar despesa' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</main>

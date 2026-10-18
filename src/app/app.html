@@ -1,0 +1,96 @@
+<header class="top-bar-verde" *ngIf="mostrarLayout">
+  <div class="brand-logo">
+    <img src="assets/icons/icone-logo-meufluxo.png" alt="" class="brand-logo-icon" />
+    <h2>MeuFluxo</h2>
+  </div>
+
+  <div class="top-bar-right">
+    <div class="search-input-wrap" (click)="$event.stopPropagation()">
+      <div class="search-input">
+        <span class="icone icone-busca" aria-hidden="true">search</span>
+        <input
+          type="text"
+          placeholder="Buscar clientes, serviços, agendamentos"
+          [(ngModel)]="termoBusca"
+          (input)="aoDigitarBusca()"
+          (focus)="onFocusBusca()"
+          (keyup.enter)="selecionarPrimeiroResultado()"
+        />
+      </div>
+
+      <div class="busca-dropdown" *ngIf="buscaAberta">
+        <button
+          type="button"
+          class="busca-item"
+          *ngFor="let r of resultadosBusca"
+          (click)="irParaResultado(r)"
+        >
+          <span class="busca-tipo">{{ r.tipo }}</span>
+          <span class="busca-titulo">{{ r.titulo }}</span>
+          <span class="busca-subtitulo">{{ r.subtitulo }}</span>
+        </button>
+
+        <p class="busca-vazio" *ngIf="resultadosBusca.length === 0">
+          Nada encontrado para "{{ termoBusca }}".
+        </p>
+      </div>
+    </div>
+
+    <!-- sininho: os mesmos avisos do card "Precisa da sua atenção" da Início -->
+    <div class="sininho-wrap" (click)="$event.stopPropagation()">
+      <button type="button" class="sininho" (click)="alternarSininho()"
+              [attr.aria-label]="alertas.length + ' avisos'" title="Avisos">
+        <span class="icone" aria-hidden="true">notifications</span>
+        @if (alertas.length > 0) {
+          <span class="sininho-contador">{{ alertas.length > 9 ? '9+' : alertas.length }}</span>
+        }
+      </button>
+
+      @if (sininhoAberto) {
+        <div class="sininho-lista">
+          <p class="sininho-titulo">Precisa da sua atenção</p>
+          @for (a of alertas; track a.id) {
+            <div class="aviso-item">
+              <span class="aviso-bolinha" [attr.data-cor]="a.cor"></span>
+              <div class="aviso-textos">
+                <p>{{ a.texto }}</p>
+                @if (a.acao) {
+                  <button type="button" class="aviso-acao" (click)="abrirAlerta(a)">{{ a.acao.rotulo }}</button>
+                }
+              </div>
+            </div>
+          } @empty {
+            <p class="sininho-vazio">Tudo em dia. Nenhum aviso agora.</p>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="user-pill" (click)="toggleMenuUsuario($event)">
+      <div class="user-avatar-iniciais">{{ inicialUsuario }}</div>
+      <div class="user-nome">
+        <strong>{{ primeiroNomeUsuario }}</strong>
+        <small>{{ papelUsuario }}</small>
+      </div>
+
+      <div class="user-dropdown" *ngIf="menuUsuarioAberto" (click)="$event.stopPropagation()">
+        <a routerLink="/perfil" class="dropdown-item">
+          <span class="icone icone-perfil-inline" aria-hidden="true">person</span>
+          Meu perfil
+        </a>
+        <button class="dropdown-item dropdown-sair" (click)="sair()">
+          <span class="icone icone-sair-inline" aria-hidden="true">logout</span>
+          Sair
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="app-body" [class.no-layout]="!mostrarLayout">
+  <app-menu-lateral *ngIf="mostrarLayout"></app-menu-lateral>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

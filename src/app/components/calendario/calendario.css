@@ -1,0 +1,265 @@
+.calendario {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* cores de status (iguais em todas as visões) */
+.status-agendado { background: var(--color-agendado-claro); color: var(--color-agendado-escuro); }
+.status-realizado { background: var(--color-sucesso-claro); color: var(--color-sucesso); }
+.status-cancelado { background: var(--color-perigo-claro); color: var(--color-perigo); }
+.status-nao_compareceu { background: var(--color-aviso-claro); color: var(--color-aviso); }
+
+/* =====================================================================
+   VISÃO MÊS
+   ===================================================================== */
+.dias-semana { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 6px; }
+.dias-semana span {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+
+.dia-cell {
+  min-height: 104px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 6px;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  transition: background var(--transition), border-color var(--transition);
+}
+.dia-cell:hover { background: var(--color-bg); }
+.dia-cell.tem-evento { background: var(--color-bg-claro); }
+.dia-cell.fora-do-mes { color: var(--color-text-muted); opacity: 0.4; }
+.dia-cell.hoje { border-color: var(--color-primary); }
+.dia-cell.selecionado { border-color: var(--color-primary); }
+
+.dia-numero { font-weight: 600; }
+.dia-cell.hoje .dia-numero {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.dia-eventos { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+
+.evento-chip {
+  display: block;
+  width: 100%;
+  border: none;
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.evento-chip.status-cancelado { text-decoration: line-through; }
+.evento-chip:hover, .chip-semana:hover { filter: brightness(0.95); }
+.evento-chip:focus-visible, .chip-semana:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+
+.evento-extra { font-size: 0.66rem; color: var(--color-text-muted); font-weight: 600; padding-left: 4px; }
+
+/* =====================================================================
+   VISÃO SEMANA
+   ===================================================================== */
+.semana-grade { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+
+.coluna { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.coluna-topo {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-claro);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+.coluna-topo.hoje { background: var(--color-primary); color: var(--color-white); }
+.coluna-sigla { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; opacity: 0.8; }
+.coluna-numero { font-size: 1.15rem; font-weight: 700; font-family: var(--font-display); line-height: 1.1; }
+.coluna-ocupacao { font-size: 0.66rem; opacity: 0.85; }
+
+.barra { width: 100%; height: 4px; border-radius: 999px; background: var(--color-border-strong); overflow: hidden; }
+.barra-cheia { display: block; height: 100%; background: var(--color-primary-dark); border-radius: 999px; }
+.coluna-topo.hoje .barra { background: rgba(255, 255, 255, 0.3); }
+.coluna-topo.hoje .barra-cheia { background: var(--color-white); }
+
+.coluna-itens { display: flex; flex-direction: column; gap: 5px; }
+
+.chip-semana {
+  display: block; width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.chip-semana.status-cancelado { text-decoration: line-through; }
+.chip-livre {
+  background: var(--color-white);
+  color: var(--color-sucesso);
+  border: 1.5px dashed var(--color-livre-borda);
+}
+
+.nao-trabalha {
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  background: repeating-linear-gradient(135deg, var(--color-listra-1), var(--color-listra-1) 6px, var(--color-listra-2) 6px, var(--color-listra-2) 12px);
+}
+
+/* =====================================================================
+   VISÃO DIA (linha do tempo)
+   ===================================================================== */
+.linha-tempo { display: flex; flex-direction: column; gap: 8px; }
+
+.dia-vazio {
+  margin: 0;
+  padding: 28px;
+  text-align: center;
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+.linha { display: flex; align-items: stretch; gap: 14px; }
+.linha-hora { width: 48px; flex-shrink: 0; padding-top: 14px; font-weight: 700; font-size: 0.88rem; color: var(--color-text); text-align: right; }
+
+.cartao {
+  flex: 1;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: filter var(--transition);
+}
+.cartao:hover { filter: brightness(0.98); }
+.cartao.status-agendado { border-color: var(--color-agendado-claro); }
+.cartao.status-cancelado .cartao-info strong { text-decoration: line-through; }
+.cartao-info { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 2px; }
+.cartao-info strong { font-size: 0.92rem; color: var(--color-text); }
+.cartao-info small { font-size: 0.76rem; color: var(--color-text-soft); }
+
+.cartao-livre {
+  background: var(--color-white);
+  border: 1.5px dashed var(--color-livre-borda);
+  cursor: default;
+}
+.cartao-livre:hover { filter: none; }
+
+.etiqueta {
+  font-size: 0.7rem; font-weight: 700;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--color-white); color: var(--color-text-soft);
+  white-space: nowrap;
+}
+.et-agendado { background: var(--color-agendado-claro); color: var(--color-agendado-escuro); }
+.et-realizado { background: var(--color-white); color: var(--color-sucesso); }
+.et-receber { background: var(--color-aviso-claro); color: var(--color-aviso); }
+.et-cancelado { background: var(--color-white); color: var(--color-perigo-escuro); }
+.et-falta { background: var(--color-white); color: var(--color-aviso); }
+.et-livre { background: var(--color-sucesso-claro); color: var(--color-sucesso); }
+
+.btn-mini {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body); font-size: 0.78rem; font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition);
+}
+.btn-mini:hover:not(:disabled) { background: var(--color-border-strong); }
+.btn-mini:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-mini-escuro { background: var(--color-primary); color: var(--color-white); }
+.btn-mini-escuro:hover:not(:disabled) { background: var(--color-primary-dark); }
+
+/* =====================================================================
+   LEGENDA
+   ===================================================================== */
+.legenda {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.78rem; font-weight: 600; color: var(--color-text-soft);
+}
+.leg { display: inline-flex; align-items: center; gap: 6px; }
+.leg::before { content: ''; width: 12px; height: 12px; border-radius: 3px; }
+/* quadradinhos com a cor forte de cada status, para dar para enxergar bem */
+.leg-agendado::before { background: var(--color-agendado); }
+.leg-realizado::before { background: var(--color-sucesso); }
+.leg-cancelado::before { background: var(--color-perigo); }
+.leg-falta::before { background: var(--color-aviso); }
+.leg-livre::before { background: var(--color-white); border: 2px dashed var(--color-sucesso); }
+.leg-dica { margin-left: auto; font-style: italic; font-weight: 400; color: var(--color-text-muted); }
+
+@media (max-width: 900px) {
+  .semana-grade { grid-template-columns: repeat(7, 140px); overflow-x: auto; }
+}
+@media (max-width: 640px) {
+  .leg-dica { margin-left: 0; }
+  .linha-hora { width: 40px; }
+}
+
+/* =====================================================================
+   TÍTULO + LEGENDA NO TOPO (Início)
+   ===================================================================== */
+.cal-topo {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.cal-topo h3 { margin: 0; font-size: 1.05rem; color: var(--color-text); }
+.cal-topo h3::first-letter { text-transform: uppercase; }
+.legenda-topo { margin: 0; padding: 0; border: none; gap: 14px; font-size: 0.74rem; }
+
+/* =====================================================================
+   MÊS RESUMIDO (Início)
+   ===================================================================== */
+.dia-cell.resumo { min-height: 84px; }
+.dia-resumo { display: flex; flex-direction: column; gap: 3px; width: 100%; margin-top: auto; }
+.resumo-qtd { font-size: 0.72rem; font-weight: 600; color: var(--color-text-soft); }
+.resumo-fechado { color: var(--color-text-faint); font-weight: 500; }
+.resumo-ocupacao { font-size: 0.68rem; color: var(--color-text-muted); }
+.barra-cheia[data-nivel="alta"] { background: var(--color-primary-dark); }
+.barra-cheia[data-nivel="media"] { background: var(--color-primary); }
+.barra-cheia[data-nivel="baixa"] { background: var(--color-livre-borda); }

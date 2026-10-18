@@ -1,0 +1,34 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-brand-icon">
+        <img src="assets/icons/icone-logo-meufluxo.png" alt="" />
+      </div>
+      <span class="auth-brand-name">MeuFluxo</span>
+    </div>
+
+    <h2 class="auth-heading">Entrar</h2>
+    <p class="subtitle">Entre para continuar organizando o seu negócio</p>
+
+    <form class="auth-form" (ngSubmit)="fazerLogin($event)">
+      <div class="auth-erro" *ngIf="erro">{{ erro }}</div>
+
+      <div class="input-group">
+        <label>E-mail</label>
+        <input type="email" placeholder="seuemail@exemplo.com" [(ngModel)]="email" name="email" required />
+      </div>
+      <div class="input-group">
+        <label>Senha</label>
+        <input type="password" placeholder="••••••••" [(ngModel)]="senha" name="senha" required />
+      </div>
+
+      <button type="submit" class="btn-primary" [disabled]="carregando">
+        {{ carregando ? 'Entrando...' : 'Entrar' }}
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Ainda não tem conta? <a routerLink="/cadastro">Criar uma conta</a>
+    </div>
+  </div>
+</div>
