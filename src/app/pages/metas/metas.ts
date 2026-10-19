@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 
-const API_URL = 'http://localhost:3001/api';
+import { API_URL, dinheiro } from '../../app';
 
 interface Servico { id: number; nome: string; valor: number; }
 interface Agendamento {
@@ -124,6 +124,11 @@ export class Metas implements OnInit {
         this.cdr.markForCheck();
       },
     });
+  }
+
+   /** Valor em reais respeitando o "Ocultar valores" (Início/Financeiro): "R$ 80,00" ou "R$ ••••". */
+  valorEmReais(valor: number | null | undefined): string {
+    return dinheiro(valor);
   }
 
   private chaveMes(ano: number, mes: number): string {

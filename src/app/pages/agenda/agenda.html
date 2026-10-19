@@ -49,7 +49,7 @@
         <div class="detalhe-titulos">
           <small>{{ tituloDetalhe(ag) }}</small>
           <h2>{{ nomeCliente(ag.clienteId) }}</h2>
-          <p>{{ nomeServico(ag.servicoId) }} · {{ duracaoServico(ag.servicoId) }} min · {{ valorServico(ag.servicoId) | currency }}</p>
+          <p>{{ nomeServico(ag.servicoId) }} · {{ duracaoServico(ag.servicoId) }} min · {{ valorEmReais(valorServico(ag.servicoId)) }}</p>
         </div>
         <span class="etiqueta"
               [class.et-agendado]="ag.status === 'agendado'"
@@ -64,7 +64,7 @@
 
       <p class="detalhe-origem">
         {{ textoOrigem(ag) }}
-        <a [routerLink]="['/clientes']" [queryParams]="{ busca: nomeCliente(ag.clienteId) }">Ver ficha do cliente</a>
+        <a [routerLink]="['/clientes']" [queryParams]="{ ficha: ag.clienteId }">Ver ficha do cliente</a>
       </p>
 
       <div class="modal-erro" *ngIf="erroDetalhe">{{ erroDetalhe }}</div>
@@ -192,14 +192,14 @@
         </div>
 
         <p class="texto-bloco" *ngIf="ag.statusPagamento === 'pago'">
-          <strong>{{ totalComDesconto(ag.valorCobrado || 0, ag.desconto) | currency }}</strong> via {{ rotuloForma(ag.formaPagamento) }}
-          <ng-container *ngIf="ag.desconto > 0"> (desconto de {{ ag.desconto | currency }})</ng-container>
+          <strong>{{ valorEmReais(totalComDesconto(ag.valorCobrado || 0, ag.desconto)) }}</strong> via {{ rotuloForma(ag.formaPagamento) }}
+          <ng-container *ngIf="ag.desconto > 0"> (desconto de {{ valorEmReais(ag.desconto) }})</ng-container>
           <ng-container *ngIf="ag.pagoEm"> · recebido<ng-container *ngIf="ag.recebidoPorNome"> por {{ ag.recebidoPorNome }}</ng-container>
             em {{ dataCurta(ag.pagoEm.slice(0, 10)) }} às {{ ag.pagoEm.slice(11, 16) }}</ng-container>
         </p>
 
         <ng-container *ngIf="ag.statusPagamento === 'pendente'">
-          <p class="texto-bloco"><strong>{{ (ag.valorCobrado || 0) | currency }}</strong> ainda não foi pago. O valor está em Financeiro › A receber.</p>
+          <p class="texto-bloco"><strong>{{ valorEmReais(ag.valorCobrado) }}</strong> ainda não foi pago. O valor está em Financeiro › A receber.</p>
 
           <button type="button" class="btn-primary btn-largo" *ngIf="acao !== 'pagamento'" (click)="escolherAcao('pagamento')">Registrar pagamento</button>
 
@@ -300,7 +300,7 @@
         <div class="form-group">
           <label>Serviço *</label>
           <select [(ngModel)]="novoAgendamento.servicoId" name="servicoId" (ngModelChange)="limparAvisoNovo()" required>
-            <option *ngFor="let s of servicos" [value]="s.id">{{ s.nome }} — {{ s.duracao }} min · {{ s.valor | currency }}</option>
+            <option *ngFor="let s of servicos" [value]="s.id">{{ s.nome }} — {{ s.duracao }} min · {{ valorEmReais(s.valor) }}</option>
           </select>
         </div>
 

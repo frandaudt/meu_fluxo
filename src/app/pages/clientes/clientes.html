@@ -1,102 +1,204 @@
 <main class="clientes-page">
 
+  <!-- ===== TOPO ===== -->
   <div class="clientes-header">
     <div>
       <h1>Clientes</h1>
-      <p>Gerencie seus clientes</p>
+      <p *ngIf="!carregando">{{ resumoTopo }}</p>
     </div>
-
-    <button class="btn-primary" (click)="abrirModal()">
-      + Novo Cliente
-    </button>
+    <button type="button" class="btn-primary" (click)="abrirModal()">+ Novo cliente</button>
   </div>
 
   <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
-
-  <div class="busca-ativa" *ngIf="termoBusca">
-    Buscando por "<strong>{{ termoBusca }}</strong>"
-    <button (click)="limparBusca()">Limpar</button>
-  </div>
-
   <p class="carregando" *ngIf="carregando">Carregando clientes...</p>
 
-  <div class="clientes-list" *ngIf="!carregando">
-
-    <div class="cliente-card" *ngFor="let cliente of clientesFiltrados">
-      <div class="card-header">
-        <div class="user-avatar">{{ iniciais(cliente.nome) }}</div>
-
-        <div class="card-title">
-          <h3>{{ cliente.nome }}</h3>
-          <span class="badge-status">Ativo</span>
-        </div>
-
-        <button class="btn-icon" title="Editar" (click)="abrirModalEdicao(cliente)">
-          <span class="icone btn-icon-img" aria-hidden="true">edit</span>
-        </button>
-        <button class="btn-icon" title="Remover" (click)="removerCliente(cliente.id)">
-          <span class="icone btn-icon-img icone-remover" aria-hidden="true">delete</span>
-        </button>
+  <!-- ===== BUSCA + FILTROS + TABELA ===== -->
+  <section class="card" *ngIf="!carregando">
+    <div class="ferramentas">
+      <div class="campo-busca">
+        <span class="icone" aria-hidden="true">search</span>
+        <input type="text" placeholder="Buscar por nome ou telefone" [(ngModel)]="termoBusca" name="termoBusca" />
       </div>
 
-      <div class="card-body">
-        <span class="icone info-icon" aria-hidden="true">call</span>
-               <span class="icone info-icon" aria-hidden="true">mail</span>
-       <span class="icone info-icon" aria-hidden="true">location_on</span>
+      <div class="filtros" role="group" aria-label="Filtrar por situação">
+        <button type="button" *ngFor="let f of filtros" class="filtro"
+                [class.ativo]="filtro === f.valor" (click)="filtro = f.valor">
+          {{ f.rotulo }} <span>{{ quantos(f.valor) }}</span>
+        </button>
       </div>
     </div>
 
-    <p class="empty-state" *ngIf="clientesFiltrados.length === 0">
-      Nenhum cliente encontrado.
-    </p>
+    <div class="tabela-rolagem">
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Telefone</th>
+            <th>Visitas</th>
+            <th>Última visita</th>
+            <th>Próxima visita</th>
+            <th>Situação</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of linhasFiltradas">
+            <td>
+              <div class="cliente-cel">
+                <div class="avatar">{{ iniciais(l.cliente.nome) }}</div>
+                <div>
+                  <strong>{{ l.cliente.nome }}</strong>
+                  <small>{{ textoOrigem(l.cliente) }}</small>
+                </div>
+              </div>
+            </td>
+            <td>{{ l.cliente.telefone }}</td>
+            <td>{{ l.resumo.visitas }}</td>
+            <td>{{ dataCurta(l.resumo.ultimaVisita) }}</td>
+            <td [class.atrasada]="!l.resumo.proximaVisita && l.resumo.atrasada">{{ textoProxima(l.resumo) }}</td>
+            <td><span class="etiqueta" [attr.data-situacao]="l.resumo.situacao">{{ rotuloSituacao[l.resumo.situacao] }}</span></td>
+            <td class="col-acao">
+              <button type="button" class="btn-visualizar" (click)="abrirFicha(l.cliente.id)">Visualizar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
+      <p class="vazio" *ngIf="linhasFiltradas.length === 0">
+        {{ clientes.length === 0 ? 'Nenhum cliente cadastrado ainda. Clique em "+ Novo cliente" para começar.' : 'Nenhum cliente encontrado com esse filtro.' }}
+      </p>
+    </div>
+  </section>
+
+
+  <!-- ===== FICHA DO CLIENTE (janela) ===== -->
+  <div class="modal-overlay" *ngIf="ficha as f" (click)="fecharFicha()">
+    <div class="modal modal-ficha" (click)="$event.stopPropagation()">
+
+      <div class="ficha-topo">
+        <div class="avatar avatar-grande">{{ iniciais(f.cliente.nome) }}</div>
+        <div class="ficha-titulos">
+          <div class="ficha-nome">
+            <h2>{{ f.cliente.nome }}</h2>
+            <span class="etiqueta" [attr.data-situacao]="f.resumo.situacao">{{ rotuloSituacao[f.resumo.situacao] }}</span>
+          </div>
+          <p>{{ f.cliente.telefone }}<ng-container *ngIf="clienteDesde(f.cliente)"> · {{ clienteDesde(f.cliente) }}</ng-container></p>
+        </div>
+        <div class="ficha-botoes">
+          <button type="button" class="btn-secondary" (click)="editarDaFicha()">Editar</button>
+          <button type="button" class="btn-primary" (click)="agendar(f.cliente)">Agendar</button>
+          <button type="button" class="btn-fechar" (click)="fecharFicha()" aria-label="Fechar">
+            <span class="icone" aria-hidden="true">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- faixa de alerta: em risco ou inativo -->
+      <div class="faixa-alerta" *ngIf="f.resumo.situacao === 'em_risco' || f.resumo.situacao === 'inativo'">
+        <p>
+          <strong>Não vem há {{ f.resumo.diasSemVir }} dias.</strong>
+          <ng-container *ngIf="f.resumo.ritmo"> Costuma voltar a cada {{ f.resumo.ritmo }} dias.</ng-container>
+        </p>
+        <button type="button" class="btn-whatsapp" [disabled]="!linkSaudade(f)" (click)="chamarNoWhatsapp(f)">Chamar no WhatsApp</button>
+      </div>
+
+      <!-- 6 números -->
+      <div class="ficha-numeros">
+        <div class="ficha-numero">
+          <span>Visitas</span>
+          <strong>{{ f.resumo.visitas }}</strong>
+        </div>
+        <div class="ficha-numero">
+          <span>Total gasto</span>
+          <strong>{{ valorEmReais(f.resumo.totalGasto) }}</strong>
+        </div>
+        <div class="ficha-numero">
+          <span>Próxima visita</span>
+          <strong *ngIf="f.resumo.proximaVisita">{{ dataComDia(f.resumo.proximaVisita) }}</strong>
+          <strong *ngIf="!f.resumo.proximaVisita && f.resumo.prevista" [class.texto-perigo]="f.resumo.atrasada">
+            {{ f.resumo.atrasada ? 'atrasada' : 'prevista' }} ({{ dataCurta(f.resumo.prevista) }})
+          </strong>
+          <strong *ngIf="!f.resumo.proximaVisita && !f.resumo.prevista">—</strong>
+        </div>
+        <div class="ficha-numero">
+          <span>Volta a cada</span>
+          <strong>{{ f.resumo.ritmo ? f.resumo.ritmo + ' dias' : '—' }}</strong>
+        </div>
+        <div class="ficha-numero">
+          <span>Última visita</span>
+          <strong>{{ dataCurta(f.resumo.ultimaVisita) }}</strong>
+        </div>
+        <div class="ficha-numero">
+          <span>Faltas / cancel.</span>
+          <strong>{{ f.resumo.faltas }} / {{ f.resumo.cancelamentos }}</strong>
+        </div>
+      </div>
+
+      <p class="preferencias">
+        <span>Serviço favorito: <strong>{{ f.resumo.servicoFavorito ? f.resumo.servicoFavorito.nome + ' (' + f.resumo.servicoFavorito.vezes + 'x)' : '—' }}</strong></span>
+        <span>Horário preferido: <strong>{{ f.resumo.horarioPreferido || '—' }}</strong></span>
+        <span>Costuma pagar com: <strong>{{ f.resumo.formaPreferida || '—' }}</strong></span>
+      </p>
+
+      <h3 class="jornada-titulo">Jornada do cliente</h3>
+      <ol class="jornada">
+        <li *ngFor="let e of jornada">
+          <span class="jornada-bolinha" [attr.data-cor]="e.cor"></span>
+          <div class="jornada-texto">
+            <strong>{{ e.titulo }}</strong>
+            <small>{{ e.detalhe }}</small>
+          </div>
+          <span class="jornada-data">{{ quando(e.data) }}</span>
+        </li>
+        <li class="vazio" *ngIf="jornada.length === 0">Ainda não há nada na jornada deste cliente.</li>
+      </ol>
+    </div>
   </div>
 
 
-  <!-- MODAL -->
-  <div class="modal-overlay" *ngIf="modalAberto">
-    <div class="modal">
+  <!-- ===== NOVO / EDITAR CLIENTE (janela) ===== -->
+  <div class="modal-overlay" *ngIf="modalAberto" (click)="fecharModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
 
       <div class="modal-header">
-        <h2>{{ editandoId ? 'Editar Cliente' : 'Novo Cliente' }}</h2>
-        <button class="btn-icon" (click)="fecharModal()">×</button>
+        <h2>{{ editandoId ? 'Editar cliente' : 'Novo cliente' }}</h2>
+        <button type="button" class="btn-fechar" (click)="fecharModal()" aria-label="Fechar">
+          <span class="icone" aria-hidden="true">close</span>
+        </button>
       </div>
 
       <form class="modal-form" (ngSubmit)="salvarCliente($event)">
-
         <div class="modal-erro" *ngIf="erroModal">{{ erroModal }}</div>
 
         <div class="form-group">
-          <label>Nome Completo *</label>
-          <input type="text" placeholder="Ex: Maria Silva" [(ngModel)]="novoCliente.nome" name="nome" required />
+          <label for="nome">Nome completo *</label>
+          <input id="nome" type="text" placeholder="Ex: Maria Silva" [(ngModel)]="novoCliente.nome" name="nome" required />
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label>Telefone / WhatsApp *</label>
-            <input type="tel" placeholder="(11) 99999-9999" [(ngModel)]="novoCliente.telefone" name="telefone" required />
+            <label for="telefone">Telefone / WhatsApp *</label>
+            <input id="telefone" type="tel" placeholder="(11) 99999-9999" [(ngModel)]="novoCliente.telefone" name="telefone" required />
           </div>
-
           <div class="form-group">
-            <label>E-mail</label>
-            <input type="email" placeholder="cliente&#64;email.com" [(ngModel)]="novoCliente.email" name="email" />
+            <label for="email">E-mail</label>
+            <input id="email" type="email" placeholder="cliente&#64;email.com" [(ngModel)]="novoCliente.email" name="email" />
           </div>
         </div>
 
         <div class="form-group">
-          <label>Endereço / Complemento</label>
-          <input type="text" placeholder="Rua, número, bairro..." [(ngModel)]="novoCliente.endereco" name="endereco" />
+          <label for="endereco">Endereço / complemento</label>
+          <input id="endereco" type="text" placeholder="Rua, número, bairro..." [(ngModel)]="novoCliente.endereco" name="endereco" />
         </div>
 
         <div class="modal-actions">
+          <button type="button" class="btn-excluir" *ngIf="editandoId && podeExcluir" (click)="removerCliente()">Excluir cliente</button>
           <button type="button" class="btn-secondary" (click)="fecharModal()">Cancelar</button>
           <button type="submit" class="btn-primary" [disabled]="salvando">
-            {{ salvando ? 'Salvando...' : (editandoId ? 'Salvar Alterações' : 'Salvar Cliente') }}
+            {{ salvando ? 'Salvando...' : (editandoId ? 'Salvar alterações' : 'Salvar cliente') }}
           </button>
         </div>
-
       </form>
-
     </div>
   </div>
 

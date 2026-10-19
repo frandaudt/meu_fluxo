@@ -67,7 +67,7 @@
             <div class="aviso-item" *ngFor="let a of alertas">
               <span class="aviso-bolinha" [attr.data-cor]="a.cor"></span>
               <div class="aviso-textos">
-                <p>{{ a.texto }}</p>
+                <p>{{ textoAlerta(a.texto) }}</p>
                 <button type="button" class="aviso-acao" *ngIf="a.acao" (click)="abrirAlerta(a)">{{ a.acao.rotulo }}</button>
               </div>
             </div>

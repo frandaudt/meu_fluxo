@@ -155,3 +155,21 @@
   margin-right: 4px;
   color: var(--color-primary);
 }
+
+/* aviso amarelo depois de criar um serviço */
+.aviso-novo {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-aviso-claro);
+  color: var(--color-aviso);
+  font-size: 0.88rem;
+}
+.aviso-novo button {
+  flex-shrink: 0;
+  min-height: 36px; padding: 6px 14px;
+  border: none; border-radius: var(--radius-sm);
+  background: var(--color-white); color: var(--color-aviso);
+  font-weight: 600; font-family: var(--font-body);
+  cursor: pointer;
+}

@@ -1,0 +1,112 @@
+.busca { display: flex; flex-direction: column; gap: 16px; }
+
+.busca-topo h1 { margin: 0; font-size: 1.6rem; color: var(--color-text); word-break: break-word; }
+.busca-topo p { margin: 4px 0 0; font-size: 0.9rem; color: var(--color-text-muted); }
+
+.card {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+/* ===== exemplos + filtros ===== */
+.filtros-card { gap: 14px; }
+.exemplos { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--color-border); }
+.exemplos-rotulo { font-size: 0.84rem; color: var(--color-text-muted); margin-right: 4px; }
+.chip {
+  min-height: 38px; padding: 6px 14px;
+  border: 1.5px solid var(--color-border-strong); border-radius: 999px;
+  background: var(--color-white); color: var(--color-text);
+  font-weight: 600; font-family: var(--font-body); font-size: 0.84rem;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.chip:hover { border-color: var(--color-primary); }
+.chip.ativo { background: var(--color-primary-dark); border-color: var(--color-primary-dark); color: white; }
+
+.filtros { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.filtro { display: flex; flex-direction: column; gap: 6px; }
+.filtro span { font-size: 0.78rem; font-weight: 600; color: var(--color-text-muted); }
+.filtro select, .filtro input {
+  min-width: 130px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  font-size: 0.88rem; font-family: var(--font-body); color: var(--color-text);
+  outline: none;
+}
+.filtro select:focus, .filtro input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-foco); }
+.btn-limpar {
+  margin-left: auto;
+  min-height: 42px; padding: 8px 14px;
+  border: none; border-radius: var(--radius-md);
+  background: var(--color-bg); color: var(--color-text);
+  font-weight: 600; font-family: var(--font-body); font-size: 0.84rem;
+  cursor: pointer;
+}
+.btn-limpar:hover { background: var(--color-border-strong); }
+
+/* ===== números ===== */
+.numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.numero {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 16px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+.numero span { font-size: 0.78rem; color: var(--color-text-muted); }
+.numero strong { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== ações ===== */
+.acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.acoes button {
+  min-height: 40px; padding: 8px 14px;
+  border: none; border-radius: var(--radius-md);
+  background: var(--color-bg); color: var(--color-text);
+  font-weight: 600; font-family: var(--font-body); font-size: 0.84rem;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.acoes button:hover { background: var(--color-border-strong); }
+.acoes button.principal { background: var(--color-primary-dark); color: white; }
+.acoes button.principal:hover { background: var(--color-primary); }
+
+/* ===== seções ===== */
+.secao-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.secao-topo h2 { margin: 0; font-size: 1.05rem; color: var(--color-text); }
+.secao-topo small { font-size: 0.8rem; color: var(--color-text-muted); }
+
+.tabela-rolagem { overflow-x: auto; }
+.tabela { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.tabela th {
+  text-align: left; padding: 9px 12px;
+  font-size: 0.78rem; font-weight: 600; color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.tabela td { padding: 10px 12px; border-bottom: 1px solid var(--color-border); color: var(--color-text); }
+.tabela tr:last-child td { border-bottom: none; }
+.tabela tr.clicavel { cursor: pointer; }
+.tabela tr.clicavel:hover td { background: var(--color-bg-claro); }
+
+.vazio { margin: 0; padding: 12px 0; font-size: 0.86rem; color: var(--color-text-muted); }
+
+.pagina-erro {
+  background: var(--color-perigo-claro); color: var(--color-perigo-escuro);
+  border: 1px solid var(--color-perigo-borda); border-radius: 8px;
+  padding: 10px 14px; font-size: 0.9rem;
+}
+.carregando { color: var(--color-text-muted); padding: 24px 0; text-align: center; }
+
+@media (max-width: 640px) {
+  .btn-limpar { margin-left: 0; }
+  .filtro select, .filtro input { min-width: 0; width: 100%; }
+  .filtro { flex: 1 1 140px; }
+}

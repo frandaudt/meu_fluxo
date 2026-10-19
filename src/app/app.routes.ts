@@ -9,6 +9,7 @@ import { Metas } from './pages/metas/metas';
 import { Perfil } from './pages/perfil/perfil';
 import { Servicos } from './pages/servicos/servicos';
 import { TelaInicial } from './pages/tela-inicial/tela-inicial';
+import { Busca } from './pages/busca/busca';
 
 export const routes: Routes = [
   {path: '', component: Anuncio},
@@ -21,5 +22,6 @@ export const routes: Routes = [
   {path: 'financeiro', component: Financeiro},
   {path: 'metas', component: Metas},
   {path: 'perfil', component: Perfil},
+  {path: 'busca', component: Busca},
 
 ];

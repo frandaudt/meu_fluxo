@@ -14,25 +14,26 @@
           [(ngModel)]="termoBusca"
           (input)="aoDigitarBusca()"
           (focus)="onFocusBusca()"
-          (keyup.enter)="selecionarPrimeiroResultado()"
+          (keyup.enter)="buscarTudo()"
         />
       </div>
 
+      <!-- sugestões enquanto digita (clicar ou apertar Enter abre a tela de resultados) -->
       <div class="busca-dropdown" *ngIf="buscaAberta">
+        <p class="busca-titulo-lista">Sugestões enquanto digita</p>
         <button
           type="button"
           class="busca-item"
-          *ngFor="let r of resultadosBusca"
-          (click)="irParaResultado(r)"
+          *ngFor="let s of sugestoes"
+          (click)="irParaSugestao(s)"
         >
-          <span class="busca-tipo">{{ r.tipo }}</span>
-          <span class="busca-titulo">{{ r.titulo }}</span>
-          <span class="busca-subtitulo">{{ r.subtitulo }}</span>
+          <span class="busca-titulo">{{ s.titulo }}</span>
+          <span class="busca-tipo">{{ s.tipo }}</span>
         </button>
 
-        <p class="busca-vazio" *ngIf="resultadosBusca.length === 0">
-          Nada encontrado para "{{ termoBusca }}".
-        </p>
+        <button type="button" class="busca-item busca-ver-tudo" (click)="buscarTudo()">
+          Ver todos os resultados para "{{ termoBusca }}"
+        </button>
       </div>
     </div>
 
@@ -53,7 +54,7 @@
             <div class="aviso-item">
               <span class="aviso-bolinha" [attr.data-cor]="a.cor"></span>
               <div class="aviso-textos">
-                <p>{{ a.texto }}</p>
+                <p>{{ textoAlerta(a.texto) }}</p>
                 @if (a.acao) {
                   <button type="button" class="aviso-acao" (click)="abrirAlerta(a)">{{ a.acao.rotulo }}</button>
                 }
@@ -67,7 +68,11 @@
     </div>
 
     <div class="user-pill" (click)="toggleMenuUsuario($event)">
-      <div class="user-avatar-iniciais">{{ inicialUsuario }}</div>
+      @if (fotoUsuario) {
+       <img class="user-avatar-iniciais user-avatar-foto" [src]="fotoUsuario" alt="" />
+     } @else {
+       <div class="user-avatar-iniciais">{{ inicialUsuario }}</div>
+     }
       <div class="user-nome">
         <strong>{{ primeiroNomeUsuario }}</strong>
         <small>{{ papelUsuario }}</small>

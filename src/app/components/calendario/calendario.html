@@ -39,7 +39,7 @@
             <span class="resumo-ocupacao">{{ ocupacaoDoDia(dia.data) }}%</span>
             <span class="barra"><span class="barra-cheia" [attr.data-nivel]="nivelOcupacao(dia.data)" [style.width.%]="ocupacaoDoDia(dia.data)"></span></span>
           </ng-container>
-          <ng-template #resumoFechado><span class="resumo-qtd resumo-fechado">fechado</span></ng-template>
+          <ng-template #resumoFechado><span class="resumo-qtd resumo-fechado">{{ rotuloFechado(dia.data) }}</span></ng-template>
         </div>
 
         <div class="dia-eventos" *ngIf="!resumoMes">
@@ -75,7 +75,7 @@
           <span class="barra"><span class="barra-cheia" [style.width.%]="col.ocupacao"></span></span>
           <span class="coluna-ocupacao">{{ col.ocupacao }}% ocupado</span>
         </ng-container>
-        <ng-template #topoFechado><span class="coluna-ocupacao">fechado</span></ng-template>
+        <ng-template #topoFechado><span class="coluna-ocupacao">{{ rotuloFechado(col.data) }}</span></ng-template>
       </button>
 
       <div class="coluna-itens">
@@ -97,6 +97,10 @@
                   (click)="agendarEm.emit({ data: col.data, horario: item.inicio })">
             <strong>{{ item.inicio }}</strong> livre
           </button>
+
+          <span class="chip-semana chip-pausa" *ngIf="item.tipo === 'pausa'" [title]="item.motivo + ': ' + item.inicio + ' às ' + item.fim">
+            <strong>{{ item.inicio }}</strong> {{ item.motivo }}
+          </span>
         </ng-container>
       </div>
     </div>
@@ -107,7 +111,7 @@
        ================================================================ -->
   <div class="linha-tempo" *ngIf="visao === 'dia'">
     <p class="dia-vazio" *ngIf="itensDia.length === 0">
-      {{ diaFechado ? 'Você não trabalha nesse dia.' : 'Nenhum agendamento nesse dia.' }}
+      {{ diaFechado ? textoDiaFechado : 'Nenhum agendamento nesse dia.' }}
     </p>
 
     <div class="linha" *ngFor="let item of itensDia">
@@ -155,6 +159,14 @@
         </div>
         <span class="etiqueta et-livre">Livre</span>
         <button type="button" class="btn-mini" (click)="agendarEm.emit({ data: dataRef, horario: item.inicio })">Agendar aqui</button>
+      </div>
+
+      <!-- pausa do almoço ou bloqueio de parte do dia -->
+      <div class="cartao cartao-pausa" *ngIf="item.tipo === 'pausa'">
+        <div class="cartao-info">
+          <strong>{{ item.motivo }}</strong>
+          <small>{{ item.inicio }} às {{ item.fim }} · ninguém consegue agendar</small>
+        </div>
       </div>
     </div>
   </div>

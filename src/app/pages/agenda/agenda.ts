@@ -6,7 +6,15 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { AcaoRapida, Calendario, EventoResumo, VisaoCalendario } from '../../components/calendario/calendario';
 
-import { API_URL } from '../../app';
+import {
+  API_URL,
+  dinheiro,
+  HorarioTrabalho,
+  horarioPadrao,
+  normalizarHorarioTrabalho,
+  expedienteDoDia,
+  bloqueioDoDiaInteiro,
+} from '../../app';
 
 interface Cliente { id: number; nome: string; }
 interface Servico { id: number; nome: string; valor: number; duracao: number; }
@@ -40,11 +48,6 @@ interface Agendamento {
 /** O que está aberto dentro da janela de detalhes. */
 type AcaoDetalhe = '' | 'concluir' | 'falta' | 'reagendar' | 'cancelar' | 'pagamento';
 
-interface DiaTrabalho { ativo: boolean; inicio: string; fim: string; }
-interface HorarioTrabalho {
-  blocoMin: number;
-  dias: DiaTrabalho[]; // dias[0] = domingo ... dias[6] = sábado
-}
 
 @Component({
   selector: 'app-agenda',
@@ -54,8 +57,6 @@ interface HorarioTrabalho {
   styleUrl: './agenda.css',
 })
 export class Agenda implements OnInit {
-  private readonly HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
-
   carregando = true;
   erro: string | null = null;
   erroModal: string | null = null;
@@ -64,7 +65,7 @@ export class Agenda implements OnInit {
   agendamentos: Agendamento[] = [];
   clientes: Cliente[] = [];
   servicos: Servico[] = [];
-  horario: HorarioTrabalho = this.horarioPadrao();
+  horario: HorarioTrabalho = horarioPadrao();
 
   eventosPorDia: Map<string, EventoResumo[]> = new Map();
 
@@ -106,7 +107,7 @@ export class Agenda implements OnInit {
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
   ];
 
-   constructor(
+  constructor(
     private router: Router,
     private rota: ActivatedRoute,
     private http: HttpClient,
@@ -143,13 +144,13 @@ export class Agenda implements OnInit {
         { headers }
       ),
       agendamentos: this.http.get<{ agendamentos: Agendamento[] }>(`${API_URL}/agendamentos`, { headers }),
-      horarioTrabalho: this.http.get<{ horario: HorarioTrabalho | null }>(`${API_URL}/horario-trabalho`, { headers }),
+      horarioTrabalho: this.http.get<unknown>(`${API_URL}/horario-trabalho`, { headers }),
     }).subscribe({
       next: ({ clientes, servicos, agendamentos, horarioTrabalho }) => {
         this.clientes = clientes.clientes;
         this.servicos = servicos.servicos.map(s => ({ id: s.id, nome: s.nome, valor: s.valor, duracao: s.duracaoMin }));
         this.agendamentos = agendamentos.agendamentos;
-        this.horario = this.normalizarHorario(horarioTrabalho.horario);
+        this.horario = normalizarHorarioTrabalho(horarioTrabalho); // com pausa e folgas
         this.atualizarDerivados();
         this.carregando = false;
         this.abrirPeloEndereco();
@@ -168,37 +169,13 @@ export class Agenda implements OnInit {
   //  HORÁRIO DE TRABALHO (expediente) e VALIDAÇÃO de conflito
   // =====================================================================
 
-  /** Padrão: segunda a sábado, 08:00 às 18:00, domingo fechado. */
-  private horarioPadrao(): HorarioTrabalho {
-    const util = (): DiaTrabalho => ({ ativo: true, inicio: '08:00', fim: '18:00' });
-    return {
-      blocoMin: 30,
-      dias: [{ ativo: false, inicio: '08:00', fim: '18:00' }, util(), util(), util(), util(), util(), util()],
-    };
-  }
-
-  /** Garante um horário válido a partir do que estiver salvo (ou devolve o padrão). */
-  private normalizarHorario(bruto: unknown): HorarioTrabalho {
-    const padrao = this.horarioPadrao();
-    if (!bruto || typeof bruto !== 'object') return padrao;
-
-    const b = bruto as { blocoMin?: unknown; dias?: unknown };
-    const dias = padrao.dias.map((d, i) => {
-      const salvo = Array.isArray(b.dias) ? (b.dias[i] as Record<string, unknown> | undefined) : undefined;
-      if (!salvo || typeof salvo !== 'object') return d;
-      return {
-        ativo: typeof salvo['ativo'] === 'boolean' ? (salvo['ativo'] as boolean) : d.ativo,
-        inicio: this.HORA_REGEX.test(String(salvo['inicio'])) ? String(salvo['inicio']) : d.inicio,
-        fim: this.HORA_REGEX.test(String(salvo['fim'])) ? String(salvo['fim']) : d.fim,
-      };
-    });
-
-    return { blocoMin: padrao.blocoMin, dias };
-  }
-
   private paraMinutos(hhmm: string): number {
     const [h, m] = String(hhmm).split(':');
     return (Number(h) || 0) * 60 + (Number(m) || 0);
+  }
+
+  private paraHora(minutos: number): string {
+    return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
   }
 
   private diaSemanaDe(data: string): number {
@@ -212,12 +189,26 @@ export class Agenda implements OnInit {
     const inicioMin = this.paraMinutos(horarioNovo);
     const fimMin = inicioMin + duracao;
 
+    const folga = bloqueioDoDiaInteiro(this.horario, data);
+    if (folga) {
+      return `Esse dia está bloqueado (${folga.descricao || 'folga'}). Escolha outra data ou remova o bloqueio no Perfil.`;
+    }
     const diaConfig = this.horario.dias[this.diaSemanaDe(data)];
     if (!diaConfig.ativo) {
       return 'Você não atende nesse dia da semana. Ajuste o horário de trabalho no Perfil ou escolha outra data.';
     }
     if (inicioMin < this.paraMinutos(diaConfig.inicio) || fimMin > this.paraMinutos(diaConfig.fim)) {
       return `Esse horário fica fora do seu expediente (${diaConfig.inicio} às ${diaConfig.fim}).`;
+    }
+    // pausa do almoço e bloqueios de parte do dia
+    const expediente = expedienteDoDia(this.horario, data);
+    const pausa = expediente?.pausas.find(p => inicioMin < p.fim && p.ini < fimMin);
+    if (pausa) {
+      const de = this.paraHora(pausa.ini);
+      const ate = this.paraHora(pausa.fim);
+      return pausa.motivo === 'Pausa'
+        ? `Esse horário cai na sua pausa (${de} às ${ate}).`
+        : `Esse horário está bloqueado (${pausa.motivo}, das ${de} às ${ate}).`;
     }
     return '';
   }
@@ -325,7 +316,7 @@ export class Agenda implements OnInit {
     if (this.modalAberto) this.novoAgendamento.horario = slot.horario;
   }
 
-    /** Botões "Concluir" / "Não compareceu" / "Registrar pagamento" da visão Dia: abre os detalhes já no bloco certo. */
+  /** Botões "Concluir" / "Não compareceu" / "Registrar pagamento" da visão Dia: abre os detalhes já no bloco certo. */
   acaoRapida(evento: { id: number; acao: AcaoRapida }) {
     this.abrirDetalhe(evento.id);
     this.escolherAcao(evento.acao);
@@ -336,6 +327,7 @@ export class Agenda implements OnInit {
    *   /agenda?ag=12&acao=concluir   → abre os detalhes do agendamento 12 (e o bloco "Concluir")
    *   /agenda?data=2026-10-16       → mostra a visão Dia desse dia
    *   /agenda?novo=2026-10-20&hora=14:00 → abre "Novo agendamento" já preenchido
+   *   (&cliente=5 → já com o cliente escolhido; vem da ficha do cliente e da Busca)
    */
   private abrirPeloEndereco() {
     const params = this.rota.snapshot.queryParamMap;
@@ -356,6 +348,8 @@ export class Agenda implements OnInit {
     } else if (novo && /^\d{4}-\d{2}-\d{2}$/.test(novo)) {
       this.selecionarDia(novo);
       this.agendarEm({ data: novo, horario: params.get('hora') || '' });
+      const clienteId = Number(params.get('cliente'));
+      if (this.modalAberto && clienteId) this.novoAgendamento.clienteId = clienteId;
     }
 
     // limpa o endereço, para não reabrir a janela ao atualizar a página
@@ -699,6 +693,11 @@ export class Agenda implements OnInit {
   // =====================================================================
   //  AUXILIARES
   // =====================================================================
+
+  /** Valor em reais respeitando o "Ocultar valores" (Início/Financeiro): "R$ 80,00" ou "R$ ••••". */
+  valorEmReais(valor: number | null | undefined): string {
+    return dinheiro(valor);
+  }
 
   nomeCliente(id: number): string {
     return this.clientes.find(c => c.id === id)?.nome ?? 'Cliente removido';

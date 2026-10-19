@@ -1,10 +1,10 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 
-const API_URL = 'http://localhost:3001/api';
+import { API_URL, dinheiro } from '../../app';
 
 interface Servico {
   id: number;
@@ -13,6 +13,8 @@ interface Servico {
   valor: number;
   duracao: number; // em minutos
 }
+
+type ServicoApi = { id: number; nome: string; categoria: string; valor: number; duracaoMin: number };
 
 @Component({
   selector: 'app-servicos',
@@ -33,18 +35,30 @@ export class Servicos implements OnInit {
 
   editandoId: number | null = null;
 
-  novoServico = {
+  /** Aviso amarelo depois de criar um serviço (ele já entra no bot e no link). */
+  avisoNovo: string | null = null;
+
+  novoServico: { nome: string; categoria: string; valor: number | null; duracao: number | null } = {
     nome: '',
     categoria: '',
     valor: null,
     duracao: null,
   };
 
-  constructor(private router: Router, private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private router: Router,
+    private rota: ActivatedRoute,
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   private cabecalhoAuth(): HttpHeaders {
     const token = localStorage.getItem('meufluxo_token');
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
+  }
+
+  private paraServico(s: ServicoApi): Servico {
+    return { id: s.id, nome: s.nome, categoria: s.categoria, valor: s.valor, duracao: s.duracaoMin };
   }
 
   ngOnInit() {
@@ -54,19 +68,18 @@ export class Servicos implements OnInit {
       return;
     }
 
-    this.http.get<{ servicos: { id: number; nome: string; categoria: string; valor: number; duracaoMin: number }[] }>(
-      `${API_URL}/servicos`,
-      { headers: this.cabecalhoAuth() }
-    ).subscribe({
+    this.http.get<{ servicos: ServicoApi[] }>(`${API_URL}/servicos`, { headers: this.cabecalhoAuth() }).subscribe({
       next: (resposta) => {
-        this.servicos = resposta.servicos.map(s => ({
-          id: s.id,
-          nome: s.nome,
-          categoria: s.categoria,
-          valor: s.valor,
-          duracao: s.duracaoMin,
-        }));
+        this.servicos = resposta.servicos.map(s => this.paraServico(s));
         this.carregando = false;
+
+        // vindo da Busca ("Editar serviço"): /servicos?editar=3 abre a janela direto
+        const editar = Number(this.rota.snapshot.queryParamMap.get('editar'));
+        if (editar) {
+          const servico = this.servicos.find(s => s.id === editar);
+          if (servico) this.abrirModalEdicao(servico);
+          this.router.navigate([], { relativeTo: this.rota, queryParams: {}, replaceUrl: true });
+        }
         this.cdr.markForCheck();
       },
       error: (erro) => {
@@ -76,6 +89,11 @@ export class Servicos implements OnInit {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  /** Valor em reais respeitando o "Ocultar valores": "R$ 80,00" ou "R$ ••••". */
+  valorEmReais(valor: number | null | undefined): string {
+    return dinheiro(valor);
   }
 
   abrirModal() {
@@ -90,8 +108,8 @@ export class Servicos implements OnInit {
     this.novoServico = {
       nome: servico.nome,
       categoria: servico.categoria,
-      valor: servico.valor as any,
-      duracao: servico.duracao as any,
+      valor: servico.valor,
+      duracao: servico.duracao,
     };
     this.erroModal = null;
     this.modalAberto = true;
@@ -101,54 +119,45 @@ export class Servicos implements OnInit {
     this.modalAberto = false;
     this.editandoId = null;
     this.erroModal = null;
-    this.novoServico = { nome: '', categoria: '', valor: null, duracao: null };
   }
 
   salvarServico(event: Event) {
     event.preventDefault();
     this.erroModal = null;
 
-    if (!this.novoServico.nome || !this.novoServico.valor) {
-      this.erroModal = 'Preencha ao menos o nome e o valor do serviço!';
+    if (!this.novoServico.nome.trim() || !this.novoServico.valor) {
+      this.erroModal = 'Preencha o nome e o valor do serviço.';
+      return;
+    }
+    // a duração é obrigatória: é com ela que a agenda, o bot e o link calculam os horários livres
+    if (!this.novoServico.duracao || Number(this.novoServico.duracao) <= 0) {
+      this.erroModal = 'Informe a duração do serviço, em minutos.';
       return;
     }
 
     const corpo = {
-      nome: this.novoServico.nome,
+      nome: this.novoServico.nome.trim(),
       categoria: this.novoServico.categoria,
       valor: Number(this.novoServico.valor),
-      duracaoMin: Number(this.novoServico.duracao) || 0,
+      duracaoMin: Number(this.novoServico.duracao),
     };
 
     this.salvando = true;
+    const criando = !this.editandoId;
 
     const requisicao = this.editandoId
-      ? this.http.put<{ servico: { id: number; nome: string; categoria: string; valor: number; duracaoMin: number } }>(
-          `${API_URL}/servicos/${this.editandoId}`,
-          corpo,
-          { headers: this.cabecalhoAuth() }
-        )
-      : this.http.post<{ servico: { id: number; nome: string; categoria: string; valor: number; duracaoMin: number } }>(
-          `${API_URL}/servicos`,
-          corpo,
-          { headers: this.cabecalhoAuth() }
-        );
+      ? this.http.put<{ servico: ServicoApi }>(`${API_URL}/servicos/${this.editandoId}`, corpo, { headers: this.cabecalhoAuth() })
+      : this.http.post<{ servico: ServicoApi }>(`${API_URL}/servicos`, corpo, { headers: this.cabecalhoAuth() });
 
     requisicao.subscribe({
       next: (resposta) => {
-        const servicoAtualizado: Servico = {
-          id: resposta.servico.id,
-          nome: resposta.servico.nome,
-          categoria: resposta.servico.categoria,
-          valor: resposta.servico.valor,
-          duracao: resposta.servico.duracaoMin,
-        };
+        const servico = this.paraServico(resposta.servico);
+        const i = this.servicos.findIndex(s => s.id === servico.id);
+        if (i >= 0) this.servicos[i] = servico;
+        else this.servicos.push(servico);
 
-        if (this.editandoId) {
-          const indice = this.servicos.findIndex(s => s.id === this.editandoId);
-          if (indice !== -1) this.servicos[indice] = servicoAtualizado;
-        } else {
-          this.servicos.push(servicoAtualizado);
+        if (criando) {
+          this.avisoNovo = `"${servico.nome}" já vai aparecer no menu do bot e no link de agendamento. Você pode ocultá-lo na tela WhatsApp.`;
         }
 
         this.salvando = false;
@@ -164,9 +173,8 @@ export class Servicos implements OnInit {
   }
 
   removerServico(id: number) {
-    this.http.delete(`${API_URL}/servicos/${id}`, {
-      headers: this.cabecalhoAuth(),
-    }).subscribe({
+    if (!confirm('Excluir este serviço?')) return;
+    this.http.delete(`${API_URL}/servicos/${id}`, { headers: this.cabecalhoAuth() }).subscribe({
       next: () => {
         this.servicos = this.servicos.filter(s => s.id !== id);
         this.cdr.markForCheck();

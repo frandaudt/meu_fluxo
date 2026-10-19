@@ -1,46 +1,67 @@
-  <main class="perfil-page">
+<main class="perfil-page">
 
-    <h1>Meu Perfil</h1>
+  <h1>Meu perfil</h1>
 
-    <p class="carregando" *ngIf="carregando">Carregando perfil...</p>
+  <p class="carregando" *ngIf="carregando">Carregando perfil...</p>
 
-    <div class="perfil-grid" *ngIf="!carregando">
+  <ng-container *ngIf="!carregando">
 
-      <div class="perfil-coluna-principal">
+    <!-- abas (o atendente vê só "Meus dados", e "Horário" se o dono liberar) -->
+    <nav class="abas" *ngIf="abas.length > 1" aria-label="Seções do perfil">
+      <button type="button" *ngFor="let a of abas" [class.ativa]="aba === a.id" (click)="escolherAba(a.id)">{{ a.rotulo }}</button>
+    </nav>
 
-        <div class="perfil-card avatar-card">
-          <div class="avatar-wrapper">
-            <div class="avatar-iniciais">{{ inicialNome }}</div>
-          </div>
-          <div>
-            <h3>{{ form.nome || 'Seu nome' }}</h3>
-            <p>{{ form.email }}</p>
-          </div>
-        </div>
+    <!-- =================================================================
+         ABA MEUS DADOS
+         ================================================================= -->
+    <ng-container *ngIf="aba === 'dados'">
+      <div class="grade-2-1">
 
         <form class="perfil-card" (ngSubmit)="salvarPerfil($event)">
+          <div class="avatar-linha">
+            <label class="avatar" [class.carregando-foto]="salvandoFoto" title="Trocar foto">
+              <img *ngIf="usuario.foto; else semFoto" [src]="usuario.foto" alt="Sua foto" />
+              <ng-template #semFoto><span>{{ inicialNome }}</span></ng-template>
+              <span class="avatar-camera"><span class="icone" aria-hidden="true">photo_camera</span></span>
+              <input type="file" accept="image/*" (change)="escolherFoto($event)" />
+            </label>
+            <div class="avatar-textos">
+              <h3>{{ usuario.nome || 'Seu nome' }}</h3>
+              <p>{{ ehDono ? 'Dono' : 'Atendente' }} · {{ usuario.email }}</p>
+              <div class="avatar-acoes">
+                <label class="link-acao link-esquerda">
+                  {{ usuario.foto ? 'Trocar foto' : 'Colocar foto' }}
+                  <input type="file" accept="image/*" (change)="escolherFoto($event)" hidden />
+                </label>
+                <button type="button" class="link-acao link-esquerda" *ngIf="usuario.foto" (click)="removerFoto()">Remover foto</button>
+              </div>
+            </div>
+          </div>
+          <div class="card-erro" *ngIf="erroFoto">{{ erroFoto }}</div>
+
           <div class="card-erro" *ngIf="erroPerfil">{{ erroPerfil }}</div>
           <div class="card-ok" *ngIf="mensagemPerfil">{{ mensagemPerfil }}</div>
 
           <div class="form-group">
-            <label>Nome completo *</label>
-            <input type="text" [(ngModel)]="form.nome" name="nome" required />
+            <label for="nome">Nome completo</label>
+            <input id="nome" type="text" [(ngModel)]="form.nome" name="nome" required />
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>E-mail *</label>
-              <input type="email" [(ngModel)]="form.email" name="email" required />
+              <label for="email">E-mail</label>
+              <input id="email" type="email" [(ngModel)]="form.email" name="email" required />
             </div>
             <div class="form-group">
-              <label>Telefone</label>
-              <input type="tel" placeholder="(11) 99999-9999" [(ngModel)]="form.telefone" name="telefone" />
+              <label for="telefone">Telefone</label>
+              <input id="telefone" type="tel" placeholder="(11) 99999-9999" [(ngModel)]="form.telefone" name="telefone" />
             </div>
           </div>
 
-          <div class="form-group">
-            <label>Nome do negócio</label>
-            <input type="text" placeholder="Ex: Studio Nicole Beauty" [(ngModel)]="form.nomeNegocio" name="nomeNegocio" />
+          <!-- o nome do negócio é do dono -->
+          <div class="form-group" *ngIf="ehDono">
+            <label for="negocio">Nome do negócio</label>
+            <input id="negocio" type="text" placeholder="Ex.: Studio Francisco" [(ngModel)]="form.nomeNegocio" name="nomeNegocio" />
           </div>
 
           <div class="form-actions">
@@ -50,178 +71,456 @@
           </div>
         </form>
 
-        <div class="perfil-card senha-card">
-          <div>
-            <h4>Senha</h4>
-            <p>••••••••</p>
-          </div>
-          <button type="button" class="link-acao" (click)="abrirModalSenha()">Alterar senha</button>
-        </div>
+        <form class="perfil-card" (ngSubmit)="alterarSenha($event)">
+          <h2 class="card-titulo">Senha</h2>
 
-  <div class="perfil-card">
-    <h4 class="secao-titulo">Minha conta</h4>
+          <div class="card-erro" *ngIf="erroSenha">{{ erroSenha }}</div>
+          <div class="card-ok" *ngIf="mensagemSenha">{{ mensagemSenha }}</div>
 
-    <div class="card-erro" *ngIf="erroConta">{{ erroConta }}</div>
-
-    <div class="config-item">
-      <div>
-        <strong class="texto-perigo">Excluir conta</strong>
-        <p>Apaga sua conta e todos os seus dados (clientes, serviços, agendamentos, despesas, metas e horário de trabalho) permanentemente. Não pode ser desfeito.</p>
-      </div>
-      <button class="btn-perigo" (click)="excluirConta()" [disabled]="excluindoConta">
-        {{ excluindoConta ? 'Excluindo...' : 'Excluir conta' }}
-      </button>
-    </div>
-  </div>
-
-      </div>
-
-      <div class="perfil-coluna-lateral">
-
-        <form class="perfil-card" (ngSubmit)="salvarHorario()">
-          <div>
-            <h4 class="secao-titulo">Horário de trabalho</h4>
-            <p class="ajuda-horario">Define os horários que aparecem como livres na tela Início.</p>
+          <div class="form-group">
+            <label for="senhaAtual">Senha atual</label>
+            <div class="campo-senha">
+              <input id="senhaAtual" [type]="mostrarSenhaAtual ? 'text' : 'password'" [(ngModel)]="senhaAtual" name="senhaAtual" autocomplete="current-password" />
+              <button type="button" class="btn-olho" (click)="mostrarSenhaAtual = !mostrarSenhaAtual" [attr.aria-label]="mostrarSenhaAtual ? 'Ocultar senha' : 'Mostrar senha'">
+                <span class="icone notranslate" translate="no" aria-hidden="true">{{ mostrarSenhaAtual ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
           </div>
 
           <div class="form-group">
-            <label>Duração de cada horário</label>
-            <select [(ngModel)]="horario.blocoMin" name="blocoMin">
-              <option *ngFor="let b of blocos" [ngValue]="b">{{ b }} minutos</option>
-            </select>
-          </div>
-
-          <div class="horario-dias">
-            <div class="dia-linha" *ngFor="let i of ordemDias">
-              <label class="dia-toggle">
-                <input type="checkbox" [(ngModel)]="horario.dias[i].ativo" [name]="'ativo' + i" />
-                <span>{{ nomesDias[i] }}</span>
-              </label>
-
-              <div class="dia-horas" *ngIf="horario.dias[i].ativo; else folga">
-                <input type="time" [(ngModel)]="horario.dias[i].inicio" [name]="'inicio' + i" required />
-                <span class="ate">até</span>
-                <input type="time" [(ngModel)]="horario.dias[i].fim" [name]="'fim' + i" required />
-              </div>
-
-              <ng-template #folga><span class="folga">Não trabalho</span></ng-template>
+            <label for="novaSenha">Nova senha</label>
+            <div class="campo-senha">
+              <input id="novaSenha" [type]="mostrarNovaSenha ? 'text' : 'password'" [(ngModel)]="novaSenha" name="novaSenha" placeholder="mínimo 8 caracteres" autocomplete="new-password" />
+              <button type="button" class="btn-olho" (click)="mostrarNovaSenha = !mostrarNovaSenha" [attr.aria-label]="mostrarNovaSenha ? 'Ocultar senha' : 'Mostrar senha'">
+                <span class="icone notranslate" translate="no" aria-hidden="true">{{ mostrarNovaSenha ? 'visibility_off' : 'visibility' }}</span>
+              </button>
             </div>
+            <ul class="checklist-senha" *ngIf="novaSenha">
+              <li [class.ok]="senhaTemComprimento">{{ senhaTemComprimento ? '✓' : '○' }} Pelo menos 8 caracteres</li>
+              <li [class.ok]="senhaTemMaiuscula">{{ senhaTemMaiuscula ? '✓' : '○' }} Uma letra maiúscula</li>
+              <li [class.ok]="senhaTemEspecial">{{ senhaTemEspecial ? '✓' : '○' }} Um caractere especial</li>
+            </ul>
           </div>
 
-          <button type="button" class="link-acao link-esquerda" (click)="aplicarHorarioATodos()">
-            Usar o mesmo horário nos dias em que trabalho
+          <button type="submit" class="btn-secondary btn-largo" [disabled]="salvandoSenha">
+            {{ salvandoSenha ? 'Alterando...' : 'Alterar senha' }}
           </button>
-
-          <p class="erro-horario" *ngIf="erroHorario">{{ erroHorario }}</p>
-          <p class="ok-horario" *ngIf="mensagemHorario">{{ mensagemHorario }}</p>
-
-          <div class="form-actions">
-            <button type="submit" class="btn-primary">Salvar horário</button>
-          </div>
         </form>
+      </div>
 
-              <div class="perfil-card tema-card">
-          <div>
-            <h4 class="secao-titulo">Cores do sistema</h4>
-            <p class="ajuda-horario">Escolha a cor principal. As cores de acento e destaque são calculadas pelo círculo cromático. As cores salvam automaticamente.</p>
+      <!-- Seus dados: só o dono (são os dados do negócio) -->
+      <section class="perfil-card" *ngIf="ehDono">
+        <div>
+          <h2 class="card-titulo">Seus dados</h2>
+          <p class="card-sub">Baixe uma cópia do que está salvo no MeuFluxo ou traga sua lista de clientes de outro lugar.</p>
+        </div>
+
+        <div class="card-erro" *ngIf="erroDados">{{ erroDados }}</div>
+
+        <div class="lista-acoes">
+          <div class="acao-linha">
+            <div>
+              <strong>Baixar todos os meus dados</strong>
+              <p>Um arquivo .json com perfil, clientes, serviços, agendamentos, despesas e metas. Serve de backup e é um direito seu pela LGPD.</p>
+            </div>
+            <button type="button" class="btn-secondary" (click)="baixarTudo()" [disabled]="baixandoTudo">
+              {{ baixandoTudo ? 'Preparando...' : 'Baixar (.json)' }}
+            </button>
           </div>
 
-          <div class="tema-opcoes">
-            <button
-              type="button"
-              class="tema-opcao"
-              *ngFor="let t of temasProntos"
-              [class.ativo]="temaEstaAtivo(t)"
-              (click)="escolherTema(t)"
-            >
-              <span class="tema-amostras">
-                <span *ngFor="let cor of amostrasDoTema(t)" [style.background]="cor"></span>
-              </span>
-              {{ t.nome }}
+          <div class="acao-linha">
+            <div>
+              <strong>Exportar clientes para planilha</strong>
+              <p>Abre no Excel ou no Google Planilhas.</p>
+            </div>
+            <button type="button" class="btn-secondary" (click)="exportarCsv()" [disabled]="exportandoCsv">
+              {{ exportandoCsv ? 'Preparando...' : 'Exportar (.csv)' }}
             </button>
+          </div>
 
-            <label class="tema-opcao tema-personalizada" [class.ativo]="tema.nome === 'Personalizada'">
-              <input
-                type="color"
-                [value]="corPersonalizada"
-                (input)="escolherCorPersonalizada($any($event.target).value)"
-              />
-              Personalizada
+          <div class="acao-linha">
+            <div>
+              <strong>Importar clientes</strong>
+              <p>De uma planilha (.csv, com as colunas Nome e Telefone) ou de um backup do MeuFluxo (.json). Telefones que já existem são ignorados, para não duplicar.</p>
+              <div class="resumo-importacao" *ngIf="resumoImportacao">
+                <strong>{{ resumoImportacao }}</strong>
+                <ul *ngIf="detalhesImportacao.length">
+                  <li *ngFor="let d of detalhesImportacao">{{ d }}</li>
+                </ul>
+              </div>
+            </div>
+            <label class="btn-secondary botao-arquivo" [class.desativado]="importando">
+              {{ importando ? 'Importando...' : 'Escolher arquivo' }}
+              <input type="file" accept=".csv,.json,text/csv,application/json" (change)="importarClientes($event)" [disabled]="importando" hidden />
             </label>
           </div>
 
+          <div class="acao-linha">
+            <div>
+              <strong class="texto-perigo">Excluir conta</strong>
+              <p>Apaga sua conta e todos os dados. Não pode ser desfeito. Dica: baixe seus dados antes.</p>
+              <div class="card-erro" *ngIf="erroConta">{{ erroConta }}</div>
+            </div>
+            <button type="button" class="btn-perigo" (click)="excluirConta()" [disabled]="excluindoConta">
+              {{ excluindoConta ? 'Excluindo...' : 'Excluir conta' }}
+            </button>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- =================================================================
+         ABA HORÁRIO DE TRABALHO
+         ================================================================= -->
+    <div class="grade-horario" *ngIf="aba === 'horario'">
+
+      <section class="perfil-card">
+        <div class="card-topo">
+          <div>
+            <h2 class="card-titulo">Dias e horários</h2>
+            <p class="card-sub">Vale para a Início, a Agenda, o bot e o link de agendamento.</p>
+          </div>
+          <div class="form-group tamanho-horario">
+            <label for="bloco">Tamanho de cada horário</label>
+            <select id="bloco" [(ngModel)]="horario.blocoMin" name="blocoMin">
+              <option *ngFor="let b of opcoesBloco" [ngValue]="b">{{ b }} minutos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="tabela-rolagem">
+          <table class="tabela-horario">
+            <thead>
+              <tr><th>Dia</th><th>Abre</th><th>Fecha</th><th>Pausa (almoço)</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let i of ordemDias" [class.desligado]="!horario.dias[i].ativo">
+                <td>
+                  <label class="dia-toggle">
+                    <input type="checkbox" [(ngModel)]="horario.dias[i].ativo" [name]="'ativo' + i" />
+                    <span>{{ nomesDias[i] }}</span>
+                  </label>
+                </td>
+                <ng-container *ngIf="horario.dias[i].ativo; else naoTrabalha">
+                  <td><input type="time" [(ngModel)]="horario.dias[i].inicio" [name]="'inicio' + i" aria-label="Abre" /></td>
+                  <td><input type="time" [(ngModel)]="horario.dias[i].fim" [name]="'fim' + i" aria-label="Fecha" /></td>
+                  <td>
+                    <div class="pausa">
+                      <input type="time" [(ngModel)]="horario.dias[i].pausaInicio" [name]="'pausaIni' + i" aria-label="Começo da pausa" />
+                      <span class="ate">até</span>
+                      <input type="time" [(ngModel)]="horario.dias[i].pausaFim" [name]="'pausaFim' + i" aria-label="Fim da pausa" />
+                      <button type="button" class="btn-limpar" *ngIf="horario.dias[i].pausaInicio || horario.dias[i].pausaFim"
+                              (click)="limparPausa(i)" title="Sem pausa" aria-label="Tirar a pausa">×</button>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-template #naoTrabalha><td colspan="3" class="folga">Não trabalho</td></ng-template>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="dica">Pausa vazia = sem pausa nesse dia.</p>
+
+        <p class="erro-horario" *ngIf="erroHorario">{{ erroHorario }}</p>
+        <p class="ok-horario" *ngIf="mensagemHorario">{{ mensagemHorario }}</p>
+
+        <div class="rodape-card">
+          <button type="button" class="link-acao link-esquerda" (click)="copiarSegunda()">Copiar o horário de segunda para os outros dias</button>
+          <button type="button" class="btn-primary" (click)="salvarHorario()" [disabled]="salvandoHorario">
+            {{ salvandoHorario ? 'Salvando...' : 'Salvar horário' }}
+          </button>
+        </div>
+      </section>
+
+      <section class="perfil-card">
+        <div class="card-topo card-topo-fixo">
+          <h2 class="card-titulo">Folgas e feriados</h2>
+          <button type="button" class="btn-secondary" (click)="abrirFormBloqueio()" *ngIf="!formBloqueioAberto">+ Bloquear dia</button>
+        </div>
+        <p class="card-sub">Nesses dias ninguém consegue agendar, nem pelo bot nem pelo link.</p>
+
+        <!-- formulário "Bloquear dia" -->
+        <form class="form-bloqueio" *ngIf="formBloqueioAberto" (ngSubmit)="salvarBloqueio($event)">
+          <div class="card-erro" *ngIf="erroBloqueio">{{ erroBloqueio }}</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="dataBloq">Data</label>
+              <input id="dataBloq" type="date" [min]="hojeISO" [(ngModel)]="formBloqueio.data" name="dataBloq" />
+            </div>
+            <div class="form-group">
+              <label for="descBloq">Nome</label>
+              <input id="descBloq" type="text" maxlength="100" placeholder="Ex.: Finados" [(ngModel)]="formBloqueio.descricao" name="descBloq" />
+            </div>
+          </div>
+          <label class="dia-toggle">
+            <input type="checkbox" [(ngModel)]="formBloqueio.diaInteiro" name="diaInteiro" />
+            <span>Dia inteiro</span>
+          </label>
+          <div class="form-row" *ngIf="!formBloqueio.diaInteiro">
+            <div class="form-group">
+              <label for="bloqIni">Fechado das</label>
+              <input id="bloqIni" type="time" [(ngModel)]="formBloqueio.horaInicio" name="bloqIni" />
+            </div>
+            <div class="form-group">
+              <label for="bloqFim">até</label>
+              <input id="bloqFim" type="time" [(ngModel)]="formBloqueio.horaFim" name="bloqFim" />
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="fecharFormBloqueio()">Cancelar</button>
+            <button type="submit" class="btn-primary" [disabled]="salvandoBloqueio">{{ salvandoBloqueio ? 'Salvando...' : 'Bloquear' }}</button>
+          </div>
+        </form>
+
+        <p class="aviso" *ngIf="avisoBloqueio">{{ avisoBloqueio }}</p>
+
+        <div class="bloqueios">
+          <div class="bloqueio" *ngFor="let b of horario.bloqueios">
+            <div class="bloqueio-data">
+              <strong>{{ diaDoBloqueio(b) }}</strong>
+              <small>{{ mesDoBloqueio(b) }}</small>
+            </div>
+            <div class="bloqueio-textos">
+              <strong>{{ b.descricao }}</strong>
+              <small>{{ detalheBloqueio(b) }}</small>
+            </div>
+            <button type="button" class="btn-secondary" (click)="removerBloqueio(b)">Remover</button>
+          </div>
+          <p class="vazio" *ngIf="horario.bloqueios.length === 0 && !formBloqueioAberto">Nenhuma folga marcada. Use "+ Bloquear dia" para feriados, férias ou um curso.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- =================================================================
+         ABA EQUIPE (só dono)
+         ================================================================= -->
+    <ng-container *ngIf="aba === 'equipe' && ehDono">
+      <div class="grade-2-1">
+        <section class="perfil-card">
+          <div>
+            <h2 class="card-titulo">Pessoas com acesso</h2>
+            <p class="card-sub">Trabalha sozinho? Não precisa cadastrar ninguém.</p>
+          </div>
+
+          <div class="card-erro" *ngIf="erroEquipe">{{ erroEquipe }}</div>
+          <div class="card-ok" *ngIf="mensagemEquipe">{{ mensagemEquipe }}</div>
+
+          <div class="pessoas">
+            <div class="pessoa" *ngFor="let p of equipe">
+              <img class="pessoa-avatar" *ngIf="p.foto; else inicialPessoa" [src]="p.foto" alt="" />
+              <ng-template #inicialPessoa><span class="pessoa-avatar">{{ inicial(p.nome) }}</span></ng-template>
+              <div class="pessoa-textos">
+                <strong>{{ p.nome }}</strong>
+                <small>{{ p.email }} · {{ situacao(p) }}</small>
+              </div>
+              <span class="etiqueta-papel" [class.dono]="p.papel === 'dono'">{{ p.papel === 'dono' ? 'Dono' : 'Atendente' }}</span>
+              <ng-container *ngIf="p.papel === 'atendente'">
+                <button type="button" class="btn-secondary" (click)="abrirRedefinir(p)">Redefinir senha</button>
+                <button type="button" class="btn-secondary" (click)="removerPessoa(p)">Remover</button>
+              </ng-container>
+            </div>
+          </div>
+        </section>
+
+        <form class="perfil-card" (ngSubmit)="criarAcesso($event)">
+          <h2 class="card-titulo">Adicionar atendente</h2>
+          <div class="card-erro" *ngIf="erroNovo">{{ erroNovo }}</div>
+          <div class="form-group">
+            <label for="novoNome">Nome</label>
+            <input id="novoNome" type="text" placeholder="Ex.: Marina Rocha" [(ngModel)]="novoAtendente.nome" name="novoNome" />
+          </div>
+          <div class="form-group">
+            <label for="novoEmail">E-mail</label>
+            <input id="novoEmail" type="email" placeholder="email@exemplo.com" [(ngModel)]="novoAtendente.email" name="novoEmail" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="novoSenha">Senha provisória</label>
+            <div class="campo-senha">
+              <input id="novoSenha" [type]="mostrarSenhaNovo ? 'text' : 'password'" placeholder="mín. 8, uma maiúscula e um especial"
+                     [(ngModel)]="novoAtendente.senha" name="novoSenha" autocomplete="new-password" />
+              <button type="button" class="btn-olho" (click)="mostrarSenhaNovo = !mostrarSenhaNovo" [attr.aria-label]="mostrarSenhaNovo ? 'Ocultar senha' : 'Mostrar senha'">
+                <span class="icone notranslate" translate="no" aria-hidden="true">{{ mostrarSenhaNovo ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
+          </div>
+          <p class="dica">A pessoa entra pela mesma tela de login e troca a senha no primeiro acesso. Depois, marque o que ela pode fazer na tabela abaixo.</p>
+          <button type="submit" class="btn-primary btn-largo" [disabled]="criandoAcesso">
+            {{ criandoAcesso ? 'Criando...' : 'Criar acesso' }}
+          </button>
+        </form>
+      </div>
+
+      <section class="perfil-card">
+        <div>
+          <h2 class="card-titulo">O que cada um pode fazer</h2>
+          <p class="card-sub" *ngIf="atendentes.length">Clique em "Pode" / "Não" para liberar ou tirar o acesso. Salva na hora.</p>
+        </div>
+        <div class="tabela-rolagem">
+          <table class="tabela-permissoes">
+            <thead>
+              <tr>
+                <th>Área</th>
+                <th>Dono</th>
+                <th *ngIf="atendentes.length === 0">Atendente</th>
+                <th *ngFor="let p of atendentes">{{ primeiroNome(p.nome) }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let l of linhasPermissao">
+                <td>{{ l.area }}</td>
+                <td><span class="chip-pode">Pode</span></td>
+                <!-- sem atendentes: mostra o padrão de quem for criado -->
+                <td *ngIf="atendentes.length === 0">
+                  <span [class.chip-pode]="l.atendentePode" [class.chip-nao]="!l.atendentePode">{{ l.atendentePode ? 'Pode' : 'Não' }}</span>
+                </td>
+                <td *ngFor="let p of atendentes">
+                  <button type="button" *ngIf="l.permissao; else fixo" class="chip-alternar"
+                          [class.chip-pode]="pode(p, l)" [class.chip-nao]="!pode(p, l)"
+                          [attr.aria-pressed]="pode(p, l)"
+                          [title]="(pode(p, l) ? 'Tirar' : 'Liberar') + ' para ' + primeiroNome(p.nome)"
+                          (click)="alternarPermissao(p, l.permissao!)">
+                    {{ pode(p, l) ? 'Pode' : 'Não' }}
+                  </button>
+                  <ng-template #fixo>
+                    <span [class.chip-pode]="l.atendentePode" [class.chip-nao]="!l.atendentePode">{{ l.atendentePode ? 'Pode' : 'Não' }}</span>
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- =================================================================
+         ABA APARÊNCIA (só dono; vale para a equipe toda)
+         ================================================================= -->
+    <div class="grade-aparencia" *ngIf="aba === 'aparencia' && ehDono">
+      <div class="coluna">
+        <section class="perfil-card">
+          <div>
+            <h2 class="card-titulo">Paleta de cores</h2>
+            <p class="card-sub">Clique numa paleta e veja o sistema mudar na hora.</p>
+          </div>
+          <div class="paletas">
+            <button type="button" class="paleta" *ngFor="let t of temasProntos" [class.ativa]="temaEstaAtivo(t)" (click)="escolherTema(t)">
+              <span class="paleta-cores">
+                <span *ngFor="let cor of amostrasDoTema(t)" [style.background]="cor"></span>
+              </span>
+              <strong>{{ t.nome }}{{ t.id === 'salvia' ? ' (padrão)' : '' }}</strong>
+            </button>
+          </div>
+        </section>
+
+        <section class="perfil-card">
+          <div class="card-topo">
+            <div>
+              <h2 class="card-titulo">Personalizada</h2>
+              <p class="card-sub">Escolha a cor principal, por exemplo a da marca do seu negócio. As outras duas são calculadas pelo círculo cromático.</p>
+            </div>
+            <button type="button" class="btn-secondary" (click)="usarCorPersonalizada()">Usar minhas cores</button>
+          </div>
+
+          <div class="cores-personalizadas">
+            <label class="cor-caixa" [class.ativa]="tema.id === 'personalizada'">
+              <input type="color" [(ngModel)]="corPersonalizada" name="corPersonalizada" />
+              <span>
+                <strong>Cor principal</strong>
+                <small>menu, botões e topo · {{ corPersonalizada }}</small>
+              </span>
+            </label>
+            <div class="cor-caixa" *ngFor="let c of coresDaPersonalizada">
+              <span class="cor-amostra" [style.background]="c.cor"></span>
+              <span>
+                <strong>{{ c.rotulo }}</strong>
+                <small>{{ c.detalhe }}</small>
+              </span>
+            </div>
+          </div>
+
+          <p class="aviso" *ngIf="corPersonalizadaClara">
+            Cor principal muito clara: o texto branco do menu e dos botões ficaria difícil de ler.
+            O MeuFluxo usa um tom mais escuro dela (veja na prévia). Se preferir, escolha um tom mais escuro.
+          </p>
+
           <div class="harmonia">
             <div class="roda-cromatica">
-              <span
-                class="roda-marcador"
-                *ngFor="let c of angulosHarmonia"
-                [class.base]="c.papel === 'Base'"
-                [style.transform]="'rotate(' + c.angulo + 'deg) translateY(-46px) rotate(' + (-c.angulo) + 'deg)'"
-                [style.background]="'hsl(' + c.angulo + ' 60% 55%)'"
-              ></span>
+              <span class="roda-marcador" *ngFor="let c of angulosHarmonia" [class.base]="c.papel === 'Base'"
+                    [style.transform]="'rotate(' + c.angulo + 'deg) translateY(-46px) rotate(' + (-c.angulo) + 'deg)'"
+                    [style.background]="'hsl(' + c.angulo + ' 60% 55%)'"></span>
               <span class="roda-centro"></span>
             </div>
-
             <ul class="harmonia-legenda">
-              <li *ngFor="let c of angulosHarmonia">
-                <strong>{{ c.papel }}</strong> {{ c.angulo }}°
-              </li>
+              <li *ngFor="let c of angulosHarmonia"><strong>{{ c.papel }}</strong> {{ c.angulo }}°</li>
               <li class="harmonia-nome">Complementar dividida</li>
             </ul>
           </div>
 
-          <button type="button" class="link-acao link-esquerda" (click)="restaurarTemaPadrao()">
-            Voltar às cores padrão
-          </button>
-        </div>
+          <p class="dica">As cores de status (agendado, realizado, cancelado) não mudam, para você não confundir as informações.</p>
+        </section>
 
-        <div class="perfil-card sobre-card">
-          <span>MeuFluxo</span>
-          <small>versão 1.0 · TCC</small>
-        </div>
-
+        <section class="perfil-card card-linha">
+          <div>
+            <h2 class="card-titulo">Tamanho do texto</h2>
+            <p class="card-sub">Deixa tudo maior para facilitar a leitura.</p>
+          </div>
+          <div class="alternador" role="group" aria-label="Tamanho do texto">
+            <button type="button" [class.ativo]="tamanhoTexto === 'normal'" (click)="escolherTamanho('normal')">Normal</button>
+            <button type="button" [class.ativo]="tamanhoTexto === 'grande'" (click)="escolherTamanho('grande')">Grande</button>
+          </div>
+        </section>
       </div>
 
-    </div>
-
-
-    <!-- MODAL TROCAR SENHA -->
-    <div class="modal-overlay" *ngIf="modalSenhaAberto">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>Alterar Senha</h2>
-          <button class="btn-icon" (click)="fecharModalSenha()">×</button>
+      <section class="perfil-card previa-card">
+        <h2 class="card-titulo">Prévia</h2>
+        <div class="previa">
+          <div class="previa-topo">MeuFluxo</div>
+          <div class="previa-corpo">
+            <div class="previa-numero">
+              <small>Faturamento do mês</small>
+              <strong>R$ 3.480,00</strong>
+            </div>
+            <div class="previa-linha">
+              <span class="previa-chip"><strong>14:00</strong> Júlia M.</span>
+              <span class="previa-destaque">3 na espera</span>
+            </div>
+            <span class="previa-botao">+ Novo agendamento</span>
+          </div>
         </div>
 
-        <form class="modal-form" (ngSubmit)="salvarNovaSenha($event)">
-          <div class="modal-erro" *ngIf="erroSenha">{{ erroSenha }}</div>
+        <div class="card-erro" *ngIf="erroAparencia">{{ erroAparencia }}</div>
+        <div class="card-ok" *ngIf="mensagemAparencia">{{ mensagemAparencia }}</div>
 
-          <div class="form-group">
-            <label>Senha atual *</label>
-            <input type="password" [(ngModel)]="senhaAtual" name="senhaAtual" required />
-          </div>
-          <div class="form-group">
-            <label>Nova senha *</label>
-            <input type="password" [(ngModel)]="novaSenha" name="novaSenha" required />
-            <ul class="checklist-senha">
-            <li [class.ok]="senhaTemComprimento">{{ senhaTemComprimento ? '✓' : '○' }} Pelo menos 6 caracteres</li>
-            <li [class.ok]="senhaTemMaiuscula">{{ senhaTemMaiuscula ? '✓' : '○' }} Uma letra maiúscula</li>
-            <li [class.ok]="senhaTemEspecial">{{ senhaTemEspecial ? '✓' : '○' }} Um caractere especial</li>
-            </ul>
-          </div>
-          <div class="form-group">
-            <label>Confirmar nova senha *</label>
-            <input type="password" [(ngModel)]="confirmarSenha" name="confirmarSenha" required />
-          </div>
-
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" (click)="fecharModalSenha()">Cancelar</button>
-            <button type="submit" class="btn-primary" [disabled]="salvandoSenha">
-              {{ salvandoSenha ? 'Salvando...' : 'Salvar Senha' }}
-            </button>
-          </div>
-        </form>
-      </div>
+        <button type="button" class="btn-primary btn-largo" (click)="salvarAparencia()" [disabled]="salvandoAparencia || !aparenciaAlterada">
+          {{ salvandoAparencia ? 'Salvando...' : 'Salvar aparência' }}
+        </button>
+        <button type="button" class="link-acao" *ngIf="aparenciaAlterada" (click)="desfazerAparencia()">Desfazer (voltar para a salva)</button>
+        <p class="dica" *ngIf="aparenciaAlterada">Sem salvar, as cores voltam ao sair desta tela.</p>
+      </section>
     </div>
 
-  </main>
+  </ng-container>
+
+  <!-- MODAL REDEFINIR SENHA (Equipe) -->
+  <div class="modal-overlay" *ngIf="redefinindo" (click)="fecharRedefinir()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Redefinir senha</h2>
+        <button class="btn-icon" type="button" (click)="fecharRedefinir()" aria-label="Fechar">×</button>
+      </div>
+      <form class="modal-form" (ngSubmit)="salvarRedefinir($event)">
+        <p class="card-sub">Nova senha provisória para <strong>{{ redefinindo.nome }}</strong>. Ela troca no próximo acesso.</p>
+        <div class="modal-erro" *ngIf="erroRedefinir">{{ erroRedefinir }}</div>
+        <div class="form-group">
+          <label for="senhaRedef">Senha provisória</label>
+          <input id="senhaRedef" type="text" [(ngModel)]="senhaRedefinir" name="senhaRedef" placeholder="mín. 8, uma maiúscula e um especial" autocomplete="off" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharRedefinir()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="salvandoRedefinir">{{ salvandoRedefinir ? 'Salvando...' : 'Redefinir' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</main>

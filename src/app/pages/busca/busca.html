@@ -1,0 +1,124 @@
+<main class="busca">
+
+  <div class="busca-topo">
+    <h1>{{ q ? 'Resultados para “' + q + '”' : 'Busca' }}</h1>
+    <p>{{ subtitulo }}</p>
+  </div>
+
+  <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
+  <p class="carregando" *ngIf="carregando">Carregando...</p>
+
+  <ng-container *ngIf="!carregando">
+
+    <!-- ===== EXEMPLOS + FILTROS ===== -->
+    <section class="card filtros-card">
+      <div class="exemplos">
+        <span class="exemplos-rotulo">Exemplos (clique):</span>
+        <button type="button" class="chip" *ngFor="let e of exemplos"
+                [class.ativo]="q === e.q" (click)="buscarExemplo(e.q)">{{ e.rotulo }}</button>
+      </div>
+
+      <div class="filtros">
+        <label class="filtro">
+          <span>Procurar em</span>
+          <select [(ngModel)]="procurar" (ngModelChange)="calcular()" name="procurar">
+            <option value="tudo">Tudo</option>
+            <option value="clientes">Clientes</option>
+            <option value="servicos">Serviços</option>
+            <option value="agendamentos">Agendamentos</option>
+            <option value="financeiro" *ngIf="veValores">Financeiro</option>
+          </select>
+        </label>
+
+        <label class="filtro" *ngIf="modo !== 'dia'">
+          <span>Período</span>
+          <select [(ngModel)]="periodo" (ngModelChange)="calcular()" name="periodo">
+            <option value="proximos">Próximos 14 dias</option>
+            <option value="3meses">Últimos 3 meses</option>
+            <option value="mes">Este mês</option>
+            <option value="semana">Esta semana</option>
+            <option value="personalizado">Personalizado…</option>
+          </select>
+        </label>
+
+        <ng-container *ngIf="periodo === 'personalizado' && modo !== 'dia'">
+          <label class="filtro">
+            <span>De</span>
+            <input type="date" [(ngModel)]="de" (ngModelChange)="calcular()" name="de" />
+          </label>
+          <label class="filtro">
+            <span>Até</span>
+            <input type="date" [(ngModel)]="ate" (ngModelChange)="calcular()" name="ate" />
+          </label>
+        </ng-container>
+
+        <label class="filtro">
+          <span>Status</span>
+          <select [(ngModel)]="status" (ngModelChange)="calcular()" name="status">
+            <option value="todos">Todos</option>
+            <option value="agendado">Agendado</option>
+            <option value="realizado">Realizado</option>
+            <option value="cancelado">Cancelado</option>
+            <option value="nao_compareceu">Não compareceu</option>
+          </select>
+        </label>
+
+        <label class="filtro">
+          <span>Pagamento</span>
+          <select [(ngModel)]="pagamento" (ngModelChange)="calcular()" name="pagamento">
+            <option value="todos">Todos</option>
+            <option value="pago">Pago</option>
+            <option value="pendente">A receber</option>
+          </select>
+        </label>
+
+        <label class="filtro">
+          <span>Horário</span>
+          <select [(ngModel)]="turno" (ngModelChange)="calcular()" name="turno">
+            <option value="qualquer">Qualquer</option>
+            <option value="manha">Manhã</option>
+            <option value="tarde">Tarde</option>
+            <option value="noite">Noite</option>
+          </select>
+        </label>
+
+        <button type="button" class="btn-limpar" (click)="limparFiltros()">Limpar filtros</button>
+      </div>
+    </section>
+
+    <!-- ===== NÚMEROS ===== -->
+    <div class="numeros" *ngIf="numeros.length">
+      <div class="numero" *ngFor="let n of numeros">
+        <span>{{ n.rotulo }}</span>
+        <strong>{{ n.valor }}</strong>
+      </div>
+    </div>
+
+    <!-- ===== AÇÕES ===== -->
+    <div class="acoes" *ngIf="acoes.length">
+      <button type="button" *ngFor="let a of acoes" [class.principal]="a.principal" (click)="a.fazer()">{{ a.rotulo }}</button>
+    </div>
+
+    <!-- ===== SEÇÕES (tabelas) ===== -->
+    <section class="card" *ngFor="let s of secoes">
+      <div class="secao-topo">
+        <h2>{{ s.titulo }}</h2>
+        <small>{{ s.contagem }}</small>
+      </div>
+      <div class="tabela-rolagem">
+        <table class="tabela" *ngIf="s.linhas.length; else secaoVazia">
+          <thead>
+            <tr><th *ngFor="let c of s.colunas">{{ c }}</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of s.linhas" [class.clicavel]="!!l.abrir" (click)="l.abrir && l.abrir()">
+              <td *ngFor="let cel of l.celulas">{{ cel }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #secaoVazia><p class="vazio">{{ s.vazio }}</p></ng-template>
+      </div>
+    </section>
+
+  </ng-container>
+</main>

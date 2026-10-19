@@ -12,6 +12,7 @@ function formatarPessoa(linha) {
     id: linha.id,
     nome: linha.nome,
     email: linha.email,
+    foto: linha.foto || null,
     papel: linha.papel,
     permissoes: linha.papel === 'atendente' ? lerPermissoes(linha.permissoes) : PERMISSOES.slice(),
     ultimoAcesso: linha.ultimo_acesso, // null = "ainda não entrou"
@@ -28,7 +29,7 @@ function limparPermissoes(lista) {
 async function listar(req, res) {
   try {
     const [linhas] = await pool.query(
-      `SELECT id, nome, email, papel, permissoes, ultimo_acesso
+      `SELECT id, nome, email, papel, permissoes, ultimo_acesso, foto
          FROM usuarios
         WHERE id = ? OR dono_id = ?
         ORDER BY papel = 'atendente', nome`,

@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 
-import { API_URL } from '../../app';
+import { API_URL, alternarValoresOcultos, dinheiro, valoresOcultos } from '../../app';
 
 interface Cliente { id: number; nome: string; }
 interface Servico { id: number; nome: string; valor: number; }
@@ -60,7 +60,7 @@ interface FatiaForma {
   percentual: number;
 }
 
-const CHAVE_OCULTAR = 'meufluxo_ocultar_valores';
+
 
 @Component({
   selector: 'app-financeiro',
@@ -72,7 +72,10 @@ const CHAVE_OCULTAR = 'meufluxo_ocultar_valores';
 export class Financeiro implements OnInit {
   carregando = true;
   erro: string | null = null;
-  ocultarValores = false;
+   /** "Ocultar valores" é o mesmo no sistema todo (começa oculto a cada login e a cada aba nova). */
+  get ocultarValores(): boolean {
+    return valoresOcultos();
+  }
 
   clientes: Cliente[] = [];
   servicos: Servico[] = [];
@@ -134,7 +137,7 @@ export class Financeiro implements OnInit {
       this.router.navigate(['/login']);
       return;
     }
-    this.ocultarValores = localStorage.getItem(CHAVE_OCULTAR) === 'true';
+
 
     const headers = this.cabecalhoAuth();
     forkJoin({
@@ -189,9 +192,8 @@ export class Financeiro implements OnInit {
     this.atualizarDerivados();
   }
 
-  alternarValores() {
-    this.ocultarValores = !this.ocultarValores;
-    localStorage.setItem(CHAVE_OCULTAR, String(this.ocultarValores));
+    alternarValores() {
+    alternarValoresOcultos();
     this.atualizarDerivados(); // os textos dos cards e do gráfico são montados já formatados
   }
 
@@ -491,8 +493,7 @@ export class Financeiro implements OnInit {
 
   /** Valor em R$, ou "R$ ••••" com os valores ocultos. */
   moeda(valor: number): string {
-    if (this.ocultarValores) return 'R$ ••••';
-    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return dinheiro(valor);
   }
 
   /** Valor curto para cima das barras: "R$ 3,1k". */

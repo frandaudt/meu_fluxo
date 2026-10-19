@@ -1,7 +1,9 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HorarioTrabalho, Expediente, expedienteDoDia, bloqueioDoDiaInteiro, minutosDeTrabalho } from '../../app';
 
 export type VisaoCalendario = 'dia' | 'semana' | 'mes';
+/** Botões direto na linha do tempo (visão Dia). */
 export type AcaoRapida = 'concluir' | 'falta' | 'pagamento';
 
 export interface EventoResumo {
@@ -16,8 +18,8 @@ export interface EventoResumo {
   origem?: string;          // 'sistema' | 'whatsapp' | 'link' | 'lista_espera'
 }
 
-interface DiaTrabalho { ativo: boolean; inicio: string; fim: string; }
-export interface HorarioTrabalhoCalendario { blocoMin: number; dias: DiaTrabalho[]; }
+/** Mesmo formato do Perfil (com pausa e folgas); o nome antigo continua valendo. */
+export type HorarioTrabalhoCalendario = HorarioTrabalho;
 
 interface DiaCalendario {
   data: string;      // 'YYYY-MM-DD'
@@ -26,12 +28,13 @@ interface DiaCalendario {
   hoje: boolean;
 }
 
-/** Item da linha do tempo (visão Dia) e da coluna (visão Semana): um agendamento ou um horário livre. */
+/** Item da linha do tempo (visão Dia) e da coluna (visão Semana): agendamento, horário livre ou pausa/bloqueio. */
 export interface ItemDoDia {
-  tipo: 'agendamento' | 'livre';
+  tipo: 'agendamento' | 'livre' | 'pausa';
   inicio: string;            // 'HH:mm'
   fim: string;               // 'HH:mm'
   evento?: EventoResumo;     // quando tipo = 'agendamento'
+  motivo?: string;           // quando tipo = 'pausa' ("Pausa", "Véspera de Natal"...)
 }
 
 /** Cabeçalho de cada coluna da visão Semana. */
@@ -68,7 +71,7 @@ export class Calendario {
 
   @Output() selecionarDia = new EventEmitter<string>();            // clique num dia (visão Mês)
   @Output() abrirEvento = new EventEmitter<number>();              // clique num agendamento → detalhes
-    @Output() acaoEvento = new EventEmitter<{ id: number; acao: AcaoRapida }>();           // botões da visão Dia
+  @Output() acaoEvento = new EventEmitter<{ id: number; acao: AcaoRapida }>();           // botões da visão Dia
   @Output() agendarEm = new EventEmitter<{ data: string; horario: string }>();          // clique num horário livre
 
   readonly MAX_EVENTOS_VISIVEIS = 3;
@@ -183,15 +186,24 @@ export class Calendario {
     return !this.configDoDia(this.dataRef);
   }
 
+  /** Texto do dia fechado: o nome da folga ("Finados") ou "Você não trabalha nesse dia." */
+  get textoDiaFechado(): string {
+    const folga = bloqueioDoDiaInteiro(this.horario, this.dataRef);
+    return folga ? `Dia bloqueado: ${folga.descricao || 'folga'}.` : 'Você não trabalha nesse dia.';
+  }
+
+  /** Mês resumido e topo da semana: "Finados" (folga) ou "fechado". */
+  rotuloFechado(data: string): string {
+    return bloqueioDoDiaInteiro(this.horario, data)?.descricao || 'fechado';
+  }
+
   // =====================================================================
   //  CÁLCULOS (livre, ocupação)
   // =====================================================================
 
-  /** Configuração do dia (início/fim) ou null se a pessoa não trabalha nesse dia da semana. */
-  private configDoDia(data: string): DiaTrabalho | null {
-    if (!this.horario) return null;
-    const config = this.horario.dias[this.diaSemanaDe(data)];
-    return config && config.ativo ? config : null;
+  /** Expediente do dia (com pausas e bloqueios) ou null se não trabalha nesse dia / folga. */
+  private configDoDia(data: string): Expediente | null {
+    return expedienteDoDia(this.horario, data);
   }
 
   /** Agendamentos que ainda ocupam horário (cancelado e falta liberam o horário). */
@@ -220,17 +232,24 @@ export class Calendario {
       const agora = new Date();
       const hojeStr = this.formatarData(agora);
       if (data >= hojeStr) {
+        // pausa do almoço e bloqueios de parte do dia aparecem na linha do tempo (de hoje em diante)
+        for (const p of config.pausas) {
+          itens.push({ tipo: 'pausa', inicio: this.paraHora(p.ini), fim: this.paraHora(p.fim), motivo: p.motivo });
+        }
+
         // começa no início do expediente (ou agora, se for hoje)
-        let cursor = this.paraMinutos(config.inicio);
+        let cursor = config.inicio;
         if (data === hojeStr) {
           // arredonda "agora" para o próximo bloco (ex.: 14:53 → 15:00 com blocos de 30 min)
           const agoraMin = agora.getHours() * 60 + agora.getMinutes();
           cursor = Math.max(cursor, Math.ceil(agoraMin / bloco) * bloco);
         }
-        const fimExpediente = this.paraMinutos(config.fim);
+        const fimExpediente = config.fim;
 
+        // agendamentos + pausas: tudo o que não está livre
         const ocupados = this.ocupando(data)
           .map(e => ({ ini: this.paraMinutos(e.horario), fim: this.paraMinutos(e.horario) + (e.duracao || 30) }))
+          .concat(config.pausas.map(p => ({ ini: p.ini, fim: p.fim })))
           .sort((a, b) => a.ini - b.ini);
 
         for (const o of ocupados) {
@@ -245,14 +264,14 @@ export class Calendario {
       }
     }
 
-    return itens.sort((a, b) => a.inicio.localeCompare(b.inicio) || (a.tipo === 'livre' ? 1 : -1));
+    const ordem = { agendamento: 0, pausa: 1, livre: 2 };
+    return itens.sort((a, b) => a.inicio.localeCompare(b.inicio) || ordem[a.tipo] - ordem[b.tipo]);
   }
 
   /** Minutos agendados ÷ minutos de trabalho do dia (glossário: "Ocupação"). */
   ocupacaoDoDia(data: string): number {
-    const config = this.configDoDia(data);
-    if (!config) return 0;
-    const disponivel = this.paraMinutos(config.fim) - this.paraMinutos(config.inicio);
+    // minutos de trabalho = expediente − pausa − bloqueios
+    const disponivel = minutosDeTrabalho(this.configDoDia(data));
     if (disponivel <= 0) return 0;
     const ocupado = this.ocupando(data).reduce((soma, e) => soma + (e.duracao || 30), 0);
     return Math.min(100, Math.round((ocupado / disponivel) * 100));

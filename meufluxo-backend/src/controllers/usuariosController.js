@@ -13,8 +13,31 @@ function gerarToken(usuarioDb) {
   );
 }
 
+// paletas do Perfil › Aparência (os nomes batem com o TEMAS_PRONTOS do front)
+const PALETAS = ['salvia', 'oceano', 'lavanda', 'rose', 'terracota', 'grafite', 'personalizada'];
+const COR_REGEX = /^#[0-9a-fA-F]{6}$/;
+
+/** Linha do banco → aparência que o front aplica ao abrir o sistema. */
+function formatarAparencia(linha) {
+  return {
+    paleta: PALETAS.includes(linha && linha.paleta) ? linha.paleta : 'salvia',
+    corPrimaria: linha && linha.cor_primaria ? linha.cor_primaria : null,
+    tamanhoTexto: linha && linha.tamanho_texto === 'grande' ? 'grande' : 'normal',
+  };
+}
+
+/** A aparência vale para o negócio inteiro: o atendente usa a do dono. */
+async function aparenciaDoNegocio(donoId) {
+  const [linhas] = await pool.query(
+    'SELECT paleta, cor_primaria, tamanho_texto FROM usuarios WHERE id = ?',
+    [donoId]
+  );
+  return formatarAparencia(linhas[0]);
+}
+
 // converte a linha do banco (nome_negocio) pro formato que o front usa (nomeNegocio)
-function formatarUsuario(usuarioDb) {
+// aparencia: a do negócio (para o atendente, a do dono)
+function formatarUsuario(usuarioDb, aparencia) {
   return {
     id: usuarioDb.id,
     nome: usuarioDb.nome,
@@ -22,8 +45,28 @@ function formatarUsuario(usuarioDb) {
     telefone: usuarioDb.telefone,
     nomeNegocio: usuarioDb.nome_negocio,
     papel: usuarioDb.papel || 'dono',
+    // o front usa para esconder menus e telas; quem garante mesmo é a API (permitir)
+    permissoes: usuarioDb.papel === 'atendente' ? lerPermissoes(usuarioDb.permissoes) : PERMISSOES.slice(),
     trocarSenha: !!usuarioDb.trocar_senha,
+    foto: usuarioDb.foto || null, // imagem 256x256 em base64 (ou null = mostra a inicial)
+    aparencia: aparencia || formatarAparencia(usuarioDb),
   };
+}
+
+/** Busca o usuário logado já no formato do front (com a aparência do negócio). */
+async function carregarUsuarioFormatado(id) {
+  const [linhas] = await pool.query(
+    `SELECT id, nome, email, telefone, nome_negocio, papel, dono_id, permissoes, trocar_senha,
+            foto, paleta, cor_primaria, tamanho_texto
+       FROM usuarios WHERE id = ?`,
+    [id]
+  );
+  const usuarioDb = linhas[0];
+  if (!usuarioDb) return null;
+  const aparencia = usuarioDb.papel === 'atendente' && usuarioDb.dono_id
+    ? await aparenciaDoNegocio(usuarioDb.dono_id)
+    : formatarAparencia(usuarioDb);
+  return formatarUsuario(usuarioDb, aparencia);
 }
 
 /** Regra de senha (a mesma do front): mínimo 8 caracteres, uma maiúscula e um caractere especial. */
@@ -49,6 +92,7 @@ async function cadastrar(req, res) {
   if (erroSenha) {
     return res.status(400).json({ erro: erroSenha });
   }
+
 
   try {
     const senhaHash = await bcrypt.hash(senha, 10);
@@ -108,7 +152,7 @@ async function login(req, res) {
     // usado na aba Equipe ("último acesso hoje")
     await pool.query('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = ?', [usuarioDb.id]);
 
-    res.json({ usuario: formatarUsuario(usuarioDb), token: gerarToken(usuarioDb) });
+    res.json({ usuario: await carregarUsuarioFormatado(usuarioDb.id), token: gerarToken(usuarioDb) });
   } catch (erro) {
     console.error(erro);
     res.status(500).json({ erro: 'Erro ao fazer login.' });
@@ -117,15 +161,11 @@ async function login(req, res) {
 
 async function obterPerfil(req, res) {
   try {
-    const [linhas] = await pool.query(
-      'SELECT id, nome, email, telefone, nome_negocio, papel, trocar_senha FROM usuarios WHERE id = ?',
-      [req.usuarioLogadoId]
-    );
-    const usuarioDb = linhas[0];
-    if (!usuarioDb) {
+    const usuario = await carregarUsuarioFormatado(req.usuarioLogadoId);
+    if (!usuario) {
       return res.status(404).json({ erro: 'Usuário não encontrado.' });
     }
-    res.json({ usuario: formatarUsuario(usuarioDb) });
+    res.json({ usuario });
   } catch (erro) {
     console.error(erro);
     res.status(500).json({ erro: 'Erro ao buscar perfil.' });
@@ -145,16 +185,20 @@ async function atualizarPerfil(req, res) {
   }
 
   try {
-    await pool.query(
-      'UPDATE usuarios SET nome = ?, email = ?, telefone = ?, nome_negocio = ? WHERE id = ?',
-      [nome, email, telefone || null, nomeNegocio || null, req.usuarioLogadoId]
-    );
+    if (req.papel === 'atendente') {
+      // o nome do negócio é do dono; o atendente muda só os próprios dados
+      await pool.query(
+        'UPDATE usuarios SET nome = ?, email = ?, telefone = ? WHERE id = ?',
+        [nome, email, telefone || null, req.usuarioLogadoId]
+      );
+    } else {
+      await pool.query(
+        'UPDATE usuarios SET nome = ?, email = ?, telefone = ?, nome_negocio = ? WHERE id = ?',
+        [nome, email, telefone || null, nomeNegocio || null, req.usuarioLogadoId]
+      );
+    }
 
-    const [linhas] = await pool.query(
-      'SELECT id, nome, email, telefone, nome_negocio, papel, trocar_senha FROM usuarios WHERE id = ?',
-      [req.usuarioLogadoId]
-    );
-    res.json({ usuario: formatarUsuario(linhas[0]) });
+    res.json({ usuario: await carregarUsuarioFormatado(req.usuarioLogadoId) });
   } catch (erro) {
     if (erro.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ erro: 'Esse email já está em uso por outra conta.' });
@@ -203,6 +247,110 @@ async function trocarSenha(req, res) {
   }
 }
 
+
+// PUT /api/usuarios/foto → { foto: 'data:image/jpeg;base64,...' } ou { foto: null } para remover
+// O front já manda a imagem recortada em 256x256 (fica bem pequena, uns 20 KB).
+async function salvarFoto(req, res) {
+  const { foto } = req.body;
+
+  if (foto !== null) {
+    if (typeof foto !== 'string' || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(foto)) {
+      return res.status(400).json({ erro: 'Envie uma imagem JPG, PNG ou WEBP.' });
+    }
+    if (foto.length > 300 * 1024) {
+      return res.status(400).json({ erro: 'A foto ficou grande demais. Escolha outra imagem.' });
+    }
+  }
+
+  try {
+    await pool.query('UPDATE usuarios SET foto = ? WHERE id = ?', [foto, req.usuarioLogadoId]);
+    res.json({ usuario: await carregarUsuarioFormatado(req.usuarioLogadoId) });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro ao salvar a foto.' });
+  }
+}
+
+// GET /api/usuarios/aparencia → a aparência do negócio (o app aplica ao abrir)
+async function obterAparencia(req, res) {
+  try {
+    res.json({ aparencia: await aparenciaDoNegocio(req.usuarioId) });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro ao buscar a aparência.' });
+  }
+}
+
+// PUT /api/usuarios/aparencia → { paleta, corPrimaria, tamanhoTexto } (só o dono; vale para a equipe toda)
+async function salvarAparencia(req, res) {
+  const { paleta, corPrimaria, tamanhoTexto } = req.body;
+
+  if (!PALETAS.includes(paleta)) {
+    return res.status(400).json({ erro: 'Paleta inválida.' });
+  }
+  if (paleta === 'personalizada' && !COR_REGEX.test(String(corPrimaria || ''))) {
+    return res.status(400).json({ erro: 'Escolha a cor principal.' });
+  }
+  if (!['normal', 'grande'].includes(tamanhoTexto)) {
+    return res.status(400).json({ erro: 'Tamanho do texto inválido.' });
+  }
+
+  try {
+    await pool.query(
+      'UPDATE usuarios SET paleta = ?, cor_primaria = ?, tamanho_texto = ? WHERE id = ?',
+      [paleta, paleta === 'personalizada' ? corPrimaria.toLowerCase() : null, tamanhoTexto, req.usuarioId]
+    );
+    res.json({ aparencia: await aparenciaDoNegocio(req.usuarioId) });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro ao salvar a aparência.' });
+  }
+}
+
+// GET /api/usuarios/exportar → tudo do negócio num objeto só (o front gera o .json)
+// Backup + portabilidade (LGPD). Senha e login do Google nunca saem.
+async function exportarDados(req, res) {
+  const id = req.usuarioId;
+  try {
+    const [[perfil]] = await pool.query(
+      `SELECT nome, email, telefone, nome_negocio, slug, descricao_negocio, endereco_negocio,
+              paleta, cor_primaria, tamanho_texto
+         FROM usuarios WHERE id = ?`,
+      [id]
+    );
+    const consultar = async (sql) => (await pool.query(sql, [id]))[0];
+
+    const dados = {
+      sistema: 'MeuFluxo',
+      versao: 1,
+      exportadoEm: new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }),
+      perfil,
+      equipe: await consultar("SELECT nome, email, permissoes, ultimo_acesso FROM usuarios WHERE dono_id = ? AND papel = 'atendente'"),
+      clientes: await consultar('SELECT id, nome, telefone, email, endereco, origem, criado_em FROM clientes WHERE usuario_id = ? ORDER BY nome'),
+      servicos: await consultar('SELECT * FROM servicos WHERE usuario_id = ? ORDER BY nome'),
+      agendamentos: await consultar('SELECT * FROM agendamentos WHERE usuario_id = ? ORDER BY data, horario'),
+      despesas: await consultar('SELECT * FROM despesas WHERE usuario_id = ? ORDER BY mes, id'),
+      metas: await consultar('SELECT * FROM metas WHERE usuario_id = ? ORDER BY tipo, periodo'),
+      horarioTrabalho: (await consultar('SELECT bloco_min, dias FROM horarios_trabalho WHERE usuario_id = ?'))[0] || null,
+      folgas: await consultar('SELECT data, horario_inicio, horario_fim, motivo FROM bloqueios WHERE usuario_id = ? ORDER BY data'),
+      listaEspera: await consultar('SELECT * FROM lista_espera WHERE usuario_id = ? ORDER BY criado_em'),
+    };
+
+    // o id do dono não interessa a quem lê o arquivo
+    for (const lista of [dados.servicos, dados.agendamentos, dados.despesas, dados.metas, dados.listaEspera]) {
+      for (const linha of lista) delete linha.usuario_id;
+    }
+    if (dados.horarioTrabalho && typeof dados.horarioTrabalho.dias === 'string') {
+      try { dados.horarioTrabalho.dias = JSON.parse(dados.horarioTrabalho.dias); } catch {}
+    }
+
+    res.json(dados);
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro ao juntar os seus dados.' });
+  }
+}
+
 // só o dono chega aqui (rota protegida com somenteDono)
 async function excluirConta(req, res) {
   const usuarioId = req.usuarioId;
@@ -242,5 +390,9 @@ module.exports = {
   atualizarPerfil,
   trocarSenha,
   excluirConta,
+  salvarFoto,
+  obterAparencia,
+  salvarAparencia,
+  exportarDados,
   validarSenha,
 };

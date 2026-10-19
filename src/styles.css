@@ -461,3 +461,28 @@ app-menu-lateral {
 }
 .search-input input { width: 250px; }
 @media (max-width: 900px) { .search-input input { width: 140px; } }
+
+/* =====================================================================
+   BUSCA DO CABEÇALHO: sugestões enquanto digita
+   ===================================================================== */
+.busca-dropdown { min-width: 380px; padding: 10px; }
+.busca-titulo-lista {
+  margin: 4px 8px 6px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.busca-item { align-items: center; }
+.busca-titulo { font-weight: 500; }
+.busca-tipo {
+  text-transform: none; letter-spacing: 0;
+  font-size: 0.7rem; font-weight: 600;
+  color: var(--color-text-soft); background: var(--color-bg);
+  padding: 3px 9px;
+}
+.busca-ver-tudo {
+  margin-top: 4px; border-top: 1px solid var(--color-border); border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  font-size: 0.82rem; font-weight: 600; color: var(--color-primary-dark);
+}
+
+     html.texto-grande { font-size: 112.5%; }
+     .user-avatar-foto { object-fit: cover; padding: 0; background: var(--color-white); }

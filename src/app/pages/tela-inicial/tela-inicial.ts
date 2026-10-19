@@ -5,7 +5,19 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
-import { API_URL, Alerta, abrirAcaoDoAlerta } from '../../app';
+import {
+  API_URL,
+  Alerta,
+  abrirAcaoDoAlerta,
+  alternarValoresOcultos,
+  dinheiro,
+  esconderValoresNoTexto,
+  valoresOcultos,
+  horarioPadrao,
+  normalizarHorarioTrabalho,
+  expedienteDoDia,
+  minutosDeTrabalho,
+} from '../../app';
 import {
   AcaoRapida,
   Calendario,
@@ -34,8 +46,6 @@ interface Agendamento {
 
 interface MetaMensal { id: number; mes: string; tipo: 'faturamento' | 'clientes'; valorAlvo: number; }
 
-interface DiaTrabalho { ativo: boolean; inicio: string; fim: string; }
-
 /** Um dos 6 números do topo. */
 interface Numero {
   rotulo: string;
@@ -58,8 +68,6 @@ interface MetaResumo {
   percentual: number;
 }
 
-const CHAVE_OCULTAR = 'meufluxo_ocultar_valores';
-
 @Component({
   selector: 'app-tela-inicial',
   standalone: true,
@@ -76,7 +84,7 @@ export class TelaInicial implements OnInit {
   agendamentos: Agendamento[] = [];
   metasMensais: MetaMensal[] = [];
   alertas: Alerta[] = [];
-  horario: HorarioTrabalhoCalendario = this.horarioPadrao();
+  horario: HorarioTrabalhoCalendario = horarioPadrao();
 
   eventosPorDia: Map<string, EventoResumo[]> = new Map();
 
@@ -85,7 +93,11 @@ export class TelaInicial implements OnInit {
   /** Dono, ou atendente com acesso ao Financeiro: vê valores em R$. */
   veValores = true;
   veMetas = true;
-  ocultarValores = false;
+
+  /** "Ocultar valores" é o mesmo no sistema todo (começa oculto a cada login e a cada aba nova). */
+  get ocultarValores(): boolean {
+    return valoresOcultos();
+  }
 
   // ----- visão -----
   hoje = this.formatarData(new Date());
@@ -97,7 +109,6 @@ export class TelaInicial implements OnInit {
   lembretes: Lembrete[] = [];
   metasDoMes: MetaResumo[] = [];
 
-  private readonly HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
   readonly nomesMeses = [
     'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
@@ -127,7 +138,6 @@ export class TelaInicial implements OnInit {
     this.veValores = !ehAtendente || permissoes.includes('financeiro');
     this.veMetas = !ehAtendente || permissoes.includes('metas');
     this.visao = ehAtendente ? 'dia' : 'semana';
-    this.ocultarValores = this.veValores && localStorage.getItem(CHAVE_OCULTAR) === 'true';
 
     const headers = this.cabecalhoAuth();
 
@@ -137,7 +147,7 @@ export class TelaInicial implements OnInit {
         `${API_URL}/servicos`, { headers }
       ),
       agendamentos: this.http.get<{ agendamentos: Agendamento[] }>(`${API_URL}/agendamentos`, { headers }),
-      horario: this.http.get<{ horario: unknown }>(`${API_URL}/horario-trabalho`, { headers }),
+      horario: this.http.get<unknown>(`${API_URL}/horario-trabalho`, { headers }),
       // metas: só pede se a pessoa pode ver (senão a API responde 403)
       metas: this.veMetas
         ? this.http.get<{ metas: MetaMensal[] }>(`${API_URL}/metas/mensais`, { headers })
@@ -150,7 +160,7 @@ export class TelaInicial implements OnInit {
         this.clientes = r.clientes.clientes;
         this.servicos = r.servicos.servicos.map(s => ({ id: s.id, nome: s.nome, valor: s.valor, duracao: s.duracaoMin }));
         this.agendamentos = r.agendamentos.agendamentos;
-        this.horario = this.normalizarHorario(r.horario.horario);
+        this.horario = normalizarHorarioTrabalho(r.horario); // com pausa e folgas
         this.metasMensais = r.metas.metas;
         this.alertas = r.alertas.alertas;
         this.atualizarTudo();
@@ -205,8 +215,13 @@ export class TelaInicial implements OnInit {
   }
 
   alternarValores() {
-    this.ocultarValores = !this.ocultarValores;
-    localStorage.setItem(CHAVE_OCULTAR, String(this.ocultarValores));
+    alternarValoresOcultos();
+    this.atualizarTudo(); // os 6 números são montados já formatados, então precisam ser refeitos
+  }
+
+  /** Texto do aviso, escondendo os R$ quando "Ocultar valores" está ligado. */
+  textoAlerta(texto: string): string {
+    return esconderValoresNoTexto(texto);
   }
 
   /** Clique num dia do Mês ou no topo de uma coluna da Semana: abre a visão Dia daquele dia. */
@@ -354,8 +369,8 @@ export class TelaInicial implements OnInit {
     let disponivel = 0;
     let ocupado = 0;
     for (const data of this.diasDoPeriodo()) {
-      const config = this.horario.dias[this.diaSemanaDe(data)];
-      if (config?.ativo) disponivel += this.paraMinutos(config.fim) - this.paraMinutos(config.inicio);
+      // expediente − pausa − folgas (mesmo cálculo do calendário)
+      disponivel += minutosDeTrabalho(expedienteDoDia(this.horario, data));
     }
     for (const a of this.agendamentosNoPeriodo()) {
       if (a.status === 'agendado' || a.status === 'realizado') ocupado += this.duracao(a.servicoId);
@@ -372,16 +387,18 @@ export class TelaInicial implements OnInit {
 
     for (const data of this.diasDoPeriodo()) {
       if (data < this.hoje) continue;
-      const config = this.horario.dias[this.diaSemanaDe(data)];
-      if (!config?.ativo) continue;
+      const config = expedienteDoDia(this.horario, data); // null = não trabalha ou folga
+      if (!config) continue;
 
-      let cursor = this.paraMinutos(config.inicio);
+      let cursor = config.inicio;
       if (data === this.hoje) cursor = Math.max(cursor, Math.ceil(agoraMin / bloco) * bloco);
-      const fimExpediente = this.paraMinutos(config.fim);
+      const fimExpediente = config.fim;
 
+      // agendamentos + pausa do almoço + bloqueios de parte do dia
       const ocupados = this.agendamentos
         .filter(a => a.data === data && (a.status === 'agendado' || a.status === 'realizado'))
         .map(a => ({ ini: this.paraMinutos(a.horario), fim: this.paraMinutos(a.horario) + this.duracao(a.servicoId) }))
+        .concat(config.pausas.map(p => ({ ini: p.ini, fim: p.fim })))
         .sort((a, b) => a.ini - b.ini);
 
       for (const o of ocupados) {
@@ -510,39 +527,12 @@ export class TelaInicial implements OnInit {
   }
 
   // =====================================================================
-  //  HORÁRIO DE TRABALHO
-  // =====================================================================
-
-  private horarioPadrao(): HorarioTrabalhoCalendario {
-    const util = (): DiaTrabalho => ({ ativo: true, inicio: '08:00', fim: '18:00' });
-    return { blocoMin: 30, dias: [{ ativo: false, inicio: '08:00', fim: '18:00' }, util(), util(), util(), util(), util(), util()] };
-  }
-
-  private normalizarHorario(bruto: unknown): HorarioTrabalhoCalendario {
-    const padrao = this.horarioPadrao();
-    if (!bruto || typeof bruto !== 'object') return padrao;
-    const b = bruto as { blocoMin?: unknown; dias?: unknown };
-    const dias = padrao.dias.map((d, i) => {
-      const salvo = Array.isArray(b.dias) ? (b.dias[i] as Record<string, unknown> | undefined) : undefined;
-      if (!salvo || typeof salvo !== 'object') return d;
-      return {
-        ativo: typeof salvo['ativo'] === 'boolean' ? (salvo['ativo'] as boolean) : d.ativo,
-        inicio: this.HORA_REGEX.test(String(salvo['inicio'])) ? String(salvo['inicio']) : d.inicio,
-        fim: this.HORA_REGEX.test(String(salvo['fim'])) ? String(salvo['fim']) : d.fim,
-      };
-    });
-    const bloco = [15, 30, 45, 60].includes(Number(b.blocoMin)) ? Number(b.blocoMin) : padrao.blocoMin;
-    return { blocoMin: bloco, dias };
-  }
-
-  // =====================================================================
   //  AUXILIARES
   // =====================================================================
 
   /** Valor em R$, ou "R$ ••••" com os valores ocultos. */
   moeda(valor: number): string {
-    if (this.ocultarValores) return 'R$ ••••';
-    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return dinheiro(valor);
   }
 
   private nomeCliente(id: number): string {
@@ -572,11 +562,6 @@ export class TelaInicial implements OnInit {
   private paraMinutos(hhmm: string): number {
     const [h, m] = String(hhmm).split(':');
     return (Number(h) || 0) * 60 + (Number(m) || 0);
-  }
-
-  private diaSemanaDe(data: string): number {
-    const [ano, mes, dia] = data.split('-').map(Number);
-    return new Date(ano, mes - 1, dia).getDay();
   }
 
   private dataCurta(data: string): string {
