@@ -1,0 +1,198 @@
+<main class="lista-page">
+
+  <!-- topo -->
+  <div class="topo">
+    <div>
+      <h1>Lista de espera</h1>
+      <p class="subtitulo">Clientes que queriam um horário que estava cheio. Quando abrir uma vaga compatível, o sistema avisa e você encaixa com um clique.</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="abrirModal()">+ Adicionar à lista</button>
+  </div>
+
+  <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
+  <div class="pagina-ok" *ngIf="mensagem">{{ mensagem }}</div>
+  <p class="carregando" *ngIf="carregando">Carregando lista de espera...</p>
+
+  <ng-container *ngIf="!carregando">
+
+    <!-- 4 números -->
+    <div class="numeros">
+      <div class="numero">
+        <span class="numero-rotulo">Aguardando</span>
+        <span class="numero-valor">{{ numeros.aguardando }}</span>
+      </div>
+      <div class="numero">
+        <span class="numero-rotulo">Encaixados em {{ mesAtual }}</span>
+        <span class="numero-valor">{{ numeros.encaixadosMes }}</span>
+      </div>
+      <div class="numero">
+        <span class="numero-rotulo">Recuperado com encaixes</span>
+        <span class="numero-valor">{{ veValores ? moeda(numeros.recuperadoMes) : '—' }}</span>
+      </div>
+      <div class="numero">
+        <span class="numero-rotulo">Desistiram ou expiraram</span>
+        <span class="numero-valor">{{ numeros.desistiramMes }}</span>
+      </div>
+    </div>
+
+    <!-- vaga em destaque -->
+    <div class="destaque" *ngIf="destaque && entradaDestaque as e">
+      <span class="destaque-icone"><span class="icone" aria-hidden="true">event_available</span></span>
+      <div class="destaque-texto">
+        <p>
+          <strong>{{ destaque.quemCancelou ? 'Vaga liberada' : 'Vaga livre' }}: {{ destaque.texto }}</strong>
+          <ng-container *ngIf="destaque.quemCancelou"> ({{ destaque.quemCancelou }} cancelou)</ng-container>.
+        </p>
+        <p><strong>{{ e.clienteNome }}</strong> é a 1ª da fila e quer {{ oQueQuerDestaque }}.</p>
+      </div>
+      <div class="destaque-botoes">
+        <button type="button" class="btn-whatsapp" (click)="avisar(e, destaque)">Avisar {{ primeiroNome(e.clienteNome) }} pelo WhatsApp</button>
+        <button type="button" class="btn-escuro" [disabled]="ocupado" (click)="encaixar(e, destaque)">Encaixar direto</button>
+      </div>
+    </div>
+
+    <div class="grade">
+      <!-- aguardando vaga -->
+      <section class="card">
+        <div class="card-topo">
+          <h2>Aguardando vaga</h2>
+          <span class="card-dica">quem entrou primeiro tem prioridade</span>
+        </div>
+
+        <div class="tabela-rolagem" *ngIf="aguardando.length; else filaVazia">
+          <table class="tabela">
+            <thead>
+              <tr><th>#</th><th>Cliente</th><th>Serviço</th><th>Quer</th><th>Entrou por</th><th>Na fila há</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let e of aguardando; let i = index">
+                <td class="posicao">{{ i + 1 }}º</td>
+                <td>
+                  <button type="button" class="link-nome" (click)="abrirFicha(e)">{{ e.clienteNome }}</button>
+                  <small>{{ e.clienteTelefone }}</small>
+                </td>
+                <td>{{ e.servicoNome }} · {{ e.duracao }} min</td>
+                <td>{{ quer(e).dia }}<small>{{ quer(e).quando }}</small></td>
+                <td><span class="etiqueta" [attr.data-origem]="e.origem">{{ rotuloOrigem(e.origem) }}</span></td>
+                <td>{{ naFilaHa(e) }}</td>
+                <td class="acoes">
+                  <div class="acoes-caixa">
+                    <button type="button" class="etiqueta-vaga" *ngIf="e.vaga as v" [title]="'Encaixar em ' + diaCurto(v.data) + ' às ' + v.horario" (click)="encaixar(e, v)">
+                      vaga {{ diaCurto(v.data) }} {{ v.horario }} · encaixar
+                    </button>
+                    <span class="etiqueta-avisado" *ngIf="e.situacao === 'avisado'">já foi avisada</span>
+                    <div class="acoes-botoes">
+                      <button type="button" class="btn-mini btn-mini-verde" *ngIf="e.vaga as v" (click)="avisar(e, v)" title="Avisar pelo WhatsApp">Avisar</button>
+                      <button type="button" class="btn-mini" (click)="abrirModal(e)">Editar</button>
+                      <button type="button" class="btn-mini" (click)="remover(e)">Remover</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #filaVazia>
+          <p class="vazio">Ninguém esperando agora. Quando um horário estiver cheio, use "+ Adicionar à lista" ou a opção "Colocar na lista de espera" da Agenda.</p>
+        </ng-template>
+      </section>
+
+      <!-- histórico -->
+      <section class="card">
+        <div>
+          <h2>Histórico</h2>
+          <span class="card-dica">Quem saiu da fila e por quê</span>
+        </div>
+        <div class="historico">
+          <div class="historico-item" *ngFor="let e of historico">
+            <span class="situacao" [attr.data-situacao]="e.situacao">{{ rotuloSituacao(e) }}</span>
+            <div>
+              <strong>{{ e.clienteNome }}</strong> · {{ e.servicoNome }}
+              <small>{{ detalheHistorico(e) }}</small>
+            </div>
+          </div>
+          <p class="vazio" *ngIf="historico.length === 0">Ninguém saiu da fila ainda.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- como funciona -->
+    <section class="card explicacoes">
+      <div>
+        <h3>Como alguém entra na fila</h3>
+        <p>Você adiciona aqui, ou o sistema oferece quando um horário dá conflito na Agenda, ou o próprio cliente pede pelo bot ou pelo link quando o dia está lotado.</p>
+      </div>
+      <div>
+        <h3>Quando abre vaga</h3>
+        <p>Ao cancelar ou reagendar, o sistema procura alguém compatível (dia, período e duração do serviço) e avisa aqui, no sininho e na Início. Ninguém é encaixado sozinho: você decide.</p>
+      </div>
+      <div>
+        <h3>Quando sai da fila</h3>
+        <p>Encaixado (virou agendamento), desistiu (removido) ou expirou (a data desejada passou sem vaga).</p>
+      </div>
+    </section>
+  </ng-container>
+
+  <!-- MODAL ADICIONAR / EDITAR -->
+  <div class="modal-overlay" *ngIf="modalAberto" (click)="fecharModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ editandoId ? 'Editar' : 'Adicionar à lista de espera' }}</h2>
+        <button type="button" class="btn-icon" (click)="fecharModal()" aria-label="Fechar">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="salvar($event)">
+        <div class="modal-erro" *ngIf="erroModal">{{ erroModal }}</div>
+
+        <div class="form-group">
+          <label for="buscaCliente">Cliente</label>
+          <input id="buscaCliente" type="text" placeholder="Digite para filtrar por nome ou telefone" [(ngModel)]="buscaCliente" name="buscaCliente" />
+          <select [(ngModel)]="form.clienteId" name="clienteId" aria-label="Cliente">
+            <option [ngValue]="0" disabled>Escolha o cliente</option>
+            <option *ngFor="let c of clientesFiltrados" [ngValue]="c.id">{{ c.nome }}{{ c.telefone ? ' · ' + c.telefone : '' }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="servico">Serviço</label>
+          <select id="servico" [(ngModel)]="form.servicoId" name="servicoId">
+            <option [ngValue]="0" disabled>Escolha o serviço</option>
+            <option *ngFor="let s of servicos" [ngValue]="s.id">{{ s.nome }} · {{ s.duracaoMin }} min</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="dia">Dia desejado</label>
+          <div class="linha-dia">
+            <input id="dia" type="date" [min]="hoje" [(ngModel)]="form.dataPreferida" name="dataPreferida" [disabled]="form.qualquerDia" />
+            <label class="caixa">
+              <input type="checkbox" [(ngModel)]="form.qualquerDia" name="qualquerDia" />
+              <span>Qualquer dia</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <span class="rotulo">Período</span>
+          <div class="alternador" role="group" aria-label="Período">
+            <button type="button" [class.ativo]="form.periodo === 'manha' && !form.horarioPreferido" (click)="form.periodo = 'manha'; form.horarioPreferido = ''">Manhã</button>
+            <button type="button" [class.ativo]="form.periodo === 'tarde' && !form.horarioPreferido" (click)="form.periodo = 'tarde'; form.horarioPreferido = ''">Tarde</button>
+            <button type="button" [class.ativo]="form.periodo === 'qualquer' && !form.horarioPreferido" (click)="form.periodo = 'qualquer'; form.horarioPreferido = ''">Qualquer</button>
+          </div>
+          <label class="sub-rotulo" for="horario">ou um horário exato (opcional)</label>
+          <input id="horario" type="time" [(ngModel)]="form.horarioPreferido" name="horarioPreferido" />
+        </div>
+
+        <div class="form-group">
+          <label for="obs">Observação</label>
+          <input id="obs" type="text" maxlength="255" placeholder="Opcional" [(ngModel)]="form.observacao" name="observacao" />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="fecharModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="salvando">{{ salvando ? 'Salvando...' : (editandoId ? 'Salvar' : 'Adicionar') }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>

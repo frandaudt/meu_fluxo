@@ -51,7 +51,7 @@
 .seletor-visao button:hover { background: var(--color-bg); }
 .seletor-visao button.ativo { background: var(--color-primary); color: var(--color-white); }
 
-app-calendario { display: block; }tor-visao button.ativo { background: var(--color-primary); color: var(--color-white); }
+app-calendario { display: block; }
 
 /* ---------- botões ---------- */
 .btn-primary {
@@ -308,3 +308,37 @@ app-calendario { display: block; }tor-visao button.ativo { background: var(--col
 @media (max-width: 640px) {
   .acoes-grid, .form-row { grid-template-columns: 1fr; }
 }
+
+/* ===== faixa da lista de espera (embaixo do calendário) ===== */
+.faixa-fila {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.faixa-fila .icone { color: var(--color-aviso); }
+.faixa-fila p { flex: 1; margin: 0; font-size: 0.86rem; color: var(--color-text); min-width: 200px; }
+.btn-faixa {
+  padding: 8px 14px; border-radius: var(--radius-md);
+  background: var(--color-bg); color: var(--color-text);
+  font-size: 0.82rem; font-weight: 600; text-decoration: none;
+}
+.btn-faixa:hover { background: var(--color-border-strong); }
+.pagina-ok {
+  background: var(--color-sucesso-claro); color: var(--color-sucesso);
+  border: 1px solid var(--color-sucesso-borda); border-radius: 8px;
+  padding: 10px 14px; font-size: 0.88rem;
+}
+/* concluído: botão do agradecimento pelo WhatsApp */
+.pos-atendimento {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border-radius: var(--radius-md);
+  background: var(--color-sucesso-claro); color: var(--color-sucesso); font-size: 0.82rem;
+}
+.btn-whatsapp-pos {
+  padding: 8px 14px; border-radius: var(--radius-md);
+  background: #25d366; color: #fff; font-weight: 600; font-size: 0.82rem; text-decoration: none; white-space: nowrap;
+}
+.btn-whatsapp-pos:hover { background: #1ebe5a; }

@@ -3,9 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
-import { API_URL, dinheiro } from '../../app';
+import { API_URL, dinheiro, textoMensagemPronta } from '../../app';
+import { EntradaFila, RespostaFila, textoQuer } from '../lista-espera/lista-espera';
 
 // =====================================================================
 //  TIPOS (exportados: a tela de Busca usa os mesmos cálculos)
@@ -189,11 +191,9 @@ export function linkWhatsapp(telefone: string | null | undefined, texto: string)
   return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
 }
 
-/** Mensagem "Sentimos sua falta" (cliente em risco ou inativo). */
+/** Mensagem "Sentimos sua falta" (cliente em risco ou inativo): a que está "Em uso" na tela WhatsApp. */
 export function mensagemSaudade(nome: string, servico: string | null): string {
-  const primeiroNome = nome.trim().split(/\s+/)[0];
-  const oQue = servico ? `seu ${servico.toLowerCase()}` : 'um horário';
-  return `Oi ${primeiroNome}, faz um tempinho que você não aparece por aqui! Quer agendar ${oQue}?`;
+  return textoMensagemPronta('falta', servico ? { nome: servico } : null, { nome });
 }
 
 /** "16/10" */
@@ -235,6 +235,7 @@ export class ClientesComponent implements OnInit {
   clientes: Cliente[] = [];
   servicos: ServicoCRM[] = [];
   agendamentos: AgendamentoCRM[] = [];
+  fila: EntradaFila[] = []; // lista de espera (aguardando + histórico)
 
   linhas: LinhaTabela[] = [];
   termoBusca = '';
@@ -300,8 +301,11 @@ export class ClientesComponent implements OnInit {
       clientes: this.http.get<{ clientes: Cliente[] }>(`${API_URL}/clientes`, { headers }),
       servicos: this.http.get<{ servicos: { id: number; nome: string; valor: number; duracaoMin: number }[] }>(`${API_URL}/servicos`, { headers }),
       agendamentos: this.http.get<{ agendamentos: AgendamentoCRM[] }>(`${API_URL}/agendamentos`, { headers }),
+      // se a lista de espera falhar, a tela abre do mesmo jeito
+      fila: this.http.get<RespostaFila>(`${API_URL}/lista-espera`, { headers }).pipe(catchError(() => of(null))),
     }).subscribe({
       next: (r) => {
+        this.fila = r.fila ? [...r.fila.aguardando, ...r.fila.historico] : [];
         this.clientes = r.clientes.clientes;
         this.servicos = r.servicos.servicos.map(s => ({ id: s.id, nome: s.nome, valor: s.valor, duracao: s.duracaoMin }));
         this.agendamentos = r.agendamentos.agendamentos;
@@ -414,6 +418,28 @@ export class ClientesComponent implements OnInit {
     if (link) window.open(link, '_blank');
   }
 
+  /** Entradas da lista de espera deste cliente (seção da ficha), mais recentes primeiro. */
+  filaDoCliente(c: Cliente): EntradaFila[] {
+    return this.fila
+      .filter(e => e.clienteId === c.id)
+      .sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)));
+  }
+
+  /** "sáb 17/10 · manhã" */
+  textoQuer(e: EntradaFila): string {
+    const q = textoQuer(e);
+    return `${q.dia} · ${q.quando}`;
+  }
+
+  rotuloFila(e: EntradaFila): string {
+    return { aguardando: 'Aguardando', avisado: 'Avisado', encaixado: 'Encaixado', desistiu: 'Desistiu', expirado: 'Expirou' }[e.situacao];
+  }
+
+  /** "Colocar na lista de espera" (abre a tela já com o cliente escolhido). */
+  colocarNaLista(c: Cliente) {
+    this.router.navigate(['/lista-espera'], { queryParams: { novo: 1, cliente: c.id } });
+  }
+
   /** "Agendar": abre a Agenda com o "Novo agendamento" já com este cliente. */
   agendar(c: Cliente) {
     this.router.navigate(['/agenda'], { queryParams: { novo: hojeISO(), cliente: c.id } });
@@ -461,6 +487,26 @@ export class ClientesComponent implements OnInit {
         eventos.push({ data: a.data, titulo: 'Primeiro atendimento', detalhe: servico, cor: 'neutro' });
       }
     });
+
+    // lista de espera: quando entrou na fila (e como saiu)
+    for (const e of this.fila.filter(x => x.clienteId === c.id)) {
+      if (!e.criadoEm) continue;
+      const pelo = e.origem === 'whatsapp' ? ' pelo WhatsApp' : e.origem === 'link' ? ' pelo link' : '';
+      eventos.push({
+        data: e.criadoEm.slice(0, 10),
+        titulo: `Entrou na lista de espera · ${e.servicoNome}`,
+        detalhe: `Queria ${this.textoQuer(e)}${pelo}`,
+        cor: 'aviso',
+      });
+      if (e.situacao === 'encaixado' && e.encaixadoEm && e.saiuEm) {
+        eventos.push({
+          data: e.saiuEm.slice(0, 10),
+          titulo: `Encaixado da lista de espera · ${e.servicoNome}`,
+          detalhe: `Para ${this.dataComDia(e.encaixadoEm.data)} às ${e.encaixadoEm.horario}`,
+          cor: 'sucesso',
+        });
+      }
+    }
 
     // entrou em "Em risco" (data em que passou de 1,5× o ritmo, ou 30 dias com 1 visita)
     if (r.situacao === 'em_risco' && r.ultimaVisita) {

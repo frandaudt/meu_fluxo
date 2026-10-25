@@ -7,6 +7,7 @@
 //     que somem sozinhos quando a situação é resolvida.
 // Regra geral do sistema: o aviso só AVISA; quem decide é a pessoa.
 const { pool } = require('../config/db');
+const { contarNaFila } = require('./listaEsperaController');
 
 /** Data de hoje no horário de Brasília ('2026-10-17'), mesmo com o servidor em UTC. */
 function hojeBrasilia() {
@@ -42,13 +43,13 @@ function linkWhatsapp(telefone, texto) {
   return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
 }
 
-/** Ação e cor de cada tipo de notificação gravada. */
+/** Cor, botão e tela de destino de cada tipo de notificação gravada (coluna tipo). */
 const TIPOS_NOTIFICACAO = {
-  novo_agendamento_bot: { cor: 'agendado', rotulo: 'Ver agendamento' },
-  novo_agendamento_link: { cor: 'agendado', rotulo: 'Ver agendamento' },
-  novo_cliente_bot: { cor: 'agendado', rotulo: 'Ver cliente' },
-  novo_cliente_link: { cor: 'agendado', rotulo: 'Ver cliente' },
-  vaga_liberada: { cor: 'aviso', rotulo: 'Ver lista de espera' },
+  novo_agendamento_bot: { cor: 'agendado', rotulo: 'Ver agenda', link: '/agenda' },
+  novo_agendamento_link: { cor: 'agendado', rotulo: 'Ver agenda', link: '/agenda' },
+  novo_cliente_bot: { cor: 'agendado', rotulo: 'Ver clientes', link: '/clientes' },
+  novo_cliente_link: { cor: 'agendado', rotulo: 'Ver clientes', link: '/clientes' },
+  vaga_liberada: { cor: 'aviso', rotulo: 'Ver lista de espera', link: '/lista-espera' },
 };
 
 // GET /api/alertas
@@ -63,8 +64,10 @@ async function listar(req, res) {
     // ---------------------------------------------------------------
     // 1. Notificações ainda não lidas (as mais novas primeiro)
     // ---------------------------------------------------------------
+    // colunas da tabela: titulo, mensagem, tipo, lida, criado_em
+    // (não tem coluna de link: a tela de destino sai do tipo, em TIPOS_NOTIFICACAO)
     const [notificacoes] = await pool.query(
-      `SELECT id, tipo, texto, link, criado_em
+      `SELECT id, tipo, titulo, mensagem, criado_em
          FROM notificacoes
         WHERE usuario_id = ? AND lida = 0
         ORDER BY criado_em DESC
@@ -72,13 +75,13 @@ async function listar(req, res) {
       [usuarioId]
     );
     for (const n of notificacoes) {
-      const tipo = TIPOS_NOTIFICACAO[n.tipo] || { cor: 'agendado', rotulo: 'Ver' };
+      const tipo = TIPOS_NOTIFICACAO[n.tipo] || { cor: 'agendado', rotulo: 'Ver', link: null };
       alertas.push({
         id: `n${n.id}`,
         tipo: n.tipo,
         cor: tipo.cor,
-        texto: n.texto,
-        acao: n.link ? { rotulo: tipo.rotulo, link: n.link } : null,
+        texto: n.mensagem || n.titulo,
+        acao: tipo.link ? { rotulo: tipo.rotulo, link: tipo.link } : null,
         notificacaoId: n.id,
       });
     }
@@ -206,7 +209,15 @@ async function listar(req, res) {
       }
     }
 
-    res.json({ alertas, total: alertas.length });
+    // quantos estão na lista de espera (bolinha do menu e número da Início)
+    let aguardandoNaLista = 0;
+    try {
+      aguardandoNaLista = await contarNaFila(usuarioId);
+    } catch (erro) {
+      console.error('Não foi possível contar a lista de espera:', erro.message);
+    }
+
+    res.json({ alertas, total: alertas.length, aguardandoNaLista });
   } catch (erro) {
     console.error(erro);
     res.status(500).json({ erro: 'Erro ao carregar os avisos.' });

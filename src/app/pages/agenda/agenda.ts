@@ -3,8 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
-import { AcaoRapida, Calendario, EventoResumo, VisaoCalendario } from '../../components/calendario/calendario';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { AcaoRapida, Calendario, EventoResumo, FilaCalendario, VisaoCalendario } from '../../components/calendario/calendario';
+import { RespostaFila } from '../lista-espera/lista-espera';
 
 import {
   API_URL,
@@ -14,9 +16,11 @@ import {
   normalizarHorarioTrabalho,
   expedienteDoDia,
   bloqueioDoDiaInteiro,
+  linkWhatsappPronto,
+  textoMensagemPronta,
 } from '../../app';
 
-interface Cliente { id: number; nome: string; }
+interface Cliente { id: number; nome: string; telefone?: string | null; }
 interface Servico { id: number; nome: string; valor: number; duracao: number; }
 
 type StatusAgendamento = 'agendado' | 'realizado' | 'cancelado' | 'nao_compareceu';
@@ -68,6 +72,11 @@ export class Agenda implements OnInit {
   horario: HorarioTrabalho = horarioPadrao();
 
   eventosPorDia: Map<string, EventoResumo[]> = new Map();
+
+  // lista de espera: faixa embaixo do calendário e "Encaixar {nome}" nos horários livres
+  fila: FilaCalendario[] = [];
+  resumoFila = { aguardando: 0, destaque: '' };
+  mensagemFila = '';
 
   private hoje = new Date();
   /** Dia | Semana | Mês (começa no Mês, como no desenho). */
@@ -145,8 +154,11 @@ export class Agenda implements OnInit {
       ),
       agendamentos: this.http.get<{ agendamentos: Agendamento[] }>(`${API_URL}/agendamentos`, { headers }),
       horarioTrabalho: this.http.get<unknown>(`${API_URL}/horario-trabalho`, { headers }),
+      // se a lista de espera falhar, a Agenda abre do mesmo jeito
+      fila: this.http.get<RespostaFila>(`${API_URL}/lista-espera`, { headers }).pipe(catchError(() => of(null))),
     }).subscribe({
-      next: ({ clientes, servicos, agendamentos, horarioTrabalho }) => {
+      next: ({ clientes, servicos, agendamentos, horarioTrabalho, fila }) => {
+        this.usarFila(fila);
         this.clientes = clientes.clientes;
         this.servicos = servicos.servicos.map(s => ({ id: s.id, nome: s.nome, valor: s.valor, duracao: s.duracaoMin }));
         this.agendamentos = agendamentos.agendamentos;
@@ -509,10 +521,111 @@ export class Agenda implements OnInit {
     return Math.max(0, (Number(valor) || 0) - (Number(desconto) || 0));
   }
 
+  // =====================================================================
+  //  LISTA DE ESPERA
+  // =====================================================================
+
+  private usarFila(resposta: RespostaFila | null) {
+    if (!resposta) return;
+    this.fila = resposta.aguardando.map(e => ({
+      id: e.id,
+      clienteNome: e.clienteNome,
+      dataPreferida: e.dataPreferida,
+      periodo: e.periodo,
+      horarioPreferido: e.horarioPreferido,
+      duracao: e.duracao,
+    }));
+    const d = resposta.destaque;
+    const quem = d ? resposta.aguardando.find(e => e.id === d.entradaId) : null;
+    this.resumoFila = {
+      aguardando: resposta.numeros.aguardando,
+      destaque: d && quem ? `vaga ${d.texto} serve para ${quem.clienteNome}` : '',
+    };
+  }
+
+  /** Recarrega a fila (depois de cancelar, reagendar ou encaixar pode aparecer/sumir vaga). */
+  private carregarFila() {
+    this.http.get<RespostaFila>(`${API_URL}/lista-espera`, { headers: this.cabecalhoAuth() }).subscribe({
+      next: (resposta) => {
+        this.usarFila(resposta);
+        this.cdr.markForCheck();
+      },
+      error: () => {},
+    });
+  }
+
+  /** "Encaixar {nome}" num horário livre do calendário. */
+  encaixarDaFila(ev: { entradaId: number; data: string; horario: string }) {
+    const entrada = this.fila.find(e => e.id === ev.entradaId);
+    const nome = entrada?.clienteNome || 'essa pessoa';
+    if (!confirm(`Encaixar ${nome} (lista de espera) em ${this.dataCurta(ev.data)} às ${ev.horario}?`)) return;
+    this.http.post<{ agendamentoId: number; mensagem: string }>(
+      `${API_URL}/lista-espera/${ev.entradaId}/encaixar`, { data: ev.data, horario: ev.horario }, { headers: this.cabecalhoAuth() }
+    ).subscribe({
+      next: ({ mensagem }) => {
+        this.mostrarMensagemFila(mensagem);
+        this.recarregarAgendamentos();
+        this.carregarFila();
+      },
+      error: (erro) => {
+        this.erro = erro?.error?.erro || 'Não foi possível encaixar.';
+        this.carregarFila();
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  /** Conflito no "Novo agendamento" → "Colocar na lista de espera" (RN02). */
+  colocarNaLista() {
+    const novo = this.novoAgendamento;
+    this.salvando = true;
+    this.http.post(`${API_URL}/lista-espera`, {
+      clienteId: Number(novo.clienteId),
+      servicoId: Number(novo.servicoId),
+      dataPreferida: novo.data,
+      horarioPreferido: novo.horario || null,
+      periodo: 'qualquer',
+      observacao: novo.observacao,
+    }, { headers: this.cabecalhoAuth() }).subscribe({
+      next: () => {
+        this.salvando = false;
+        this.fecharModal();
+        this.mostrarMensagemFila(`${this.nomeCliente(Number(novo.clienteId))} entrou na lista de espera. Se abrir vaga, o sistema avisa.`);
+        this.carregarFila();
+      },
+      error: (erro) => {
+        this.salvando = false;
+        this.erroModal = erro?.error?.erro || 'Não foi possível colocar na lista de espera.';
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private mostrarMensagemFila(texto: string) {
+    this.mensagemFila = texto;
+    this.cdr.markForCheck();
+    setTimeout(() => { this.mensagemFila = ''; this.cdr.markForCheck(); }, 5000);
+  }
+
+  /** Busca os agendamentos de novo (o encaixe cria um agendamento no servidor). */
+  private recarregarAgendamentos() {
+    this.http.get<{ agendamentos: Agendamento[] }>(`${API_URL}/agendamentos`, { headers: this.cabecalhoAuth() }).subscribe({
+      next: ({ agendamentos }) => {
+        this.agendamentos = agendamentos;
+        this.atualizarDerivados();
+        this.cdr.markForCheck();
+      },
+      error: () => {},
+    });
+  }
+
   /** Troca o agendamento na lista (e na janela aberta) pela versão que voltou da API. */
   private aplicarAtualizacao(ag: Agendamento) {
     const i = this.agendamentos.findIndex(a => a.id === ag.id);
+    const antes = i >= 0 ? this.agendamentos[i] : null;
     if (i >= 0) this.agendamentos[i] = ag;
+    // cancelou ou mudou de horário: pode ter aberto vaga para alguém da lista de espera
+    if (antes && (ag.status === 'cancelado' || antes.data !== ag.data || antes.horario !== ag.horario)) this.carregarFila();
     if (this.detalhe?.id === ag.id) {
       this.detalhe = ag;
       this.observacaoEditada = ag.observacao || '';
@@ -701,6 +814,13 @@ export class Agenda implements OnInit {
 
   nomeCliente(id: number): string {
     return this.clientes.find(c => c.id === id)?.nome ?? 'Cliente removido';
+  }
+
+  /** Atendimento concluído: wa.me com a mensagem "Depois do atendimento" (tela WhatsApp). */
+  linkPosAtendimento(ag: Agendamento): string | null {
+    const cliente = this.clientes.find(c => c.id === ag.clienteId);
+    const texto = textoMensagemPronta('pos', { id: ag.servicoId, nome: this.nomeServico(ag.servicoId) }, { nome: cliente?.nome });
+    return linkWhatsappPronto(cliente?.telefone, texto);
   }
 
   /** "Ana Souza" → "Ana S." (para caber no calendário) */

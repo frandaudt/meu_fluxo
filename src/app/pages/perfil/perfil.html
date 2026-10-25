@@ -71,8 +71,45 @@
           </div>
         </form>
 
-        <form class="perfil-card" (ngSubmit)="alterarSenha($event)">
+        <!-- conta criada pelo Google, ainda sem senha: cria com um código no e-mail -->
+        <form class="perfil-card" *ngIf="usuario.temSenha === false; else cardTrocarSenha" (ngSubmit)="criarSenhaComCodigo($event)">
           <h2 class="card-titulo">Senha</h2>
+          <p class="card-sub">Você entra com o Google. Se quiser, crie também uma senha para entrar com e-mail e senha.</p>
+
+          <div class="card-erro" *ngIf="erroSenha">{{ erroSenha }}</div>
+          <div class="card-ok" *ngIf="mensagemSenha">{{ mensagemSenha }}</div>
+
+          <button type="button" class="btn-secondary btn-largo" *ngIf="!codigoEnviado" (click)="enviarCodigoSenha()" [disabled]="salvandoSenha">
+            {{ salvandoSenha ? 'Enviando...' : 'Mandar código para o meu e-mail' }}
+          </button>
+
+          <ng-container *ngIf="codigoEnviado">
+            <div class="form-group">
+              <label for="codigoSenha">Código (6 números)</label>
+              <input id="codigoSenha" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" [(ngModel)]="codigoSenha" name="codigoSenha" />
+            </div>
+            <div class="form-group">
+              <label for="novaSenhaGoogle">Nova senha</label>
+              <div class="campo-senha">
+                <input id="novaSenhaGoogle" [type]="mostrarNovaSenha ? 'text' : 'password'" [(ngModel)]="novaSenha" name="novaSenhaGoogle" autocomplete="new-password" />
+                <button type="button" class="btn-olho" (click)="mostrarNovaSenha = !mostrarNovaSenha" [attr.aria-label]="mostrarNovaSenha ? 'Ocultar senha' : 'Mostrar senha'">
+                  <span class="icone notranslate" translate="no" aria-hidden="true">{{ mostrarNovaSenha ? 'visibility_off' : 'visibility' }}</span>
+                </button>
+              </div>
+              <ul class="checklist-senha" *ngIf="novaSenha">
+                <li [class.ok]="senhaTemComprimento">{{ senhaTemComprimento ? '✓' : '○' }} Pelo menos 8 caracteres</li>
+                <li [class.ok]="senhaTemMaiuscula">{{ senhaTemMaiuscula ? '✓' : '○' }} Uma letra maiúscula</li>
+                <li [class.ok]="senhaTemEspecial">{{ senhaTemEspecial ? '✓' : '○' }} Um caractere especial</li>
+              </ul>
+            </div>
+            <button type="submit" class="btn-secondary btn-largo" [disabled]="salvandoSenha">{{ salvandoSenha ? 'Salvando...' : 'Criar senha' }}</button>
+          </ng-container>
+        </form>
+
+        <ng-template #cardTrocarSenha>
+        <form class="perfil-card" [class.card-destaque]="usuario.trocarSenha" (ngSubmit)="alterarSenha($event)">
+          <h2 class="card-titulo">Senha</h2>
+          <p class="aviso" *ngIf="usuario.trocarSenha">Você entrou com uma senha provisória. Crie a sua senha para usar o sistema: na "Senha atual", digite a provisória.</p>
 
           <div class="card-erro" *ngIf="erroSenha">{{ erroSenha }}</div>
           <div class="card-ok" *ngIf="mensagemSenha">{{ mensagemSenha }}</div>
@@ -103,9 +140,10 @@
           </div>
 
           <button type="submit" class="btn-secondary btn-largo" [disabled]="salvandoSenha">
-            {{ salvandoSenha ? 'Alterando...' : 'Alterar senha' }}
+            {{ salvandoSenha ? 'Alterando...' : (usuario.trocarSenha ? 'Criar minha senha' : 'Alterar senha') }}
           </button>
         </form>
+        </ng-template>
       </div>
 
       <!-- Seus dados: só o dono (são os dados do negócio) -->
@@ -240,32 +278,48 @@
         <p class="card-sub">Nesses dias ninguém consegue agendar, nem pelo bot nem pelo link.</p>
 
         <!-- formulário "Bloquear dia" -->
+        <!-- formulário "Bloquear dia" (um dia, um período do dia ou vários dias, como férias) -->
         <form class="form-bloqueio" *ngIf="formBloqueioAberto" (ngSubmit)="salvarBloqueio($event)">
           <div class="card-erro" *ngIf="erroBloqueio">{{ erroBloqueio }}</div>
+
+          <div class="tipos-bloqueio" role="group" aria-label="Tipo">
+            <button type="button" *ngFor="let t of tiposBloqueio" [class.ativo]="formBloqueio.tipo === t" (click)="escolherTipoBloqueio(t)">{{ t }}</button>
+          </div>
+
+          <div class="form-group">
+            <label for="descBloq">Nome</label>
+            <input id="descBloq" type="text" maxlength="150" placeholder="Ex.: Férias, Finados, Curso de unhas" [(ngModel)]="formBloqueio.descricao" name="descBloq" />
+          </div>
+
           <div class="form-row">
             <div class="form-group">
-              <label for="dataBloq">Data</label>
-              <input id="dataBloq" type="date" [min]="hojeISO" [(ngModel)]="formBloqueio.data" name="dataBloq" />
+              <label for="dataBloq">De</label>
+              <input id="dataBloq" type="date" [min]="hojeISO" [(ngModel)]="formBloqueio.data" (ngModelChange)="aoMudarInicioBloqueio()" name="dataBloq" />
             </div>
             <div class="form-group">
-              <label for="descBloq">Nome</label>
-              <input id="descBloq" type="text" maxlength="100" placeholder="Ex.: Finados" [(ngModel)]="formBloqueio.descricao" name="descBloq" />
+              <label for="dataFimBloq">Até <small>(vazio = só um dia)</small></label>
+              <input id="dataFimBloq" type="date" [min]="formBloqueio.data || hojeISO" [(ngModel)]="formBloqueio.dataFim" name="dataFimBloq" />
             </div>
           </div>
-          <label class="dia-toggle">
-            <input type="checkbox" [(ngModel)]="formBloqueio.diaInteiro" name="diaInteiro" />
-            <span>Dia inteiro</span>
-          </label>
-          <div class="form-row" *ngIf="!formBloqueio.diaInteiro">
-            <div class="form-group">
-              <label for="bloqIni">Fechado das</label>
-              <input id="bloqIni" type="time" [(ngModel)]="formBloqueio.horaInicio" name="bloqIni" />
+
+          <ng-container *ngIf="!bloqueioVariosDias; else variosDias">
+            <label class="dia-toggle">
+              <input type="checkbox" [(ngModel)]="formBloqueio.diaInteiro" name="diaInteiro" />
+              <span>Dia inteiro</span>
+            </label>
+            <div class="form-row" *ngIf="!formBloqueio.diaInteiro">
+              <div class="form-group">
+                <label for="bloqIni">Fechado das</label>
+                <input id="bloqIni" type="time" [(ngModel)]="formBloqueio.horaInicio" name="bloqIni" />
+              </div>
+              <div class="form-group">
+                <label for="bloqFim">até</label>
+                <input id="bloqFim" type="time" [(ngModel)]="formBloqueio.horaFim" name="bloqFim" />
+              </div>
             </div>
-            <div class="form-group">
-              <label for="bloqFim">até</label>
-              <input id="bloqFim" type="time" [(ngModel)]="formBloqueio.horaFim" name="bloqFim" />
-            </div>
-          </div>
+          </ng-container>
+          <ng-template #variosDias><p class="dica">Vários dias: todos ficam fechados o dia inteiro.</p></ng-template>
+
           <div class="modal-actions">
             <button type="button" class="btn-secondary" (click)="fecharFormBloqueio()">Cancelar</button>
             <button type="submit" class="btn-primary" [disabled]="salvandoBloqueio">{{ salvandoBloqueio ? 'Salvando...' : 'Bloquear' }}</button>
@@ -274,17 +328,19 @@
 
         <p class="aviso" *ngIf="avisoBloqueio">{{ avisoBloqueio }}</p>
 
+        <div class="card-erro" *ngIf="erroCarregarHorario">{{ erroCarregarHorario }}</div>
+
         <div class="bloqueios">
-          <div class="bloqueio" *ngFor="let b of horario.bloqueios">
+          <div class="bloqueio" *ngFor="let g of gruposBloqueio">
             <div class="bloqueio-data">
-              <strong>{{ diaDoBloqueio(b) }}</strong>
-              <small>{{ mesDoBloqueio(b) }}</small>
+              <strong>{{ diaDoGrupo(g) }}</strong>
+              <small>{{ mesDoGrupo(g) }}</small>
             </div>
             <div class="bloqueio-textos">
-              <strong>{{ b.descricao }}</strong>
-              <small>{{ detalheBloqueio(b) }}</small>
+              <strong>{{ g.descricao }}</strong>
+              <small>{{ detalheGrupo(g) }}</small>
             </div>
-            <button type="button" class="btn-secondary" (click)="removerBloqueio(b)">Remover</button>
+            <button type="button" class="btn-secondary" (click)="removerGrupo(g)">Remover</button>
           </div>
           <p class="vazio" *ngIf="horario.bloqueios.length === 0 && !formBloqueioAberto">Nenhuma folga marcada. Use "+ Bloquear dia" para feriados, férias ou um curso.</p>
         </div>
@@ -343,7 +399,15 @@
               </button>
             </div>
           </div>
-          <p class="dica">A pessoa entra pela mesma tela de login e troca a senha no primeiro acesso. Depois, marque o que ela pode fazer na tabela abaixo.</p>
+          <fieldset class="permissoes-novo">
+            <legend>O que ela pode acessar</legend>
+            <p class="dica">Agenda, caixa, lista de espera e clientes já vêm liberados. Marque o resto:</p>
+            <label class="caixa" *ngFor="let l of permissoesEscolhiveis">
+              <input type="checkbox" [checked]="novoAtendente.permissoes.includes(l.permissao!)" (change)="alternarPermissaoNova(l.permissao!)" />
+              <span>{{ l.area }}</span>
+            </label>
+          </fieldset>
+          <p class="dica">A pessoa entra pela mesma tela de login e troca a senha no primeiro acesso. Dá para mudar o acesso depois na tabela abaixo.</p>
           <button type="submit" class="btn-primary btn-largo" [disabled]="criandoAcesso">
             {{ criandoAcesso ? 'Criando...' : 'Criar acesso' }}
           </button>
@@ -353,7 +417,8 @@
       <section class="perfil-card">
         <div>
           <h2 class="card-titulo">O que cada um pode fazer</h2>
-          <p class="card-sub" *ngIf="atendentes.length">Clique em "Pode" / "Não" para liberar ou tirar o acesso. Salva na hora.</p>
+          <p class="card-sub" *ngIf="atendentes.length">Marque ou desmarque a caixa de cada atendente para liberar ou tirar o acesso. Salva na hora.</p>
+          <p class="card-sub" *ngIf="!atendentes.length">Assim que criar um atendente, aparece uma coluna com o nome dele para você marcar o que ele pode fazer.</p>
         </div>
         <div class="tabela-rolagem">
           <table class="tabela-permissoes">
@@ -374,13 +439,13 @@
                   <span [class.chip-pode]="l.atendentePode" [class.chip-nao]="!l.atendentePode">{{ l.atendentePode ? 'Pode' : 'Não' }}</span>
                 </td>
                 <td *ngFor="let p of atendentes">
-                  <button type="button" *ngIf="l.permissao; else fixo" class="chip-alternar"
-                          [class.chip-pode]="pode(p, l)" [class.chip-nao]="!pode(p, l)"
-                          [attr.aria-pressed]="pode(p, l)"
-                          [title]="(pode(p, l) ? 'Tirar' : 'Liberar') + ' para ' + primeiroNome(p.nome)"
-                          (click)="alternarPermissao(p, l.permissao!)">
+                  <label *ngIf="l.permissao; else fixo" class="chip-alternar"
+                         [class.chip-pode]="pode(p, l)" [class.chip-nao]="!pode(p, l)"
+                         [title]="(pode(p, l) ? 'Tirar' : 'Liberar') + ' para ' + primeiroNome(p.nome)">
+                    <input type="checkbox" [checked]="pode(p, l)" (change)="alternarPermissao(p, l.permissao!)"
+                           [attr.aria-label]="l.area + ' — ' + p.nome" />
                     {{ pode(p, l) ? 'Pode' : 'Não' }}
-                  </button>
+                  </label>
                   <ng-template #fixo>
                     <span [class.chip-pode]="l.atendentePode" [class.chip-nao]="!l.atendentePode">{{ l.atendentePode ? 'Pode' : 'Não' }}</span>
                   </ng-template>
@@ -416,27 +481,35 @@
           <div class="card-topo">
             <div>
               <h2 class="card-titulo">Personalizada</h2>
-              <p class="card-sub">Escolha a cor principal, por exemplo a da marca do seu negócio. As outras duas são calculadas pelo círculo cromático.</p>
+              <p class="card-sub">Escolha as suas cores, por exemplo as da marca do seu negócio. O sistema e a prévia mudam enquanto você escolhe.</p>
             </div>
-            <button type="button" class="btn-secondary" (click)="usarCorPersonalizada()">Usar minhas cores</button>
+            <button type="button" class="btn-secondary" *ngIf="acentoManual || destaqueManual" (click)="calcularPeloCirculo()">Calcular pelo círculo cromático</button>
           </div>
 
           <div class="cores-personalizadas">
             <label class="cor-caixa" [class.ativa]="tema.id === 'personalizada'">
-              <input type="color" [(ngModel)]="corPersonalizada" name="corPersonalizada" />
+              <input type="color" [ngModel]="corPersonalizada" (ngModelChange)="mudarCorPrincipal($event)" name="corPersonalizada" />
               <span>
                 <strong>Cor principal</strong>
                 <small>menu, botões e topo · {{ corPersonalizada }}</small>
               </span>
             </label>
-            <div class="cor-caixa" *ngFor="let c of coresDaPersonalizada">
-              <span class="cor-amostra" [style.background]="c.cor"></span>
+            <label class="cor-caixa" [class.ativa]="tema.id === 'personalizada'">
+              <input type="color" [ngModel]="corAcento" (ngModelChange)="mudarCorAcento($event)" name="corAcento" />
               <span>
-                <strong>{{ c.rotulo }}</strong>
-                <small>{{ c.detalhe }}</small>
+                <strong>Cor de acento</strong>
+                <small>{{ acentoManual ? 'escolhida por você' : 'calculada: principal + 150°' }} · {{ corAcento }}</small>
               </span>
-            </div>
+            </label>
+            <label class="cor-caixa" [class.ativa]="tema.id === 'personalizada'">
+              <input type="color" [ngModel]="corDestaque" (ngModelChange)="mudarCorDestaque($event)" name="corDestaque" />
+              <span>
+                <strong>Cor de destaque</strong>
+                <small>{{ destaqueManual ? 'escolhida por você' : 'calculada: principal + 210°' }} · {{ corDestaque }}</small>
+              </span>
+            </label>
           </div>
+          <p class="dica">O sistema usa o tom de cada cor e ajusta o claro/escuro para os textos continuarem fáceis de ler.</p>
 
           <p class="aviso" *ngIf="corPersonalizadaClara">
             Cor principal muito clara: o texto branco do menu e dos botões ficaria difícil de ler.
@@ -452,7 +525,7 @@
             </div>
             <ul class="harmonia-legenda">
               <li *ngFor="let c of angulosHarmonia"><strong>{{ c.papel }}</strong> {{ c.angulo }}°</li>
-              <li class="harmonia-nome">Complementar dividida</li>
+              <li class="harmonia-nome">{{ acentoManual || destaqueManual ? 'Cores escolhidas por você' : 'Complementar dividida' }}</li>
             </ul>
           </div>
 
@@ -484,6 +557,7 @@
               <span class="previa-chip"><strong>14:00</strong> Júlia M.</span>
               <span class="previa-destaque">3 na espera</span>
             </div>
+            <span class="previa-acento">Novo cliente</span>
             <span class="previa-botao">+ Novo agendamento</span>
           </div>
         </div>

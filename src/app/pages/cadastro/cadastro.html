@@ -23,7 +23,12 @@
       </div>
       <div class="input-group">
       <label>Senha</label>
-      <input type="password" placeholder="••••••••" [(ngModel)]="senha" name="senha" />
+      <div class="campo-senha">
+        <input [type]="mostrarSenha ? 'text' : 'password'" placeholder="••••••••" [(ngModel)]="senha" name="senha" />
+        <button type="button" class="btn-olho" (click)="mostrarSenha = !mostrarSenha" [title]="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'" [attr.aria-label]="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'">
+          <span class="icone notranslate" translate="no" aria-hidden="true">{{ mostrarSenha ? 'visibility_off' : 'visibility' }}</span>
+        </button>
+      </div>
       <ul class="checklist-senha">
         <li [class.ok]="senhaTemComprimento">{{ senhaTemComprimento ? '✓' : '○' }} Pelo menos 8 caracteres</li>
         <li [class.ok]="senhaTemMaiuscula">{{ senhaTemMaiuscula ? '✓' : '○' }} Uma letra maiúscula</li>
@@ -35,6 +40,10 @@
         {{ carregando ? 'Criando conta...' : 'Criar conta' }}
       </button>
     </form>
+
+    <!-- "Continuar com Google" (só aparece quando estiver configurado) -->
+    <div class="separador" *ngIf="temGoogle"><span>ou</span></div>
+    <div #botaoGoogle class="botao-google"></div>
 
     <div class="auth-footer">
       Já tem uma conta? <a routerLink="/login">Fazer login</a>

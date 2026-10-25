@@ -97,6 +97,11 @@
                   (click)="agendarEm.emit({ data: col.data, horario: item.inicio })">
             <strong>{{ item.inicio }}</strong> livre
           </button>
+          <button type="button" class="chip-semana chip-encaixe" *ngIf="item.tipo === 'livre' && item.encaixe as enc"
+                  [title]="'Encaixar ' + enc.nome + ' (lista de espera) às ' + enc.horario"
+                  (click)="encaixar.emit({ entradaId: enc.entradaId, data: col.data, horario: enc.horario })">
+            <strong>{{ enc.horario }}</strong> vaga p/ {{ enc.nome }}
+          </button>
 
           <span class="chip-semana chip-pausa" *ngIf="item.tipo === 'pausa'" [title]="item.motivo + ': ' + item.inicio + ' às ' + item.fim">
             <strong>{{ item.inicio }}</strong> {{ item.motivo }}
@@ -158,6 +163,10 @@
           <small>{{ item.inicio }} às {{ item.fim }}</small>
         </div>
         <span class="etiqueta et-livre">Livre</span>
+        <!-- alguém da lista de espera serve para esse horário: encaixar com um clique -->
+        <button type="button" class="btn-mini btn-mini-escuro" *ngIf="item.encaixe as enc"
+                [title]="'Encaixar da lista de espera às ' + enc.horario"
+                (click)="encaixar.emit({ entradaId: enc.entradaId, data: dataRef, horario: enc.horario })">Encaixar {{ enc.nome }}</button>
         <button type="button" class="btn-mini" (click)="agendarEm.emit({ data: dataRef, horario: item.inicio })">Agendar aqui</button>
       </div>
 

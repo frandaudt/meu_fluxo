@@ -26,8 +26,8 @@ export class MenuLateral {
     }
   }
 
+  /** "Sair" do menu: o App faz a limpeza completa (token, buscas, mensagens prontas...). */
   sair() {
-    localStorage.removeItem('usuarioLogado');
-    localStorage.removeItem('meufluxo_token');
+    window.dispatchEvent(new Event('meufluxo-sair'));
   }
 }

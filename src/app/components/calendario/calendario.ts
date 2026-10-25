@@ -35,6 +35,17 @@ export interface ItemDoDia {
   fim: string;               // 'HH:mm'
   evento?: EventoResumo;     // quando tipo = 'agendamento'
   motivo?: string;           // quando tipo = 'pausa' ("Pausa", "Véspera de Natal"...)
+  encaixe?: { entradaId: number; nome: string; horario: string }; // livre: alguém da lista de espera serve
+}
+
+/** O que o calendário precisa saber de quem está na lista de espera. */
+export interface FilaCalendario {
+  id: number;
+  clienteNome: string;
+  dataPreferida: string | null;    // null = qualquer dia
+  periodo: 'manha' | 'tarde' | 'qualquer';
+  horarioPreferido: string | null;
+  duracao: number;
 }
 
 /** Cabeçalho de cada coluna da visão Semana. */
@@ -68,11 +79,14 @@ export class Calendario {
   @Input() titulo: string | null = null;
   /** Mês "resumido" (Início): cada dia mostra quantos atendimentos e a % de ocupação, sem os nomes. */
   @Input() resumoMes = false;
+  /** Lista de espera (Agenda): no horário livre aparece "Encaixar {nome}" quando alguém serve. */
+  @Input() fila: FilaCalendario[] = [];
 
   @Output() selecionarDia = new EventEmitter<string>();            // clique num dia (visão Mês)
   @Output() abrirEvento = new EventEmitter<number>();              // clique num agendamento → detalhes
   @Output() acaoEvento = new EventEmitter<{ id: number; acao: AcaoRapida }>();           // botões da visão Dia
   @Output() agendarEm = new EventEmitter<{ data: string; horario: string }>();          // clique num horário livre
+  @Output() encaixar = new EventEmitter<{ entradaId: number; data: string; horario: string }>(); // "Encaixar {nome}" 
 
   readonly MAX_EVENTOS_VISIVEIS = 3;
   readonly diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -252,20 +266,41 @@ export class Calendario {
           .concat(config.pausas.map(p => ({ ini: p.ini, fim: p.fim })))
           .sort((a, b) => a.ini - b.ini);
 
+        const livre = (ini: number, fim: number): ItemDoDia =>
+          ({ tipo: 'livre', inicio: this.paraHora(ini), fim: this.paraHora(fim), encaixe: this.encaixeNoLivre(data, ini, fim, bloco) });
         for (const o of ocupados) {
-          if (o.ini - cursor >= bloco) {
-            itens.push({ tipo: 'livre', inicio: this.paraHora(cursor), fim: this.paraHora(o.ini) });
-          }
+          if (o.ini - cursor >= bloco) itens.push(livre(cursor, o.ini));
           cursor = Math.max(cursor, o.fim);
         }
-        if (fimExpediente - cursor >= bloco) {
-          itens.push({ tipo: 'livre', inicio: this.paraHora(cursor), fim: this.paraHora(fimExpediente) });
-        }
+        if (fimExpediente - cursor >= bloco) itens.push(livre(cursor, fimExpediente));
       }
     }
 
     const ordem = { agendamento: 0, pausa: 1, livre: 2 };
     return itens.sort((a, b) => a.inicio.localeCompare(b.inicio) || ordem[a.tipo] - ordem[b.tipo]);
+  }
+
+  /**
+   * A 1ª pessoa da lista de espera (ordem de chegada) que cabe nesse horário livre:
+   * dia certo (ou qualquer dia), período (manhã antes das 12h, tarde a partir das 12h)
+   * e tempo para a duração do serviço (RN-LE1).
+   */
+  private encaixeNoLivre(data: string, ini: number, fim: number, bloco: number): ItemDoDia['encaixe'] {
+    for (const e of this.fila) {
+      if (e.dataPreferida && e.dataPreferida !== data) continue;
+      let inicio: number;
+      if (e.horarioPreferido) {
+        inicio = this.paraMinutos(e.horarioPreferido);
+      } else {
+        inicio = Math.ceil(Math.max(ini, e.periodo === 'tarde' ? 12 * 60 : ini) / bloco) * bloco;
+        if (inicio < ini) inicio = ini;
+      }
+      if (inicio < ini || inicio + (e.duracao || 30) > fim) continue;
+      if (e.periodo === 'manha' && !e.horarioPreferido && inicio >= 12 * 60) continue;
+      if (e.periodo === 'tarde' && !e.horarioPreferido && inicio < 12 * 60) continue;
+      return { entradaId: e.id, nome: e.clienteNome.trim().split(/\s+/)[0], horario: this.paraHora(inicio) };
+    }
+    return undefined;
   }
 
   /** Minutos agendados ÷ minutos de trabalho do dia (glossário: "Ocupação"). */

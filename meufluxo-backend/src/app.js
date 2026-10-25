@@ -13,6 +13,9 @@ const metasRoutes = require('./routes/metasRoutes');
 const horarioTrabalhoRoutes = require('./routes/horarioTrabalhoRoutes');
 const equipeRoutes = require('./routes/equipeRoutes');
 const alertasRoutes = require('./routes/alertasRoutes');
+const listaEsperaRoutes = require('./routes/listaEsperaRoutes');
+const publicoRoutes = require('./routes/publicoRoutes');
+const whatsappRoutes = require('./routes/whatsappRoutes');
 
 const app = express();
 
@@ -21,6 +24,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(cors());
+// 2 MB: cabe a foto do perfil e a importação de clientes (o padrão do Express é 100 KB)
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', (req, res) => {
@@ -36,8 +40,31 @@ const limiteAuth = rateLimit({
   message: { erro: 'Muitas tentativas. Tente novamente em alguns minutos.' },
 });
 
+// link público de agendamento (sem login):
+// - consultar: até 120 por IP a cada 15 minutos;
+// - agendar / entrar na lista de espera: até 8 por IP por hora
+const limitePublicoLeitura = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { erro: 'Muitas consultas. Espere alguns minutos e tente de novo.' },
+});
+const limitePublicoEnvio = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipFailedRequests: true, // erro de digitação não gasta tentativa
+  message: { erro: 'Muitos agendamentos deste aparelho. Tente de novo mais tarde ou fale pelo WhatsApp.' },
+});
+app.use('/api/publico', (req, res, next) => (req.method === 'POST' ? limitePublicoEnvio : limitePublicoLeitura)(req, res, next));
+
 app.use('/api/usuarios/login', limiteAuth);
 app.use('/api/usuarios/cadastro', limiteAuth);
+app.use('/api/usuarios/google', limiteAuth);
+app.use('/api/usuarios/senha/codigo', limiteAuth);    // não deixa mandar e-mail sem parar
+app.use('/api/usuarios/senha/redefinir', limiteAuth); // e nem ficar chutando o código
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/servicos', servicosRoutes);
@@ -47,6 +74,9 @@ app.use('/api/metas', metasRoutes);
 app.use('/api/horario-trabalho', horarioTrabalhoRoutes);
 app.use('/api/equipe', equipeRoutes);
 app.use('/api/alertas', alertasRoutes);
+app.use('/api/lista-espera', listaEsperaRoutes);
+app.use('/api/publico', publicoRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // rota da API que não existe → 404 em JSON (e não a página do Angular)
 app.use('/api', (req, res) => {

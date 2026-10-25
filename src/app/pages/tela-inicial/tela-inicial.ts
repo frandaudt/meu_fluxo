@@ -17,14 +17,18 @@ import {
   normalizarHorarioTrabalho,
   expedienteDoDia,
   minutosDeTrabalho,
+  linkWhatsappPronto,
+  textoMensagemPronta,
 } from '../../app';
 import {
   AcaoRapida,
   Calendario,
   EventoResumo,
+  FilaCalendario,
   HorarioTrabalhoCalendario,
   VisaoCalendario,
 } from '../../components/calendario/calendario';
+import { RespostaFila } from '../lista-espera/lista-espera';
 
 interface Cliente { id: number; nome: string; telefone?: string | null; }
 interface Servico { id: number; nome: string; valor: number; duracao: number; }
@@ -84,6 +88,10 @@ export class TelaInicial implements OnInit {
   agendamentos: Agendamento[] = [];
   metasMensais: MetaMensal[] = [];
   alertas: Alerta[] = [];
+  aguardandoNaLista = 0;
+  // lista de espera: "Encaixar {nome}" nos horários livres do calendário (igual à Agenda)
+  fila: FilaCalendario[] = [];
+  mensagemFila = '';
   horario: HorarioTrabalhoCalendario = horarioPadrao();
 
   eventosPorDia: Map<string, EventoResumo[]> = new Map();
@@ -153,8 +161,9 @@ export class TelaInicial implements OnInit {
         ? this.http.get<{ metas: MetaMensal[] }>(`${API_URL}/metas/mensais`, { headers })
         : of({ metas: [] as MetaMensal[] }),
       // avisos: se falharem, a Início abre do mesmo jeito
-      alertas: this.http.get<{ alertas: Alerta[] }>(`${API_URL}/alertas`, { headers })
-        .pipe(catchError(() => of({ alertas: [] as Alerta[] }))),
+      alertas: this.http.get<{ alertas: Alerta[]; aguardandoNaLista?: number }>(`${API_URL}/alertas`, { headers })
+        .pipe(catchError(() => of({ alertas: [] as Alerta[], aguardandoNaLista: 0 }))),
+      fila: this.http.get<RespostaFila>(`${API_URL}/lista-espera`, { headers }).pipe(catchError(() => of(null))),
     }).subscribe({
       next: (r) => {
         this.clientes = r.clientes.clientes;
@@ -163,6 +172,8 @@ export class TelaInicial implements OnInit {
         this.horario = normalizarHorarioTrabalho(r.horario); // com pausa e folgas
         this.metasMensais = r.metas.metas;
         this.alertas = r.alertas.alertas;
+        this.aguardandoNaLista = r.alertas.aguardandoNaLista || 0;
+        this.usarFila(r.fila);
         this.atualizarTudo();
         this.carregando = false;
         this.cdr.markForCheck();
@@ -270,12 +281,80 @@ export class TelaInicial implements OnInit {
   }
 
   // =====================================================================
+  //  LISTA DE ESPERA: "Encaixar {nome}" nos horários livres
+  // =====================================================================
+
+  private usarFila(resposta: RespostaFila | null) {
+    if (!resposta) return;
+    this.fila = resposta.aguardando.map(e => ({
+      id: e.id,
+      clienteNome: e.clienteNome,
+      dataPreferida: e.dataPreferida,
+      periodo: e.periodo,
+      horarioPreferido: e.horarioPreferido,
+      duracao: e.duracao,
+    }));
+    this.aguardandoNaLista = resposta.numeros.aguardando;
+  }
+
+  /** Busca de novo a fila e os agendamentos (o encaixe cria um agendamento no servidor). */
+  private recarregarDepoisDoEncaixe() {
+    const headers = this.cabecalhoAuth();
+    forkJoin({
+      agendamentos: this.http.get<{ agendamentos: Agendamento[] }>(`${API_URL}/agendamentos`, { headers }),
+      fila: this.http.get<RespostaFila>(`${API_URL}/lista-espera`, { headers }).pipe(catchError(() => of(null))),
+    }).subscribe({
+      next: ({ agendamentos, fila }) => {
+        this.agendamentos = agendamentos.agendamentos;
+        this.usarFila(fila);
+        this.atualizarTudo();
+        this.cdr.markForCheck();
+      },
+      error: () => {},
+    });
+  }
+
+  encaixarDaFila(ev: { entradaId: number; data: string; horario: string }) {
+    const entrada = this.fila.find(e => e.id === ev.entradaId);
+    const nome = entrada?.clienteNome || 'essa pessoa';
+    if (!confirm(`Encaixar ${nome} (lista de espera) em ${this.dataCurta(ev.data)} às ${ev.horario}?`)) return;
+    this.http.post<{ agendamentoId: number; mensagem: string }>(
+      `${API_URL}/lista-espera/${ev.entradaId}/encaixar`, { data: ev.data, horario: ev.horario }, { headers: this.cabecalhoAuth() }
+    ).subscribe({
+      next: ({ mensagem }) => {
+        this.mensagemFila = mensagem;
+        this.erro = '';
+        this.recarregarDepoisDoEncaixe();
+        this.cdr.markForCheck();
+        setTimeout(() => { this.mensagemFila = ''; this.cdr.markForCheck(); }, 5000);
+      },
+      error: (erro) => {
+        this.erro = erro?.error?.erro || 'Não foi possível encaixar.';
+        this.recarregarDepoisDoEncaixe();
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  // =====================================================================
   //  LEMBRETES DE AMANHÃ
   // =====================================================================
 
+  /** wa.me com o "Lembrete da véspera" que está "Em uso" na tela WhatsApp. */
+  private linkLembrete(ag: Agendamento): string | null {
+    const cliente = this.clientes.find(c => c.id === ag.clienteId);
+    const servico = this.servico(ag.servicoId);
+    const texto = textoMensagemPronta('lembrete', servico ? { id: servico.id, nome: servico.nome } : null, {
+      nome: cliente?.nome, data: ag.data, hora: ag.horario,
+    });
+    return linkWhatsappPronto(cliente?.telefone, texto);
+  }
+
   enviarLembrete(lembrete: Lembrete) {
-    if (!lembrete.link) return;
-    window.open(lembrete.link, '_blank');
+    // monta de novo na hora do clique: usa sempre a mensagem mais recente
+    const link = this.linkLembrete(lembrete.ag);
+    if (!link) return;
+    window.open(link, '_blank');
 
     // marca como enviado na hora (o botão vira "Enviado ✓") e grava no banco
     lembrete.ag.lembreteEnviadoEm = this.hoje;
@@ -447,8 +526,7 @@ export class TelaInicial implements OnInit {
     const cancelados = ags.filter(a => a.status === 'cancelado').length;
     const faltas = ags.filter(a => a.status === 'nao_compareceu').length;
     const suf = this.sufixo();
-    // ligado no pacote da Lista de espera (por enquanto mostra "—")
-    const naLista: Numero = { rotulo: 'Na lista de espera', valor: '—' };
+    const naLista: Numero = { rotulo: 'Na lista de espera', valor: String(this.aguardandoNaLista) };
 
     if (this.visao === 'dia') {
       return [
@@ -486,13 +564,11 @@ export class TelaInicial implements OnInit {
       .map(ag => {
         const cliente = this.clientes.find(c => c.id === ag.clienteId);
         const servico = this.servico(ag.servicoId)?.nome ?? 'atendimento';
-        const primeiroNome = String(cliente?.nome || '').trim().split(/\s+/)[0];
-        const texto = `Olá ${primeiroNome}, passando para lembrar: ${servico.toLowerCase()} amanhã (${this.dataCurta(ag.data)}) às ${ag.horario}. Te esperamos!`;
         return {
           ag,
           cliente: cliente?.nome ?? 'Cliente removido',
           servico,
-          link: this.linkWhatsapp(cliente?.telefone, texto),
+          link: this.linkLembrete(ag),
         };
       });
   }

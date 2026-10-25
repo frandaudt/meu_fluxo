@@ -37,7 +37,22 @@
     (abrirEvento)="abrirDetalhe($event)"
     (acaoEvento)="acaoRapida($event)"
     (agendarEm)="agendarEm($event)"
+    [fila]="fila"
+    (encaixar)="encaixarDaFila($event)"
   ></app-calendario>
+
+  <div class="pagina-ok" *ngIf="mensagemFila">{{ mensagemFila }}</div>
+
+  <!-- faixa da lista de espera (a tabela completa fica na tela Lista de espera) -->
+  <div class="faixa-fila" *ngIf="!carregando && resumoFila.aguardando > 0">
+    <span class="icone" aria-hidden="true">schedule</span>
+    <p>
+      <strong>Lista de espera:</strong> {{ resumoFila.aguardando }} {{ resumoFila.aguardando === 1 ? 'pessoa aguardando' : 'pessoas aguardando' }}<ng-container *ngIf="resumoFila.destaque"> · {{ resumoFila.destaque }}</ng-container>
+    </p>
+    <a routerLink="/lista-espera" class="btn-faixa">Abrir lista de espera</a>
+  </div>
+
+
   <!-- ================================================================
        JANELA: DETALHES DO AGENDAMENTO
        ================================================================ -->
@@ -68,6 +83,12 @@
       </p>
 
       <div class="modal-erro" *ngIf="erroDetalhe">{{ erroDetalhe }}</div>
+
+      <!-- concluído: oferece a mensagem "Depois do atendimento" (agradecimento e cuidados) -->
+      <div class="pos-atendimento" *ngIf="ag.status === 'realizado' && linkPosAtendimento(ag) as link">
+        <span>Que tal mandar um agradecimento com os cuidados pós-atendimento?</span>
+        <a class="btn-whatsapp-pos" [href]="link" target="_blank" rel="noopener">Agradecer pelo WhatsApp</a>
+      </div>
 
       <!-- ---------- AGENDADO: 4 ações ---------- -->
       <ng-container *ngIf="ag.status === 'agendado'">
@@ -319,6 +340,7 @@
           <p>{{ avisoConflitoNovo }}</p>
           <div class="aviso-conflito-botoes">
             <button type="button" class="btn-secondary" (click)="limparAvisoNovo()">Escolher outro horário</button>
+            <button type="button" class="btn-secondary" [disabled]="salvando" (click)="colocarNaLista()">Colocar na lista de espera</button>
             <button type="button" class="btn-primary" [disabled]="salvando" (click)="salvarAgendamento(null, true)">Marcar mesmo assim</button>
           </div>
         </div>

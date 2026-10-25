@@ -1,0 +1,306 @@
+<main class="whatsapp-page">
+  <div>
+    <h1>WhatsApp</h1>
+    <p class="subtitulo">Atendimento automático, link de agendamento e mensagens para os clientes.</p>
+  </div>
+
+  <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
+  <p class="carregando" *ngIf="carregando">Carregando...</p>
+
+  <div class="grade" *ngIf="!carregando && !erro">
+    <div class="coluna">
+
+      <!-- 1. ATENDIMENTO AUTOMÁTICO (BOT) -->
+      <section class="card">
+        <div class="card-topo">
+          <div>
+            <h2>Atendimento automático (bot) <span class="etiqueta" [class.ligado]="bot.ativo">{{ bot.ativo ? 'Ligado' : 'Desligado' }}</span></h2>
+            <p class="card-sub">
+              O bot responde sozinho: mostra os serviços, marca horário, cancela, remarca e coloca na lista de espera.
+            </p>
+          </div>
+          <label class="interruptor">
+            <input type="checkbox" [checked]="bot.ativo" (change)="alternarBot()" aria-label="Ligar o bot" />
+            <span class="trilho"><span class="bolinha"></span></span>
+          </label>
+        </div>
+
+        <div class="card-erro" *ngIf="erroBot">{{ erroBot }}</div>
+
+        <div class="numero-bot" [class.desconectado]="!bot.conectado">
+          <span class="icone">{{ bot.conectado ? 'check_circle' : 'info' }}</span>
+          <div *ngIf="bot.conectado">
+            <strong>{{ bot.numero || 'Número de teste da Meta' }}</strong>
+            <small>número do MeuFluxo · conectado ao WhatsApp</small>
+          </div>
+          <div *ngIf="!bot.conectado">
+            <strong>Ainda não conectado ao WhatsApp</strong>
+            <small>Enquanto isso, teste o bot no simulador "Como o cliente vê".</small>
+          </div>
+        </div>
+
+        <p class="aviso-desligado" *ngIf="!bot.ativo">
+          Desligado: ninguém recebe resposta automática. Você pode usar o MeuFluxo normalmente, e o link de agendamento continua funcionando.
+        </p>
+      </section>
+
+      <!-- LINK DE AGENDAMENTO -->
+      <section class="card">
+        <div class="card-topo">
+          <div>
+            <h2>Seu link de agendamento</h2>
+            <p class="card-sub">Mande para os clientes (bio do Instagram, status, saudação do WhatsApp Business). Eles escolhem serviço, dia e horário sozinhos.</p>
+          </div>
+          <label class="interruptor" [title]="link.linkAtivo ? 'Ligado' : 'Desligado'">
+            <input type="checkbox" [(ngModel)]="link.linkAtivo" name="linkAtivo" />
+            <span class="trilho"><span class="bolinha"></span></span>
+            <span class="interruptor-texto">{{ link.linkAtivo ? 'Ligado' : 'Desligado' }}</span>
+          </label>
+        </div>
+
+        <div class="card-erro" *ngIf="erroLink">{{ erroLink }}</div>
+        <div class="card-ok" *ngIf="mensagemLink">{{ mensagemLink }}</div>
+
+        <div class="campo">
+          <label for="slug">Endereço</label>
+          <div class="endereco">
+            <span class="endereco-inicio">{{ inicioEndereco }}</span>
+            <input id="slug" type="text" maxlength="60" [ngModel]="link.slug" (ngModelChange)="limparSlug($event)" name="slug" />
+          </div>
+        </div>
+
+        <div class="linha-campos">
+          <div class="campo">
+            <label for="descricao">O que você faz <small>(aparece embaixo do nome)</small></label>
+            <input id="descricao" type="text" maxlength="100" placeholder="Ex.: Unhas, cabelo e sobrancelha" [(ngModel)]="link.descricaoNegocio" name="descricao" />
+          </div>
+          <div class="campo">
+            <label for="endereco">Endereço do negócio</label>
+            <input id="endereco" type="text" maxlength="150" placeholder="Ex.: Rua das Flores, 120" [(ngModel)]="link.enderecoNegocio" name="endereco" />
+          </div>
+        </div>
+
+        <div class="acoes">
+          <div class="link-pronto">
+            <code>{{ enderecoLink }}</code>
+            <button type="button" class="btn-secundario" (click)="copiarLink()" [disabled]="linkMudou">{{ copiado ? 'Copiado ✓' : 'Copiar' }}</button>
+            <button type="button" class="btn-secundario" (click)="abrirLink()" [disabled]="linkMudou || !link.linkAtivo">Abrir</button>
+          </div>
+          <button type="button" class="btn-primario" (click)="salvarLink()" [disabled]="salvandoLink || !linkMudou">
+            {{ salvandoLink ? 'Salvando...' : 'Salvar' }}
+          </button>
+        </div>
+        <p class="dica" *ngIf="linkMudou">Salve para copiar ou abrir o link novo.</p>
+
+        <ul class="protecoes">
+          <li>Só aparecem os horários livres (horário de trabalho, pausa, folgas e agenda).</li>
+          <li>Cada WhatsApp pode ter até 2 horários marcados pelo link; cada aparelho, até 8 agendamentos por hora.</li>
+          <li>Ninguém recebe mensagem automática: você vê o aviso no sininho.</li>
+        </ul>
+      </section>
+
+      <!-- 2. SERVIÇOS NO BOT E NO LINK -->
+      <section class="card">
+        <div>
+          <h2>Serviços no bot e no link</h2>
+          <p class="card-sub">Desligue o que você não quer que o cliente marque sozinho. Preço e duração vêm da tela Serviços. ({{ servicosVisiveis }} de {{ servicos.length }} aparecendo)</p>
+        </div>
+        <div class="card-erro" *ngIf="erroServicos">{{ erroServicos }}</div>
+        <div class="servico" *ngFor="let s of servicos">
+          <div>
+            <strong>{{ s.nome }}</strong>
+            <small>{{ moeda(s.valor) }} · {{ s.duracaoMin }} min</small>
+          </div>
+          <label class="interruptor">
+            <span class="interruptor-texto">{{ s.mostrarNoBot ? 'aparece' : 'oculto' }}</span>
+            <input type="checkbox" [checked]="s.mostrarNoBot" (change)="alternarServico(s)" [attr.aria-label]="'Mostrar ' + s.nome + ' no bot e no link'" />
+            <span class="trilho"><span class="bolinha"></span></span>
+          </label>
+        </div>
+        <p class="vazio" *ngIf="servicos.length === 0">Cadastre os serviços na tela Serviços.</p>
+      </section>
+
+      <!-- 3. CADASTRO AUTOMÁTICO -->
+      <section class="card">
+        <div class="card-topo">
+          <div>
+            <h2>Cadastrar clientes novos automaticamente</h2>
+            <p class="card-sub">
+              Quando um número desconhecido fala com o bot, ele pergunta o nome e cria o cliente com o telefone do WhatsApp.
+              Você recebe um aviso no sininho e pode editar depois.
+            </p>
+          </div>
+          <label class="interruptor">
+            <input type="checkbox" [checked]="bot.cadastroAutomatico" (change)="alternarCadastro()" aria-label="Cadastrar clientes novos automaticamente" />
+            <span class="trilho"><span class="bolinha"></span></span>
+          </label>
+        </div>
+        <p class="dica" *ngIf="!bot.cadastroAutomatico">Desligado: números desconhecidos veem o menu, mas para agendar o bot pede que falem com você.</p>
+      </section>
+
+      <!-- 4. RESPOSTAS DO BOT -->
+      <section class="card">
+        <div>
+          <h2>Respostas do bot <span class="etiqueta ligado">Grátis</span></h2>
+          <p class="card-sub">Quando o cliente puxa conversa. Edição livre, sem aprovação e sem custo. Clique num campo para colocar no texto: o bot troca pelo valor de verdade.</p>
+        </div>
+
+        <div class="card-erro" *ngIf="erroRespostas">{{ erroRespostas }}</div>
+        <div class="card-ok" *ngIf="mensagemRespostas">{{ mensagemRespostas }}</div>
+
+        <div class="resposta" *ngFor="let c of camposResposta">
+          <div class="resposta-topo">
+            <label [for]="'resp-' + c.chave">{{ c.titulo }}</label>
+            <button type="button" class="link-acao" *ngIf="!ehPadrao(c.chave)" (click)="voltarAoPadrao(c.chave)">Voltar ao padrão</button>
+          </div>
+          <small>{{ c.quando }}</small>
+          <textarea [id]="'resp-' + c.chave" [rows]="c.chave === 'saudacao' ? 5 : 2" maxlength="1000" [(ngModel)]="respostas[c.chave]" [name]="'resp-' + c.chave"></textarea>
+          <div class="chips">
+            <button type="button" class="chip" *ngFor="let campo of c.campos" (click)="inserirCampo(c.chave, campo)">{{ campo }}</button>
+          </div>
+        </div>
+
+        <div class="acoes-fim">
+          <button type="button" class="btn-primario" (click)="salvarRespostas()" [disabled]="salvandoRespostas || !respostasMudaram">
+            {{ salvandoRespostas ? 'Salvando...' : 'Salvar respostas' }}
+          </button>
+        </div>
+      </section>
+
+      <!-- 5. MENSAGENS PRONTAS POR SERVIÇO -->
+      <section class="card">
+        <div>
+          <h2>Mensagens prontas por serviço</h2>
+          <p class="card-sub">Você envia do seu próprio WhatsApp, sem custo.</p>
+        </div>
+
+        <p class="caixa-verde">
+          Ao clicar em "Chamar no WhatsApp" (nas telas Clientes, Lista de espera e Início), o seu WhatsApp abre na conversa
+          com o cliente, com o texto já preenchido com o nome, o serviço e o horário. Você confere e toca em enviar.
+          Sem custo e sem aprovação.
+        </p>
+
+        <div class="chips servicos-mensagem">
+          <button type="button" class="chip chip-servico" [class.ativo]="servicoMensagem === null" (click)="escolherServicoMensagem(null)">Padrão (todos)</button>
+          <button type="button" class="chip chip-servico" *ngFor="let s of servicos" [class.ativo]="servicoMensagem === s.id" (click)="escolherServicoMensagem(s.id)">{{ s.nome }}</button>
+        </div>
+
+        <div class="card-erro" *ngIf="erroMensagens">{{ erroMensagens }}</div>
+
+        <div class="tipo-mensagem" *ngFor="let t of tiposMensagem">
+          <div>
+            <strong>{{ t.titulo }}</strong>
+            <small>{{ t.usadoEm }}</small>
+          </div>
+
+          <!-- em uso -->
+          <div class="modelo em-uso" *ngIf="editando?.tipo !== t.tipo || criandoDoZero">
+            <div class="modelo-topo">
+              <span class="etiqueta ligado">Em uso</span>
+              <small class="origem" *ngIf="emUso(t.tipo).origem === 'padrao'">vem do Padrão (todos)</small>
+              <small class="origem" *ngIf="escritaPorVoce(t.tipo)">escrita por você</small>
+            </div>
+            <p>{{ emUso(t.tipo).texto }}</p>
+            <div class="modelo-acoes">
+              <button type="button" class="link-acao" (click)="editar(t.tipo)">Editar</button>
+              <button type="button" class="link-acao" (click)="copiarMensagem(t.tipo)">{{ copiadoTipo === t.tipo ? 'Copiado ✓' : 'Copiar' }}</button>
+              <button type="button" class="link-acao" *ngIf="emUso(t.tipo).origem === 'salva'" (click)="voltarAoModelo(t.tipo)" [disabled]="salvandoMensagem">Voltar ao modelo</button>
+            </div>
+          </div>
+
+          <!-- editando -->
+          <div class="modelo editando" *ngIf="editando && editando.tipo === t.tipo && !criandoDoZero">
+            <textarea rows="3" maxlength="1000" [(ngModel)]="editando.texto" [name]="'edit-' + t.tipo"></textarea>
+            <div class="chips">
+              <button type="button" class="chip" *ngFor="let campo of camposMensagem" (click)="inserirCampoMensagem(campo)">{{ campo }}</button>
+            </div>
+            <div class="modelo-acoes">
+              <button type="button" class="btn-secundario" (click)="cancelarEdicao()">Cancelar</button>
+              <button type="button" class="btn-primario" (click)="salvarEdicao()" [disabled]="salvandoMensagem">{{ salvandoMensagem ? 'Salvando...' : 'Salvar' }}</button>
+            </div>
+          </div>
+
+          <!-- outros modelos prontos -->
+          <div class="modelo" *ngFor="let m of outrosModelos(t.tipo)">
+            <div class="modelo-topo"><small class="origem">Modelo pronto {{ m.numero }}</small></div>
+            <p>{{ m.texto }}</p>
+            <div class="modelo-acoes">
+              <button type="button" class="link-acao" (click)="usarTexto(t.tipo, m.texto)" [disabled]="salvandoMensagem">Usar este</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- criar do zero -->
+        <div class="modelo editando" *ngIf="criandoDoZero && editando">
+          <div class="campo">
+            <label for="tipoNovo">Mensagem nova para {{ nomeServicoMensagem }}</label>
+            <select id="tipoNovo" [(ngModel)]="editando.tipo" name="tipoNovo">
+              <option *ngFor="let t of tiposMensagem" [ngValue]="t.tipo">{{ t.titulo }}</option>
+            </select>
+          </div>
+          <textarea rows="3" maxlength="1000" placeholder="Escreva a mensagem..." [(ngModel)]="editando.texto" name="textoNovo"></textarea>
+          <div class="chips">
+            <button type="button" class="chip" *ngFor="let campo of camposMensagem" (click)="inserirCampoMensagem(campo)">{{ campo }}</button>
+          </div>
+          <div class="modelo-acoes">
+            <button type="button" class="btn-secundario" (click)="cancelarEdicao()">Cancelar</button>
+            <button type="button" class="btn-primario" (click)="salvarEdicao()" [disabled]="salvandoMensagem">{{ salvandoMensagem ? 'Salvando...' : 'Salvar e usar' }}</button>
+          </div>
+        </div>
+
+        <div class="acoes-fim" *ngIf="!criandoDoZero">
+          <button type="button" class="btn-secundario" (click)="criarDoZero()">+ Criar mensagem do zero</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- COMO O CLIENTE VÊ (simulador) -->
+    <aside class="coluna-celular">
+      <section class="card">
+        <div>
+          <h2>Como o cliente vê</h2>
+          <p class="card-sub">Converse com o bot como se fosse um cliente. É o mesmo bot do WhatsApp: os clientes e agendamentos criados aqui aparecem no sistema.</p>
+        </div>
+
+        <div class="celular">
+          <div class="celular-topo">
+            <span class="celular-avatar">{{ inicialNegocio }}</span>
+            <div>
+              <strong>{{ nomeNegocio }}</strong>
+              <small>{{ enviando ? 'digitando...' : 'online' }}</small>
+            </div>
+          </div>
+
+          <div class="celular-conversa" #conversa>
+            <p class="balao-aviso" *ngIf="mensagens.length === 0">Mande um "oi" para começar 👋</p>
+            <p class="balao-aviso" *ngIf="!bot.ativo && mensagens.length > 0">O bot está desligado: no WhatsApp de verdade, ninguém receberia essas respostas.</p>
+            <div class="balao" *ngFor="let m of mensagens" [class.cliente]="m.de === 'cliente'" [class.aviso]="m.de === 'aviso'">
+              <span class="balao-texto">{{ m.texto }}</span>
+              <span class="balao-hora" *ngIf="m.hora">{{ m.hora }}</span>
+            </div>
+          </div>
+
+          <div class="atalhos">
+            <button type="button" class="chip" *ngFor="let a of atalhos" (click)="enviar(a)" [disabled]="enviando">{{ a }}</button>
+          </div>
+
+          <form class="celular-digitar" (ngSubmit)="enviar()">
+            <input type="text" placeholder="Mensagem" maxlength="500" [(ngModel)]="textoDigitado" name="textoDigitado" autocomplete="off" />
+            <button type="submit" class="btn-enviar" [disabled]="enviando || !textoDigitado.trim()" aria-label="Enviar">
+              <span class="icone">send</span>
+            </button>
+          </form>
+        </div>
+
+        <div class="simulador-rodape">
+          <div class="campo">
+            <label for="telefoneTeste">WhatsApp do cliente de teste</label>
+            <input id="telefoneTeste" type="tel" [(ngModel)]="telefoneTeste" name="telefoneTeste" (change)="reiniciar()" />
+          </div>
+          <button type="button" class="btn-secundario" (click)="reiniciar()">Recomeçar conversa</button>
+        </div>
+        <p class="dica">Troque o número para testar um cliente novo ou um que já está cadastrado.</p>
+      </section>
+    </aside>
+  </div>
+</main>

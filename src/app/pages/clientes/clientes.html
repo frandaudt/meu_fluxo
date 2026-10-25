@@ -140,6 +140,26 @@
         <span>Costuma pagar com: <strong>{{ f.resumo.formaPreferida || '—' }}</strong></span>
       </p>
 
+      <!-- lista de espera deste cliente -->
+      <div class="ficha-fila">
+        <div class="ficha-fila-topo">
+          <h3 class="jornada-titulo">Lista de espera</h3>
+          <button type="button" class="link-acao" (click)="colocarNaLista(f.cliente)">+ Colocar na lista de espera</button>
+        </div>
+        <table class="tabela-fila" *ngIf="filaDoCliente(f.cliente).length; else semFila">
+          <thead><tr><th>Pediu em</th><th>Serviço</th><th>Quer</th><th>Situação</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let e of filaDoCliente(f.cliente)">
+              <td>{{ e.criadoEm ? dataCurta(e.criadoEm.slice(0, 10)) : '—' }}</td>
+              <td>{{ e.servicoNome }}</td>
+              <td>{{ textoQuer(e) }}</td>
+              <td><span class="situacao-fila" [attr.data-situacao]="e.situacao">{{ rotuloFila(e) }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #semFila><p class="vazio-fila">Não está nem esteve na lista de espera.</p></ng-template>
+      </div>
+
       <h3 class="jornada-titulo">Jornada do cliente</h3>
       <ol class="jornada">
         <li *ngFor="let e of jornada">

@@ -452,3 +452,47 @@ label.cor-caixa { cursor: pointer; }
   .acao-linha { flex-direction: column; align-items: flex-start; }
   .harmonia { flex-direction: column; align-items: flex-start; }
 }
+
+/* ===== campo de senha com olho (fica dentro do campo, à direita) ===== */
+.campo-senha { position: relative; display: flex; }
+.campo-senha input { width: 100%; padding-right: 46px; }
+.btn-olho {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; border: none; border-radius: 50%;
+  background: none; color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-olho:hover { color: var(--color-primary-dark); background: var(--color-bg); }
+.btn-olho .icone { font-size: 20px; }
+
+/* ===== folgas: tipo (Folga, Férias, Feriado...) ===== */
+.tipos-bloqueio { display: flex; flex-wrap: wrap; gap: 6px; }
+.tipos-bloqueio button {
+  min-height: 34px; padding: 6px 14px;
+  border: 1.5px solid var(--color-border); border-radius: 999px;
+  background: var(--color-white); color: var(--color-text);
+  font-family: var(--font-body); font-size: 0.82rem; font-weight: 600;
+  cursor: pointer;
+}
+.tipos-bloqueio button.ativo { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-white); }
+.form-group label small { font-weight: 400; color: var(--color-text-faint); }
+
+/* ===== equipe: caixas de permissão ===== */
+.permissoes-novo {
+  margin: 0; padding: 12px 14px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.permissoes-novo legend { padding: 0 6px; font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); }
+.caixa { display: flex; align-items: center; gap: 10px; font-size: 0.84rem; color: var(--color-text); cursor: pointer; }
+.caixa input, .chip-alternar input { width: 16px; height: 16px; margin: 0; accent-color: var(--color-primary); cursor: pointer; }
+.chip-alternar { display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+
+/* ===== prévia: acento ===== */
+.previa-acento {
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--color-acento-claro); color: var(--color-acento-escuro);
+  font-size: 0.72rem; font-weight: 700;
+}

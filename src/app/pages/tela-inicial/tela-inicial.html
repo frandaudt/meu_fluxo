@@ -24,6 +24,7 @@
   </div>
 
   <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
+  <div class="pagina-ok" *ngIf="mensagemFila">{{ mensagemFila }}</div>
   <p class="carregando" *ngIf="carregando">Carregando...</p>
 
   <ng-container *ngIf="!carregando">
@@ -52,6 +53,8 @@
         (abrirEvento)="abrirEvento($event)"
         (acaoEvento)="acaoRapida($event)"
         (agendarEm)="agendarEm($event)"
+        [fila]="fila"
+        (encaixar)="encaixarDaFila($event)"
       ></app-calendario>
 
       <!-- ===== COLUNA DA DIREITA ===== -->

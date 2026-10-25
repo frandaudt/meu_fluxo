@@ -181,6 +181,8 @@ export interface TemaCores {
   nome: string;
   h: number; // matiz, 0–359 (posição no círculo cromático)
   s: number; // saturação da cor base, em %
+  hAcento?: number;   // personalizada: matiz escolhido para o acento (sem ele, H + 150°)
+  hDestaque?: number; // personalizada: matiz escolhido para o destaque (sem ele, H + 210°)
 }
 
 export const TEMA_PADRAO: TemaCores = { id: 'salvia', nome: 'Sálvia', h: 100, s: 12 };
@@ -202,10 +204,14 @@ export const TEMAS_PRONTOS: TemaCores[] = [
 export interface Aparencia {
   paleta: string;               // id do tema
   corPrimaria: string | null;   // '#rrggbb' quando paleta = 'personalizada'
+  corAcento?: string | null;    // personalizada: null = calculada pelo círculo cromático
+  corDestaque?: string | null;  // personalizada: null = calculada pelo círculo cromático
   tamanhoTexto: 'normal' | 'grande';
 }
 
-export const APARENCIA_PADRAO: Aparencia = { paleta: 'salvia', corPrimaria: null, tamanhoTexto: 'normal' };
+export const APARENCIA_PADRAO: Aparencia = { paleta: 'salvia', corPrimaria: null, corAcento: null, corDestaque: null, tamanhoTexto: 'normal' };
+
+const HEX_VALIDO = /^#[0-9a-f]{6}$/i;
 
 /** Aparência guardada junto com o usuário logado (ou a padrão). */
 export function aparenciaSalva(): Aparencia {
@@ -213,7 +219,13 @@ export function aparenciaSalva(): Aparencia {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
     const a = usuario?.aparencia;
     if (a && typeof a.paleta === 'string') {
-      return { paleta: a.paleta, corPrimaria: a.corPrimaria || null, tamanhoTexto: a.tamanhoTexto === 'grande' ? 'grande' : 'normal' };
+      return {
+        paleta: a.paleta,
+        corPrimaria: a.corPrimaria || null,
+        corAcento: a.corAcento || null,
+        corDestaque: a.corDestaque || null,
+        tamanhoTexto: a.tamanhoTexto === 'grande' ? 'grande' : 'normal',
+      };
     }
   } catch {}
   return APARENCIA_PADRAO;
@@ -232,8 +244,11 @@ export function guardarAparencia(aparencia: Aparencia) {
 /** Aparência → tema de cores (paleta pronta ou cor personalizada). */
 export function temaDaAparencia(aparencia: Aparencia | null | undefined): TemaCores {
   if (!aparencia) return TEMA_PADRAO;
-  if (aparencia.paleta === 'personalizada' && aparencia.corPrimaria && /^#[0-9a-f]{6}$/i.test(aparencia.corPrimaria)) {
-    return temaDeHex(aparencia.corPrimaria);
+  if (aparencia.paleta === 'personalizada' && aparencia.corPrimaria && HEX_VALIDO.test(aparencia.corPrimaria)) {
+    const tema = temaDeHex(aparencia.corPrimaria);
+    if (aparencia.corAcento && HEX_VALIDO.test(aparencia.corAcento)) tema.hAcento = temaDeHex(aparencia.corAcento).h;
+    if (aparencia.corDestaque && HEX_VALIDO.test(aparencia.corDestaque)) tema.hDestaque = temaDeHex(aparencia.corDestaque).h;
+    return tema;
   }
   return TEMAS_PRONTOS.find(t => t.id === aparencia.paleta) || TEMA_PADRAO;
 }
@@ -259,6 +274,11 @@ export function aplicarTema(tema: TemaCores) {
   const raiz = document.documentElement.style;
   raiz.setProperty('--tema-h', String(Math.round(tema.h)));
   raiz.setProperty('--tema-s', `${Math.round(tema.s)}%`);
+  // acento e destaque escolhidos à mão (personalizada); sem eles, vale a conta do styles.css (H + 150° / H + 210°)
+  if (tema.hAcento !== undefined) raiz.setProperty('--hue-acento', String(Math.round(tema.hAcento)));
+  else raiz.removeProperty('--hue-acento');
+  if (tema.hDestaque !== undefined) raiz.setProperty('--hue-destaque', String(Math.round(tema.hDestaque)));
+  else raiz.removeProperty('--hue-destaque');
 }
 
 /**
@@ -306,6 +326,70 @@ export function contrasteComBranco(hex: string): number {
   };
   const luminancia = 0.2126 * canal(1) + 0.7152 * canal(3) + 0.0722 * canal(5);
   return 1.05 / (luminancia + 0.05);
+}
+
+// =====================================================================
+//  "CONTINUAR COM GOOGLE" (login e cadastro)
+//  O Client ID vem do back-end (GET /api/usuarios/config). Sem ele, o botão
+//  não aparece. O Google devolve um "crachá" (credential) que o back-end confere.
+// =====================================================================
+declare global {
+  interface Window { google?: any; }
+}
+
+let scriptGoogle: Promise<void> | null = null;
+
+/** Carrega o script do Google uma vez só. */
+function carregarScriptGoogle(): Promise<void> {
+  if (scriptGoogle) return scriptGoogle;
+  scriptGoogle = new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) return resolve();
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => { scriptGoogle = null; reject(new Error('Google indisponível')); };
+    document.head.appendChild(script);
+  });
+  return scriptGoogle;
+}
+
+/**
+ * Desenha o botão "Continuar com Google" dentro do elemento.
+ * aoEntrar recebe o credential, que vai para POST /api/usuarios/google.
+ * Devolve false se o login com Google não estiver configurado.
+ */
+export async function mostrarBotaoGoogle(
+  elemento: HTMLElement,
+  http: HttpClient,
+  aoEntrar: (credential: string) => void,
+): Promise<boolean> {
+  try {
+    const config = await new Promise<{ googleClientId: string | null }>((resolve, reject) =>
+      http.get<{ googleClientId: string | null }>(`${API_URL}/usuarios/config`).subscribe({ next: resolve, error: reject })
+    );
+    if (!config.googleClientId) return false;
+    await carregarScriptGoogle();
+    window.google.accounts.id.initialize({
+      client_id: config.googleClientId,
+      callback: (resposta: { credential: string }) => aoEntrar(resposta.credential),
+    });
+    window.google.accounts.id.renderButton(elemento, {
+      theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', locale: 'pt-BR',
+      width: Math.min(300, elemento.clientWidth || 300),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Guarda o login (token + usuário) e decide a primeira tela. */
+export function guardarLogin(resposta: { token: string; usuario: any }, router: Router) {
+  localStorage.setItem('meufluxo_token', resposta.token);
+  localStorage.setItem('usuarioLogado', JSON.stringify(resposta.usuario));
+  // atendente com senha provisória: troca a senha antes de usar o sistema
+  router.navigate(resposta.usuario?.trocarSenha ? ['/perfil'] : ['/tela-inicial']);
 }
 
 // =====================================================================
@@ -395,9 +479,11 @@ interface SugestaoBusca {
 })
 export class App {
   mostrarLayout = true;
+  menuAberto = false; // menu lateral no celular
   menuUsuarioAberto = false;
   sininhoAberto = false;
   alertas: Alerta[] = [];
+  aguardandoNaLista = 0; // bolinha da "Lista de espera" no menu
   papel: 'dono' | 'atendente' = 'dono';
   termoBusca = '';
   nomeUsuario = 'Usuário';
@@ -419,17 +505,32 @@ export class App {
     this.atualizarMostrarLayout(this.router.url);
     this.carregarDadosBusca();
     this.atualizarAparencia();
+    carregarMensagensProntas(this.http);
 
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event) => {
         const url = (event as NavigationEnd).urlAfterRedirects;
+        this.menuAberto = false; // escolheu uma tela no celular: o menu fecha
         this.atualizarMostrarLayout(url);
         this.carregarUsuario();
         this.carregarDadosBusca();
         this.carregarAlertas();
         this.atualizarAparencia();
+        carregarMensagensProntas(this.http); // textos dos botões de WhatsApp (só busca uma vez)
       });
+  }
+
+  /** Celular: abre e fecha o menu lateral (no computador o botão nem aparece). */
+  alternarMenu(evento: Event) {
+    evento.stopPropagation();
+    this.menuAberto = !this.menuAberto;
+  }
+
+  /** O "Sair" do menu lateral também passa por aqui (mesma limpeza do menu do usuário). */
+  @HostListener('window:meufluxo-sair')
+  aoSairPeloMenu() {
+    this.sair();
   }
 
   /** O Perfil avisa quando troca o nome ou a foto: o cabeçalho atualiza na hora. */
@@ -460,7 +561,17 @@ export class App {
 
   private atualizarMostrarLayout(url: string) {
     const caminhoLimpo = url.split('#')[0].split('?')[0];
-    this.mostrarLayout = !this.rotasSemLayout.includes(caminhoLimpo);
+
+    // senha provisória (atendente novo ou senha redefinida pelo dono): só o Perfil até trocar
+    try {
+      const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+      const telaInterna = !this.rotasSemLayout.includes(caminhoLimpo) && !caminhoLimpo.startsWith('/agendar/');
+      if (usuario?.trocarSenha && telaInterna && caminhoLimpo !== '/perfil') {
+        this.router.navigate(['/perfil']);
+      }
+    } catch {}
+    // a página pública de agendamento (/agendar/:slug) também fica sem menu e sem cabeçalho
+    this.mostrarLayout = !this.rotasSemLayout.includes(caminhoLimpo) && !caminhoLimpo.startsWith('/agendar/');
 
     // tela de login/cadastro/anúncio: o próximo login começa com os valores ocultos
     if (!this.mostrarLayout) reiniciarValoresOcultos();
@@ -518,8 +629,11 @@ export class App {
       return;
     }
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
-    this.http.get<{ alertas: Alerta[] }>(`${API_URL}/alertas`, { headers }).subscribe({
-      next: ({ alertas }) => (this.alertas = alertas || []),
+    this.http.get<{ alertas: Alerta[]; aguardandoNaLista?: number }>(`${API_URL}/alertas`, { headers }).subscribe({
+      next: ({ alertas, aguardandoNaLista }) => {
+        this.alertas = alertas || [];
+        this.aguardandoNaLista = aguardandoNaLista || 0;
+      },
       error: () => (this.alertas = []),
     });
   }
@@ -675,6 +789,10 @@ export class App {
   sair() {
     localStorage.removeItem('usuarioLogado');
     localStorage.removeItem('meufluxo_token');
+    // sobras de versões antigas (cor de cada e-mail que já entrou neste navegador)
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('meufluxo_tema_')).forEach(k => localStorage.removeItem(k));
+    } catch {}
     this.dadosBuscaCarregados = false;
     this.clientesCache = [];
     this.servicosCache = [];
@@ -682,6 +800,225 @@ export class App {
     this.alertas = [];
     this.fotoUsuario = null;
     this.aparenciaAtualizada = false;
+    esquecerMensagensProntas();
     this.router.navigate(['/login']);
   }
+}
+
+// =====================================================================
+//  MENSAGENS PRONTAS (tela WhatsApp › "Mensagens prontas por serviço")
+//  O dono envia do próprio WhatsApp: o botão abre o wa.me com o texto pronto.
+//  Ordem para escolher o texto de um serviço:
+//    1. a mensagem salva para o serviço;
+//    2. o modelo pronto do serviço (manicure, escova, corte, sobrancelha);
+//    3. a mensagem salva no "Padrão (todos)";
+//    4. o modelo pronto do Padrão.
+// =====================================================================
+export type TipoMensagem = 'lembrete' | 'pos' | 'falta' | 'vaga';
+export interface MensagemPronta { servicoId: number | null; servicoNome: string | null; tipo: TipoMensagem; texto: string; }
+
+export const TIPOS_MENSAGEM: { tipo: TipoMensagem; titulo: string; usadoEm: string }[] = [
+  { tipo: 'lembrete', titulo: 'Lembrete da véspera', usadoEm: 'Botão "Enviar" em Lembretes de amanhã, na Início.' },
+  { tipo: 'pos', titulo: 'Depois do atendimento', usadoEm: 'Oferecido ao concluir o atendimento, na Agenda.' },
+  { tipo: 'falta', titulo: 'Sentimos sua falta', usadoEm: 'Botão "Chamar no WhatsApp" da ficha do cliente em risco.' },
+  { tipo: 'vaga', titulo: 'Abriu uma vaga', usadoEm: 'Botão "Avisar pelo WhatsApp" da Lista de espera.' },
+];
+
+type Modelos = Record<TipoMensagem, [string, string]>;
+
+/** Modelos do "Padrão (todos)". */
+export const MODELOS_PADRAO: Modelos = {
+  lembrete: [
+    'Oi {nome}! Lembrando do seu {servico} amanhã ({data}) às {hora}. Responda 1 para confirmar ou 2 para remarcar.',
+    'Olá {nome}, passando para lembrar: {servico} amanhã às {hora} no {negocio}. Te esperamos!',
+  ],
+  pos: [
+    'Obrigado pela visita, {nome}! Foi um prazer te atender. Até a próxima 💚',
+    'Oi {nome}! O que achou do atendimento hoje? Sua opinião ajuda muito a gente.',
+  ],
+  falta: [
+    'Oi {nome}, faz um tempinho que você não aparece por aqui! Quer agendar seu {servico}? É só responder 2.',
+    '{nome}, estamos com saudade! Temos horários livres essa semana. Responda 2 para ver.',
+  ],
+  vaga: [
+    'Boa notícia, {nome}! Abriu um horário para {servico} em {data} às {hora}. Quer? Responda SIM em até 1 hora.',
+    'Oi {nome}! Liberou uma vaga para {servico} em {data} às {hora}. Quer que eu reserve para você?',
+  ],
+};
+
+/** Modelos próprios de alguns serviços (achados pelo nome). Vaga usa sempre o Padrão. */
+const MODELOS_POR_SERVICO: { nome: RegExp; modelos: Omit<Modelos, 'vaga'> }[] = [
+  {
+    nome: /manicure|pedicure|unha/i,
+    modelos: {
+      lembrete: [
+        'Oi {nome}! Amanhã às {hora} é dia de deixar as unhas lindas 💅 Responda 1 para confirmar ou 2 para remarcar.',
+        'Olá {nome}, sua manicure está marcada para amanhã ({data}) às {hora}. Até lá!',
+      ],
+      pos: [
+        'Obrigado, {nome}! Dica: evite água quente nas próximas 2 horas para o esmalte durar mais.',
+        'Unhas prontas! Hidratar as cutículas todo dia ajuda o resultado a durar mais, {nome} ✨',
+      ],
+      falta: [
+        'Oi {nome}! Já faz um tempinho desde a sua última manicure. Que tal renovar? Responda 2.',
+        '{nome}, suas unhas estão com saudade da gente 💅 Temos horários essa semana. Responda 2.',
+      ],
+    },
+  },
+  {
+    nome: /escova/i,
+    modelos: {
+      lembrete: [
+        'Oi {nome}! Amanhã às {hora} tem escova marcada. Se puder, venha com o cabelo lavado 😉',
+        'Olá {nome}, lembrete da sua escova amanhã ({data}) às {hora}. Responda 1 para confirmar.',
+      ],
+      pos: [
+        'Obrigado, {nome}! Para a escova durar mais, prenda o cabelo num coque frouxo para dormir.',
+        'Que bom te ver, {nome}! Evite umidade nas próximas horas para manter o liso.',
+      ],
+      falta: [
+        'Oi {nome}! Bateu saudade daquela escova? Responda 2 para ver os horários.',
+        '{nome}, que tal um cabelo novo para o fim de semana? Responda 2 e a gente agenda.',
+      ],
+    },
+  },
+  {
+    nome: /corte|barba/i,
+    modelos: {
+      lembrete: [
+        'Fala, {nome}! Seu corte é amanhã às {hora}. Responda 1 para confirmar ou 2 para remarcar.',
+        'Olá {nome}, lembrando do seu corte amanhã ({data}) às {hora}.',
+      ],
+      pos: [
+        'Valeu pela visita, {nome}! Para manter o corte em dia, o ideal é voltar em 3 a 4 semanas.',
+        'Corte feito! Qualquer ajuste, é só chamar aqui, {nome}.',
+      ],
+      falta: [
+        '{nome}, já está na hora de dar aquele trato no cabelo? Responda 2 que a gente agenda.',
+        'Oi {nome}! Seu último corte foi há um tempinho. Bora marcar? Responda 2.',
+      ],
+    },
+  },
+  {
+    nome: /sobrancelha/i,
+    modelos: {
+      lembrete: [
+        'Oi {nome}! Seu design de sobrancelha é amanhã às {hora}. Venha sem maquiagem na região 😉',
+        'Olá {nome}, lembrete: design de sobrancelha amanhã ({data}) às {hora}.',
+      ],
+      pos: [
+        'Obrigado, {nome}! Evite sol direto e maquiagem na região nas próximas 24 horas.',
+        'Sobrancelhas prontas! O retoque ideal é em 15 a 20 dias, {nome}.',
+      ],
+      falta: [
+        'Oi {nome}! Suas sobrancelhas já devem estar pedindo um retoque. Responda 2 para agendar.',
+        '{nome}, que tal manter o desenho em dia? Responda 2 e escolha um horário.',
+      ],
+    },
+  },
+];
+
+/** Os 2 modelos prontos para o tipo: os do serviço (se ele tiver) ou os do Padrão. */
+export function modelosProntos(tipo: TipoMensagem, nomeServico: string | null | undefined): { modelos: [string, string]; doServico: boolean } {
+  const proprio = tipo !== 'vaga' && nomeServico ? MODELOS_POR_SERVICO.find(m => m.nome.test(nomeServico)) : undefined;
+  return proprio
+    ? { modelos: proprio.modelos[tipo as Exclude<TipoMensagem, 'vaga'>], doServico: true }
+    : { modelos: MODELOS_PADRAO[tipo], doServico: false };
+}
+
+// guardadas uma vez por abertura do sistema (o App busca depois do login)
+let mensagensSalvas: MensagemPronta[] = [];
+let nomeDoNegocio = '';
+let mensagensCarregadas = false;
+
+export function mensagensProntasSalvas(): MensagemPronta[] {
+  return mensagensSalvas;
+}
+
+/** A tela WhatsApp chama depois de salvar: os botões das outras telas já usam o texto novo. */
+export function guardarMensagensProntas(lista: MensagemPronta[]) {
+  mensagensSalvas = Array.isArray(lista) ? lista : [];
+}
+
+/** Busca as mensagens salvas (uma vez). Sem resposta, as telas usam os modelos prontos. */
+export function carregarMensagensProntas(http: HttpClient, forcar = false) {
+  const token = localStorage.getItem('meufluxo_token');
+  if (!token || (mensagensCarregadas && !forcar)) return;
+  mensagensCarregadas = true;
+  http.get<{ negocio: string; mensagens: MensagemPronta[] }>(`${API_URL}/whatsapp/mensagens`, {
+    headers: new HttpHeaders({ Authorization: `Bearer ${token}` }),
+  }).subscribe({
+    next: (r) => {
+      guardarMensagensProntas(r?.mensagens);
+      nomeDoNegocio = r?.negocio || '';
+    },
+    error: () => (mensagensCarregadas = false),
+  });
+}
+
+/** Ao sair, esquece as mensagens (outra conta pode entrar no mesmo navegador). */
+export function esquecerMensagensProntas() {
+  mensagensSalvas = [];
+  nomeDoNegocio = '';
+  mensagensCarregadas = false;
+}
+
+/**
+ * Texto "Em uso" de um tipo para um serviço (ou para o Padrão, com servico = null).
+ * origem: 'salva' (escrita/escolhida pelo dono), 'modelo' (modelo pronto do serviço)
+ * ou 'padrao' (vem do Padrão (todos)).
+ */
+export function mensagemEmUso(
+  tipo: TipoMensagem,
+  servico: { id?: number | null; nome?: string | null } | null,
+): { texto: string; origem: 'salva' | 'modelo' | 'padrao' } {
+  const salvas = mensagensSalvas.filter(m => m.tipo === tipo);
+  if (servico) {
+    const doServico = salvas.find(m => m.servicoId !== null && (
+      (servico.id != null && m.servicoId === servico.id) ||
+      (!!servico.nome && m.servicoNome?.toLowerCase() === servico.nome.toLowerCase())
+    ));
+    if (doServico) return { texto: doServico.texto, origem: 'salva' };
+    const prontos = modelosProntos(tipo, servico.nome);
+    if (prontos.doServico) return { texto: prontos.modelos[0], origem: 'modelo' };
+  }
+  const padrao = salvas.find(m => m.servicoId === null);
+  if (padrao) return { texto: padrao.texto, origem: servico ? 'padrao' : 'salva' };
+  return { texto: MODELOS_PADRAO[tipo][0], origem: servico ? 'padrao' : 'modelo' };
+}
+
+/** '2026-11-01' → 'sáb 01/11' */
+export function diaCurtoMensagem(data: string): string {
+  const [ano, mes, dia] = data.split('-').map(Number);
+  const sigla = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][new Date(ano, mes - 1, dia).getDay()];
+  return `${sigla} ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`;
+}
+
+/** Troca {nome}, {servico}, {data}, {hora} e {negocio} pelos valores. */
+export function preencherMensagem(texto: string, campos: { nome?: string; servico?: string; data?: string; hora?: string }): string {
+  const valores: Record<string, string> = {
+    nome: String(campos.nome || '').trim().split(/\s+/)[0],
+    servico: String(campos.servico || 'atendimento').toLowerCase(),
+    data: campos.data ? diaCurtoMensagem(campos.data) : '',
+    hora: campos.hora || '',
+    negocio: nomeDoNegocio || 'salão',
+  };
+  return texto.replace(/\{(nome|servico|data|hora|negocio)\}/g, (_, c) => valores[c]);
+}
+
+/** Texto pronto (já preenchido) para mandar ao cliente. */
+export function textoMensagemPronta(
+  tipo: TipoMensagem,
+  servico: { id?: number | null; nome?: string | null } | null,
+  campos: { nome?: string; data?: string; hora?: string },
+): string {
+  return preencherMensagem(mensagemEmUso(tipo, servico).texto, { ...campos, servico: servico?.nome || undefined });
+}
+
+/** Link do WhatsApp do aparelho com a mensagem pronta (wa.me). Sem telefone: null. */
+export function linkWhatsappPronto(telefone: string | null | undefined, texto: string): string | null {
+  let numero = String(telefone || '').replace(/\D/g, '');
+  if (!numero) return null;
+  if (numero.length <= 11) numero = `55${numero}`;
+  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
 }

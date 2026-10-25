@@ -1,4 +1,9 @@
 <header class="top-bar-verde" *ngIf="mostrarLayout">
+  <!-- celular: botão que abre o menu lateral por cima da tela -->
+  <button type="button" class="btn-menu" (click)="alternarMenu($event)" [attr.aria-expanded]="menuAberto" aria-label="Abrir o menu">
+    <span class="icone" aria-hidden="true">{{ menuAberto ? 'close' : 'menu' }}</span>
+  </button>
+
   <div class="brand-logo">
     <img src="assets/icons/icone-logo-meufluxo.png" alt="" class="brand-logo-icon" />
     <h2>MeuFluxo</h2>
@@ -69,10 +74,10 @@
 
     <div class="user-pill" (click)="toggleMenuUsuario($event)">
       @if (fotoUsuario) {
-       <img class="user-avatar-iniciais user-avatar-foto" [src]="fotoUsuario" alt="" />
-     } @else {
-       <div class="user-avatar-iniciais">{{ inicialUsuario }}</div>
-     }
+        <img class="user-avatar-iniciais user-avatar-foto" [src]="fotoUsuario" alt="" />
+      } @else {
+        <div class="user-avatar-iniciais">{{ inicialUsuario }}</div>
+      }
       <div class="user-nome">
         <strong>{{ primeiroNomeUsuario }}</strong>
         <small>{{ papelUsuario }}</small>
@@ -93,7 +98,9 @@
 </header>
 
 <div class="app-body" [class.no-layout]="!mostrarLayout">
-  <app-menu-lateral *ngIf="mostrarLayout"></app-menu-lateral>
+  <app-menu-lateral *ngIf="mostrarLayout" [class.aberto]="menuAberto" [aguardandoNaLista]="aguardandoNaLista"></app-menu-lateral>
+  <!-- celular: fundo escuro atrás do menu aberto (tocar fecha) -->
+  <div class="menu-fundo" *ngIf="mostrarLayout && menuAberto" (click)="menuAberto = false"></div>
 
   <main class="main-content">
     <router-outlet></router-outlet>

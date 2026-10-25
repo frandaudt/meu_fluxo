@@ -19,7 +19,7 @@
 /* =====================================================================
    VISÃO MÊS
    ===================================================================== */
-.dias-semana { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 6px; }
+.dias-semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-bottom: 6px; }
 .dias-semana span {
   text-align: center;
   font-size: 0.72rem;
@@ -28,9 +28,10 @@
   text-transform: uppercase;
 }
 
-.semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+.semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 4px; }
 
 .dia-cell {
+  min-width: 0; /* deixa a coluna encolher no celular (o texto dos chips corta com "...") */
   min-height: 104px;
   border: 1px solid transparent;
   background: transparent;
@@ -272,4 +273,16 @@
 @media (max-width: 640px) {
   .leg-dica { margin-left: 0; }
   .linha-hora { width: 40px; }
+  /* mês no celular: células menores, chips só com o horário cabendo */
+  .semana { gap: 2px; }
+  .dia-cell { min-height: 64px; padding: 3px; gap: 2px; font-size: 0.78rem; }
+  .dia-cell.resumo { min-height: 60px; }
+  .evento-chip { font-size: 0.6rem; padding: 2px 3px; }
+}
+
+/* horário livre que serve para alguém da lista de espera ("vaga liberada") */
+.chip-encaixe {
+  background: var(--color-aviso-claro);
+  color: var(--color-aviso);
+  border: 1.5px dashed hsl(44 58% 65%);
 }

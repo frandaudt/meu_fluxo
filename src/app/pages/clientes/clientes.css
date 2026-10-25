@@ -253,4 +253,27 @@
 @media (max-width: 640px) {
   .form-row { grid-template-columns: 1fr; }
   .ficha-numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* tabela no celular: fica Cliente, Situação e o botão (telefone e visitas aparecem na ficha) */
+  .tabela-rolagem > table th:nth-child(n+2):nth-child(-n+5),
+  .tabela-rolagem > table td:nth-child(n+2):nth-child(-n+5) { display: none; }
+  .tabela-rolagem > table th, .tabela-rolagem > table td { padding-left: 4px; padding-right: 4px; }
 }
+
+/* ===== ficha: lista de espera ===== */
+.ficha-fila { display: flex; flex-direction: column; gap: 8px; }
+.ficha-fila-topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ficha-fila-topo .jornada-titulo { margin: 0; }
+.ficha-fila .link-acao {
+  border: none; background: none; padding: 0;
+  font-family: var(--font-body); font-size: 0.82rem; font-weight: 600;
+  color: var(--color-primary-dark); text-decoration: underline; cursor: pointer;
+}
+.tabela-fila { width: 100%; border-collapse: collapse; }
+.tabela-fila th { text-align: left; padding: 0 8px 6px 0; font-size: 0.74rem; font-weight: 600; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); }
+.tabela-fila td { padding: 7px 8px 7px 0; font-size: 0.82rem; color: var(--color-text); border-bottom: 1px solid var(--color-border); }
+.tabela-fila tr:last-child td { border-bottom: none; }
+.situacao-fila { padding: 2px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; background: var(--color-bg); color: var(--color-text-soft); }
+.situacao-fila[data-situacao="aguardando"], .situacao-fila[data-situacao="avisado"] { background: var(--color-aviso-claro); color: var(--color-aviso); }
+.situacao-fila[data-situacao="encaixado"] { background: var(--color-sucesso-claro); color: var(--color-sucesso); }
+.situacao-fila[data-situacao="expirado"] { background: var(--color-perigo-claro); color: var(--color-perigo-escuro); }
+.vazio-fila { margin: 0; font-size: 0.8rem; color: var(--color-text-muted); }

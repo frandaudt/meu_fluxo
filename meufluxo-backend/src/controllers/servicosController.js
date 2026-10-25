@@ -8,13 +8,15 @@ function formatarServico(servicoDb) {
     categoria: servicoDb.categoria,
     valor: servicoDb.valor,
     duracaoMin: servicoDb.duracao_min,
+    // aparece no link de agendamento e no menu do bot (tela WhatsApp)
+    mostrarNoBot: servicoDb.mostrar_no_bot === undefined ? true : !!servicoDb.mostrar_no_bot,
   };
 }
 
 async function listar(req, res) {
   try {
     const [linhas] = await pool.query(
-      'SELECT id, nome, categoria, valor, duracao_min FROM servicos WHERE usuario_id = ? ORDER BY nome',
+      'SELECT id, nome, categoria, valor, duracao_min, mostrar_no_bot FROM servicos WHERE usuario_id = ? ORDER BY nome',
       [req.usuarioId]
     );
     res.json({ servicos: linhas.map(formatarServico) });
@@ -40,7 +42,7 @@ async function criar(req, res) {
     );
 
     res.status(201).json({
-      servico: { id: resultado.insertId, nome, categoria: categoria || null, valor, duracaoMin: duracao },
+      servico: { id: resultado.insertId, nome, categoria: categoria || null, valor, duracaoMin: duracao, mostrarNoBot: true },
     });
   } catch (erro) {
     console.error(erro);
@@ -68,7 +70,8 @@ async function atualizar(req, res) {
       return res.status(404).json({ erro: 'Serviço não encontrado.' });
     }
 
-    res.json({ servico: { id: Number(id), nome, categoria: categoria || null, valor, duracaoMin: duracao } });
+    const [[linha]] = await pool.query('SELECT * FROM servicos WHERE id = ?', [id]);
+    res.json({ servico: formatarServico(linha) });
   } catch (erro) {
     console.error(erro);
     res.status(500).json({ erro: 'Erro ao atualizar serviço.' });
@@ -79,17 +82,6 @@ async function remover(req, res) {
   const { id } = req.params;
 
   try {
-    // excluir o serviço apagaria os agendamentos feitos com ele, mudando o histórico financeiro
-    const [uso] = await pool.query(
-      'SELECT COUNT(*) AS total FROM agendamentos WHERE servico_id = ? AND usuario_id = ?',
-      [id, req.usuarioId]
-    );
-    if (uso[0].total > 0) {
-      return res.status(409).json({
-        erro: `Esse serviço está em ${uso[0].total} agendamento(s) e não pode ser excluído, para não apagar o histórico de atendimentos e ganhos.`,
-      });
-    }
-
     const [resultado] = await pool.query(
       'DELETE FROM servicos WHERE id = ? AND usuario_id = ?',
       [id, req.usuarioId]
@@ -106,4 +98,21 @@ async function remover(req, res) {
   }
 }
 
-module.exports = { listar, criar, atualizar, remover };
+// PUT /api/servicos/:id/mostrar → { mostrarNoBot: true | false } (interruptor da tela WhatsApp)
+async function alterarVisibilidade(req, res) {
+  try {
+    const [resultado] = await pool.query(
+      'UPDATE servicos SET mostrar_no_bot = ? WHERE id = ? AND usuario_id = ?',
+      [req.body.mostrarNoBot ? 1 : 0, req.params.id, req.usuarioId]
+    );
+    if (resultado.affectedRows === 0) {
+      return res.status(404).json({ erro: 'Serviço não encontrado.' });
+    }
+    res.json({ mostrarNoBot: !!req.body.mostrarNoBot });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro ao salvar.' });
+  }
+}
+
+module.exports = { listar, criar, atualizar, remover, alterarVisibilidade };

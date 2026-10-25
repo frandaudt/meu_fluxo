@@ -95,3 +95,37 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* ===== esqueci minha senha / Google ===== */
+.link-esqueci, .link-voltar {
+  padding: 0; border: none; background: none;
+  font-family: var(--font-body); font-size: 0.82rem; font-weight: 600;
+  color: var(--color-primary-dark); cursor: pointer;
+}
+.link-esqueci { display: block; margin: 8px 0 0 auto; }
+.link-esqueci:hover, .link-voltar:hover { text-decoration: underline; }
+.link-voltar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.campo-codigo { text-align: center; letter-spacing: 8px; font-size: 1.3rem !important; font-weight: 700; }
+
+.checklist-senha { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 3px; text-align: left; }
+.checklist-senha li { font-size: 0.78rem; color: var(--color-text-muted); }
+.checklist-senha li.ok { color: var(--color-sucesso); font-weight: 600; }
+
+.separador { display: flex; align-items: center; gap: 10px; margin: 18px 0 14px; color: var(--color-text-faint); font-size: 0.8rem; }
+.separador::before, .separador::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
+.botao-google { display: flex; justify-content: center; min-height: 0; }
+
+/* campo de senha com o olho dentro, à direita */
+.campo-senha { position: relative; display: flex; }
+.campo-senha input { width: 100%; padding-right: 46px; }
+.btn-olho {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; border: none; border-radius: 50%;
+  background: none; color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-olho:hover { color: var(--color-primary-dark); background: var(--color-bg); }
+.btn-olho .icone { font-size: 20px; }

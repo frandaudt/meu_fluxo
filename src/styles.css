@@ -2,14 +2,29 @@
   box-sizing: border-box;
 }
 
+/* =====================================================================
+   PALETA DO MEUFLUXO — baseada no círculo cromático (HSL)
+   ---------------------------------------------------------------------
+   Harmonia usada: COMPLEMENTAR DIVIDIDA (split-complementary).
+   - Cor base (marca) ........ matiz H            (padrão 100° = verde sálvia)
+   - Complementar da base .... H + 180°           (280°, não usada direto)
+   - Acento .................. H + 150°           (250° = lavanda)
+   - Destaque ................ H + 210°           (310° = orquídea / malva)
+   O usuário escolhe só a cor base no Perfil; o JS troca --tema-h e
+   --tema-s e todas as outras cores se recalculam sozinhas.
+   Saturação e luminosidade são fixas por papel, para manter o contraste
+   (texto branco no botão, texto escuro no fundo) em qualquer cor escolhida.
+   ===================================================================== */
 :root {
+  /* ---- valores que o usuário pode trocar (Perfil > Cores do sistema) ---- */
   --tema-h: 100;
   --tema-s: 12%;
 
+  /* ---- matizes derivados pela harmonia ---- */
   --hue-acento: calc(var(--tema-h) + 150);
   --hue-destaque: calc(var(--tema-h) + 210);
 
-  /* cor base e neutros tingidos por ela */
+  /* ---- cor base (marca) e neutros levemente tingidos por ela ---- */
   --color-primary: hsl(var(--tema-h) var(--tema-s) 35%);
   --color-primary-dark: hsl(var(--tema-h) var(--tema-s) 28%);
   --color-primary-light: hsl(var(--tema-h) calc(var(--tema-s) + 10%) 86%);
@@ -27,23 +42,26 @@
   --color-listra-1: hsl(var(--tema-h) 12% 95%);
   --color-listra-2: hsl(var(--tema-h) 10% 90%);
 
-  /* horário livre na grade da Início */
+  /* horário livre na grade da tela Início (família da cor base) */
   --color-livre: hsl(var(--tema-h) 30% 91%);
   --color-livre-hover: hsl(var(--tema-h) 32% 84%);
   --color-livre-borda: hsl(var(--tema-h) 22% 71%);
 
-  /* acento (H + 150°) */
+  /* ---- acento (H + 150°) ---- */
   --color-acento: hsl(var(--hue-acento) 45% 56%);
   --color-acento-escuro: hsl(var(--hue-acento) 36% 32%);
   --color-acento-claro: hsl(var(--hue-acento) 50% 91%);
 
-  /* destaque (H + 210°) */
+  /* ---- destaque (H + 210°) ---- */
   --color-destaque: hsl(var(--hue-destaque) 34% 45%);
   --color-destaque-escuro: hsl(var(--hue-destaque) 30% 34%);
   --color-destaque-claro: hsl(var(--hue-destaque) 40% 91%);
-  --color-accent: var(--color-destaque); /* nome antigo, mantido */
+  --color-accent: var(--color-destaque); /* nome antigo, mantido por compatibilidade */
 
-  /* STATUS — semânticas e FIXAS (não mudam com o tema) */
+  /* ---- cores de STATUS (semânticas, FIXAS — não mudam com o tema) ----
+     Ficam fora da harmonia de propósito: verde = deu certo,
+     vermelho = cancelado/erro, amarelo = aviso. Se elas girassem junto
+     com o tema, "agendado" poderia ficar vermelho e confundir. */
   --color-agendado: hsl(255 45% 56%);
   --color-agendado-escuro: hsl(255 36% 32%);
   --color-agendado-claro: hsl(255 50% 91%);
@@ -89,6 +107,12 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* =====================================================================
+   ÍCONES — Material Symbols (fonte de ícones do Google Fonts, carregada
+   no index.html). Como são texto, obedecem ao "color" do CSS e acompanham
+   o tema escolhido pelo usuário. Uso: <span class="icone">home</span>
+   Lista de nomes: https://fonts.google.com/icons
+   ===================================================================== */
 .icone {
   font-family: 'Material Symbols Rounded';
   font-weight: normal;
@@ -108,6 +132,28 @@ html, body {
   font-feature-settings: 'liga';
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
+
+/* campo de senha com botão de olho (login, cadastro e alterar senha) */
+.campo-senha { position: relative; }
+.campo-senha input { padding-right: 46px !important; }
+.btn-olho {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+.btn-olho:hover { color: var(--color-primary-dark); background: var(--color-bg); }
+.btn-olho .icone { font-size: 20px; }
 
 /* botões de ícone (editar / remover) das listas */
 .btn-icon .icone { color: var(--color-text-faint); transition: color var(--transition); }
@@ -133,8 +179,10 @@ h1, h2, h3, h4, .brand-logo h2 {
   padding: 0 28px;
   color: white;
   box-shadow: var(--shadow-sm);
-  position: relative;
-  z-index: 10;
+  /* fica preso no topo ao rolar a página */
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .brand-logo { display: flex; align-items: center; gap: 10px; }
@@ -214,7 +262,7 @@ app-menu-lateral {
   width: 240px;
   flex-shrink: 0;
   position: sticky;
-  top: 24px;
+  top: 88px; /* 64px do cabeçalho + 24px de espaço */
 }
 
 .main-content { flex: 1; min-width: 0; }
@@ -374,8 +422,9 @@ app-menu-lateral {
   margin-right: 6px;
   color: var(--color-primary);
 }
-
-
+/* =====================================================================
+   CABEÇALHO: nome + papel ("Francisco / Dono") e SININHO de avisos
+   ===================================================================== */
 .user-nome { display: flex; flex-direction: column; line-height: 1.15; }
 .user-nome strong { font-size: 0.88rem; font-weight: 600; }
 .user-nome small { font-size: 0.72rem; opacity: 0.8; }
@@ -484,5 +533,51 @@ app-menu-lateral {
   font-size: 0.82rem; font-weight: 600; color: var(--color-primary-dark);
 }
 
-     html.texto-grande { font-size: 112.5%; }
-     .user-avatar-foto { object-fit: cover; padding: 0; background: var(--color-white); }
+/* =====================================================================
+   PERFIL › APARÊNCIA
+   ===================================================================== */
+/* "Tamanho do texto: Grande" — a fonte base cresce e tudo em rem acompanha */
+html.texto-grande { font-size: 112.5%; }
+
+/* foto do perfil no cabeçalho (no lugar da inicial) */
+.user-avatar-foto { object-fit: cover; padding: 0; background: var(--color-white); }
+
+/* =====================================================================
+   CELULAR E TABLET (até 900px): menu lateral vira gaveta e o cabeçalho encolhe
+   ===================================================================== */
+.btn-menu, .menu-fundo { display: none; }
+
+@media (max-width: 900px) {
+  .top-bar-verde { padding: 0 10px; gap: 8px; }
+  .btn-menu {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 40px; height: 40px; padding: 0;
+    border: none; border-radius: 50%; background: transparent; color: white; cursor: pointer;
+  }
+  .btn-menu:hover { background: rgba(255, 255, 255, 0.12); }
+  .btn-menu .icone { font-size: 26px; }
+
+  .top-bar-right { flex: 1; min-width: 0; justify-content: flex-end; gap: 6px; }
+  .search-input-wrap { flex: 1; min-width: 0; max-width: 320px; }
+  .search-input { padding: 8px 12px; }
+  .search-input input { width: 100%; min-width: 0; }
+  .busca-dropdown { position: fixed; top: 64px; left: 8px; right: 8px; min-width: 0; }
+
+  .app-body { padding: 14px 12px; gap: 0; }
+  .main-content { width: 100%; }
+
+  /* o menu fica escondido à esquerda e desliza por cima da tela */
+  app-menu-lateral {
+    position: fixed; top: 64px; left: 0; bottom: 0; z-index: 210;
+    width: 264px; padding: 12px; box-sizing: border-box; overflow-y: auto;
+    transform: translateX(-105%); transition: transform 0.2s ease;
+  }
+  app-menu-lateral.aberto { transform: translateX(0); }
+  app-menu-lateral .sidebar { max-height: none; }
+  .menu-fundo { display: block; position: fixed; inset: 64px 0 0 0; z-index: 200; background: rgba(20, 24, 20, 0.4); }
+}
+
+@media (max-width: 640px) {
+  .brand-logo h2 { display: none; }
+  .brand-logo-icon { height: 30px; }
+}

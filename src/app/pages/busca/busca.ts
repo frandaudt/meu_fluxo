@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Subscription, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { EntradaFila, RespostaFila, textoQuer } from '../lista-espera/lista-espera';
 
 import {
   API_URL,
@@ -88,6 +90,7 @@ export class Busca implements OnInit, OnDestroy {
   numeros: Numero[] = [];
   acoes: Acao[] = [];
   secoes: Secao[] = [];
+  fila: EntradaFila[] = []; // lista de espera (aguardando + histórico)
   exemplos: { rotulo: string; q: string }[] = [];
 
   private inscricao?: Subscription;
@@ -118,6 +121,7 @@ export class Busca implements OnInit, OnDestroy {
       servicos: this.http.get<{ servicos: { id: number; nome: string; valor: number; duracaoMin: number }[] }>(`${API_URL}/servicos`, { headers }),
       agendamentos: this.http.get<{ agendamentos: AgendamentoCRM[] }>(`${API_URL}/agendamentos`, { headers }),
       horario: this.http.get<unknown>(`${API_URL}/horario-trabalho`, { headers }),
+      fila: this.http.get<RespostaFila>(`${API_URL}/lista-espera`, { headers }).pipe(catchError(() => of(null))),
       // despesas: só para quem vê o Financeiro (senão a API responde 403)
       despesas: this.veValores
         ? this.http.get<{ despesas: Despesa[] }>(`${API_URL}/despesas`, { headers })
@@ -128,6 +132,7 @@ export class Busca implements OnInit, OnDestroy {
         this.servicos = r.servicos.servicos.map(s => ({ id: s.id, nome: s.nome, valor: s.valor, duracao: s.duracaoMin }));
         this.agendamentos = r.agendamentos.agendamentos;
         this.despesas = r.despesas.despesas;
+        this.fila = r.fila ? [...r.fila.aguardando, ...r.fila.historico] : [];
         this.horario = normalizarHorarioTrabalho(r.horario); // com pausa e folgas
         this.montarExemplos();
         this.carregando = false;
@@ -316,6 +321,26 @@ export class Busca implements OnInit, OnDestroy {
       })),
       vazio: 'Nenhum agendamento no período.',
     }];
+
+    // lista de espera deste cliente (pedidos de vaga e como terminaram)
+    const naFila = this.fila.filter(e => e.clienteId === c.id)
+      .sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)));
+    this.secoes.push({
+      titulo: 'Lista de espera',
+      contagem: `${naFila.length}`,
+      colunas: ['Pediu em', 'Serviço', 'Dia desejado', 'Período', 'Situação'],
+      linhas: naFila.map(e => ({
+        celulas: [
+          e.criadoEm ? dataCurta(e.criadoEm.slice(0, 10)) : '—',
+          e.servicoNome,
+          textoQuer(e).dia,
+          textoQuer(e).quando,
+          { aguardando: 'Aguardando', avisado: 'Avisado', encaixado: 'Encaixado', desistiu: 'Desistiu', expirado: 'Expirou' }[e.situacao],
+        ],
+        abrir: () => this.router.navigate(['/lista-espera']),
+      })),
+      vazio: 'Não está nem esteve na lista de espera.',
+    });
   }
 
   // =====================================================================
@@ -436,7 +461,26 @@ export class Busca implements OnInit, OnDestroy {
         })),
         vazio: this.configDoDia(data) ? 'Nenhum horário livre.' : 'Você não trabalha neste dia.',
       },
+      {
+        // quem está esperando vaga para este dia (ou para qualquer dia)
+        titulo: 'Lista de espera para este dia',
+        contagem: '',
+        colunas: ['Cliente', 'Serviço', 'Quer', 'Vaga compatível'],
+        linhas: this.fila
+          .filter(e => (e.situacao === 'aguardando' || e.situacao === 'avisado') && (!e.dataPreferida || e.dataPreferida === data))
+          .map(e => ({
+            celulas: [
+              e.clienteNome,
+              e.servicoNome,
+              `${textoQuer(e).dia} · ${textoQuer(e).quando}`,
+              e.vaga && e.vaga.data === data ? `às ${e.vaga.horario}` : '—',
+            ],
+            abrir: () => this.router.navigate(['/lista-espera']),
+          })),
+        vazio: 'Ninguém na lista de espera para este dia.',
+      },
     ];
+    this.secoes[2].contagem = `${this.secoes[2].linhas.length}`;
     if (this.veValores) {
       this.secoes.push({
         titulo: 'Financeiro do dia · a receber',

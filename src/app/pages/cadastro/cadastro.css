@@ -111,3 +111,22 @@
 .checklist-senha li.ok {
   color: var(--color-sucesso);
 }
+
+/* "ou" + botão do Google */
+.separador { display: flex; align-items: center; gap: 10px; margin: 18px 0 14px; color: var(--color-text-faint); font-size: 0.8rem; }
+.separador::before, .separador::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
+.botao-google { display: flex; justify-content: center; }
+
+/* campo de senha com o olho dentro, à direita */
+.campo-senha { position: relative; display: flex; }
+.campo-senha input { width: 100%; padding-right: 46px; }
+.btn-olho {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; border: none; border-radius: 50%;
+  background: none; color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-olho:hover { color: var(--color-primary-dark); background: var(--color-bg); }
+.btn-olho .icone { font-size: 20px; }

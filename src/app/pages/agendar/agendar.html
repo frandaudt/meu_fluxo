@@ -1,0 +1,149 @@
+<div class="agendar-fundo">
+  <main class="celular">
+
+    <p class="carregando" *ngIf="carregando">Carregando...</p>
+
+    <div class="pagina-erro" *ngIf="!carregando && erroPagina">
+      <strong>Ops!</strong>
+      <p>{{ erroPagina }}</p>
+    </div>
+
+    <ng-container *ngIf="negocio as n">
+      <!-- cabeçalho do negócio + 4 etapas -->
+      <header class="topo">
+        <div class="negocio">
+          <img class="avatar" *ngIf="n.foto; else semFoto" [src]="n.foto" alt="" />
+          <ng-template #semFoto><span class="avatar">{{ iniciais }}</span></ng-template>
+          <div>
+            <h1>{{ n.nome }}</h1>
+            <p *ngIf="subtituloNegocio">{{ subtituloNegocio }}</p>
+          </div>
+        </div>
+        <ol class="etapas">
+          <li *ngFor="let e of etapas" [class.feita]="indiceEtapa(e.id) <= indiceEtapa(etapa)" [class.atual]="e.id === etapa">
+            <span class="barra"></span>
+            <span class="rotulo">{{ e.rotulo }}</span>
+          </li>
+        </ol>
+      </header>
+
+      <section class="conteudo">
+        <div class="erro" *ngIf="erro">{{ erro }}</div>
+
+        <!-- 1. SERVIÇO -->
+        <ng-container *ngIf="etapa === 'servico'">
+          <h2>Qual serviço você quer?</h2>
+          <button type="button" class="card-servico" *ngFor="let s of servicos" (click)="escolherServico(s)">
+            <span>
+              <strong>{{ s.nome }}</strong>
+              <small>{{ s.duracao }} min</small>
+            </span>
+            <strong class="preco">{{ preco(s.valor) }}</strong>
+          </button>
+          <p class="vazio" *ngIf="servicos.length === 0">Nenhum serviço disponível para agendar pelo link agora.</p>
+        </ng-container>
+
+        <!-- 2. HORÁRIO -->
+        <ng-container *ngIf="etapa === 'horario' && servico as s">
+          <button type="button" class="voltar" (click)="voltar()">‹ Voltar</button>
+          <h2>Escolha o dia e o horário</h2>
+          <p class="resumo-linha">{{ s.nome }} · {{ preco(s.valor) }} · {{ s.duracao }} min</p>
+
+          <p class="carregando-pequeno" *ngIf="carregandoDias">Procurando horários...</p>
+
+          <div class="dias" *ngIf="!carregandoDias">
+            <button type="button" class="dia" *ngFor="let d of dias"
+                    [class.ativo]="dia?.data === d.data" [class.lotado]="d.livres === 0" [disabled]="d.livres === 0"
+                    [title]="d.livres === 0 ? 'Lotado' : d.livres + ' horários livres'"
+                    (click)="escolherDia(d)">
+              <small>{{ d.sigla }}</small>
+              <strong>{{ numeroDoDia(d.data) }}</strong>
+            </button>
+          </div>
+          <p class="vazio" *ngIf="!carregandoDias && dias.length === 0">Não há dias disponíveis nas próximas duas semanas.</p>
+
+          <p class="carregando-pequeno" *ngIf="carregandoHorarios">Carregando horários...</p>
+          <div class="horarios" *ngIf="dia && !carregandoHorarios">
+            <button type="button" class="horario" *ngFor="let h of horarios" [class.ativo]="horario === h" (click)="horario = h">{{ h }}</button>
+          </div>
+
+          <!-- dias lotados: oferece a lista de espera -->
+          <div class="lotado-aviso" *ngFor="let d of diasLotados">
+            <strong>{{ nomeDoDia(d.data) }} ({{ d.data.slice(8, 10) }}/{{ d.data.slice(5, 7) }}) está lotada.</strong>&nbsp;
+            <button type="button" class="link" (click)="entrarNaEspera(d)">Entrar na lista de espera</button> e ser avisado se abrir vaga.
+          </div>
+        </ng-container>
+
+        <!-- 3. SEUS DADOS -->
+        <form *ngIf="etapa === 'dados' && servico as s" class="form-dados" (ngSubmit)="confirmar()">
+          <button type="button" class="voltar" (click)="voltar()">‹ Voltar</button>
+          <h2>{{ modoEspera ? 'Lista de espera' : 'Seus dados' }}</h2>
+
+          <div class="resumo-card">
+            <strong>{{ s.nome }} · {{ preco(s.valor) }}</strong>
+            <span *ngIf="!modoEspera && dia">{{ diaPorExtenso(dia.data) }} às {{ horario }}</span>
+            <span *ngIf="modoEspera && dia">Esperando vaga para {{ diaPorExtenso(dia.data) }}</span>
+          </div>
+
+          <label for="nome">Seu nome</label>
+          <input id="nome" type="text" autocomplete="name" maxlength="100" [(ngModel)]="nome" name="nome" />
+
+          <label for="telefone">Seu WhatsApp</label>
+          <input id="telefone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999" maxlength="20" [(ngModel)]="telefone" name="telefone" />
+
+          <!-- armadilha: pessoas não veem este campo; robôs preenchem -->
+          <div class="armadilha" aria-hidden="true">
+            <label for="site">Site</label>
+            <input id="site" type="text" tabindex="-1" autocomplete="off" [(ngModel)]="site" name="site" />
+          </div>
+
+          <label class="aceite">
+            <input type="checkbox" [(ngModel)]="aceite" name="aceite" />
+            <span>Aceito receber mensagens do {{ negocio?.nome }} pelo WhatsApp sobre {{ modoEspera ? 'a lista de espera' : 'este agendamento' }}</span>
+          </label>
+          <p class="privacidade">
+            Seus dados ficam só com o {{ negocio?.nome }}.
+            <button type="button" class="link" (click)="mostrarPrivacidade = !mostrarPrivacidade">Política de privacidade</button>
+          </p>
+          <p class="privacidade-texto" *ngIf="mostrarPrivacidade">
+            Usamos o seu nome e o seu WhatsApp só para marcar e lembrar do seu atendimento. Eles não são vendidos nem
+            passados para ninguém. Para apagar os seus dados, peça ao {{ negocio?.nome }} pelo WhatsApp.
+          </p>
+
+          <button type="submit" class="btn-principal" [disabled]="enviando">
+            {{ enviando ? 'Enviando...' : (modoEspera ? 'Entrar na lista de espera' : 'Confirmar agendamento') }}
+          </button>
+        </form>
+
+        <!-- 4. PRONTO -->
+        <ng-container *ngIf="etapa === 'pronto' && servico as s">
+          <div class="pronto">
+            <span class="check">✓</span>
+            <h2>{{ modoEspera ? 'Você está na lista!' : 'Agendado!' }}</h2>
+
+            <div class="resumo-card centro" *ngIf="!modoEspera && dia">
+              <strong>{{ s.nome }} · {{ preco(s.valor) }}</strong>
+              <span>{{ diaPorExtenso(dia.data) }} às {{ horario }}</span>
+              <small>{{ negocio?.nome }}<ng-container *ngIf="negocio?.endereco"> · {{ negocio?.endereco }}</ng-container></small>
+            </div>
+
+            <p class="dica" *ngIf="!modoEspera">
+              Guarde este horário. Para cancelar ou remarcar, fale com o {{ negocio?.nome }} pelo WhatsApp (até 2h antes).
+            </p>
+            <p class="dica" *ngIf="modoEspera">{{ mensagemEspera }}</p>
+
+            <button type="button" class="btn-secundario" *ngIf="!modoEspera" (click)="adicionarAoCalendario()">Adicionar à agenda do celular</button>
+          </div>
+        </ng-container>
+      </section>
+
+      <!-- rodapé fixo com o botão da etapa -->
+      <footer class="rodape">
+        <p *ngIf="etapa === 'servico'">Toque num serviço para continuar</p>
+        <button type="button" class="btn-principal" *ngIf="etapa === 'horario'" [disabled]="!horario" (click)="continuar()">Continuar</button>
+        <button type="button" class="btn-secundario" *ngIf="etapa === 'pronto'" (click)="novoAgendamento()">Fazer outro agendamento</button>
+        <small class="marca">Agendamento online pelo MeuFluxo</small>
+      </footer>
+    </ng-container>
+  </main>
+</div>

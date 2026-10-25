@@ -1,10 +1,10 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { AfterViewInit, Component, ChangeDetectorRef, ElementRef, NgZone, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 
-import { API_URL } from '../../app';
+import { API_URL, guardarLogin, mostrarBotaoGoogle } from '../../app';
 
 @Component({
   selector: 'app-cadastro',
@@ -13,10 +13,14 @@ import { API_URL } from '../../app';
   templateUrl: './cadastro.html',
   styleUrl: './cadastro.css'
 })
-export class Cadastro {
+export class Cadastro implements AfterViewInit {
+  @ViewChild('botaoGoogle') botaoGoogle?: ElementRef<HTMLDivElement>;
+  temGoogle = false;
+
   nome: string = '';
   email: string = '';
   senha: string = '';
+  mostrarSenha = false;
   carregando = false;
   erro: string | null = null;
 
@@ -27,7 +31,28 @@ export class Cadastro {
     return this.senhaTemComprimento && this.senhaTemMaiuscula && this.senhaTemEspecial;
   }
 
-  constructor(private router: Router, private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  constructor(private router: Router, private http: HttpClient, private cdr: ChangeDetectorRef, private zone: NgZone) {}
+
+  /** "Continuar com Google": cria a conta (ou entra, se já existir) sem precisar de senha. */
+  ngAfterViewInit() {
+    const elemento = this.botaoGoogle?.nativeElement;
+    if (!elemento) return;
+    mostrarBotaoGoogle(elemento, this.http, (credential) => this.zone.run(() => {
+      this.erro = null;
+      this.carregando = true;
+      this.http.post<{ usuario: any; token: string }>(`${API_URL}/usuarios/google`, { credential }).subscribe({
+        next: (resposta) => guardarLogin(resposta, this.router),
+        error: (erro) => {
+          this.carregando = false;
+          this.erro = erro?.error?.erro || 'Não foi possível continuar com o Google.';
+          this.cdr.markForCheck();
+        },
+      });
+    })).then((ok) => {
+      this.temGoogle = ok;
+      this.cdr.markForCheck();
+    });
+  }
 
   fazerCadastro(event: Event) {
     event.preventDefault();
@@ -56,11 +81,7 @@ export class Cadastro {
       email: this.email,
       senha: this.senha,
     }).subscribe({
-      next: (resposta) => {
-        localStorage.setItem('meufluxo_token', resposta.token);
-        localStorage.setItem('usuarioLogado', JSON.stringify(resposta.usuario));
-        this.router.navigate(['/tela-inicial']);
-      },
+      next: (resposta) => guardarLogin(resposta, this.router),
       error: (erro) => {
         this.carregando = false;
         this.erro = erro?.error?.erro || 'Não foi possível concluir o cadastro. Tente novamente.';

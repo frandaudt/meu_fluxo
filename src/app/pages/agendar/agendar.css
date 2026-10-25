@@ -1,0 +1,168 @@
+/* Página pública: pensada para celular; no computador vira uma "tela de celular" centralizada */
+.agendar-fundo {
+  min-height: 100vh;
+  display: flex; justify-content: center;
+  background: var(--color-bg);
+}
+.celular {
+  width: 100%; max-width: 480px; min-height: 100vh;
+  display: flex; flex-direction: column;
+  background: var(--color-bg-claro);
+  box-shadow: var(--shadow-md);
+}
+
+/* ===== cabeçalho do negócio ===== */
+.topo {
+  padding: 18px 18px 12px;
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+.negocio { display: flex; align-items: center; gap: 12px; }
+.avatar {
+  width: 44px; height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+  object-fit: cover; /* quando é a foto do Perfil */
+}
+.negocio h1 { margin: 0; font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; }
+.negocio p { margin: 2px 0 0; font-size: 0.8rem; opacity: 0.85; }
+
+.etapas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+.etapas li { display: flex; flex-direction: column; gap: 4px; }
+.barra { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); }
+.etapas li.feita .barra { background: var(--color-white); }
+.rotulo { font-size: 0.68rem; opacity: 0.75; }
+.etapas li.atual .rotulo { font-weight: 700; opacity: 1; }
+
+/* ===== conteúdo ===== */
+.conteudo { flex: 1; padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+.conteudo h2 { margin: 2px 0 6px; font-family: var(--font-display); font-size: 1.25rem; color: var(--color-text); }
+.resumo-linha { margin: -4px 0 4px; font-size: 0.84rem; color: var(--color-text-muted); }
+.vazio, .carregando-pequeno { margin: 6px 0; font-size: 0.86rem; color: var(--color-text-muted); }
+.erro {
+  padding: 10px 12px; border-radius: var(--radius-md);
+  background: var(--color-perigo-claro); color: var(--color-perigo-escuro);
+  font-size: 0.86rem;
+}
+
+.voltar {
+  align-self: flex-start;
+  padding: 4px 0; border: none; background: none;
+  font-family: var(--font-body); font-size: 0.86rem; color: var(--color-text-soft);
+  cursor: pointer;
+}
+
+/* serviços */
+.card-servico {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  width: 100%; min-height: 64px; padding: 14px 16px;
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-white); color: var(--color-text);
+  font-family: var(--font-body); text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+.card-servico:hover, .card-servico:focus-visible { border-color: var(--color-primary); }
+.card-servico span { display: flex; flex-direction: column; gap: 2px; }
+.card-servico strong { font-size: 0.95rem; }
+.card-servico small { font-size: 0.78rem; color: var(--color-text-muted); }
+.preco { white-space: nowrap; }
+
+/* dias e horários */
+.dias { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.dia {
+  flex: 0 0 58px; height: 62px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-white); color: var(--color-text);
+  font-family: var(--font-body); cursor: pointer;
+}
+.dia small { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; }
+.dia strong { font-size: 1.1rem; }
+.dia.ativo { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-white); }
+.dia.lotado { background: var(--color-bg); color: var(--color-text-faint); cursor: not-allowed; }
+
+.horarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+.horario {
+  min-height: 44px;
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-white); color: var(--color-text);
+  font-family: var(--font-body); font-size: 0.92rem; font-weight: 600;
+  cursor: pointer;
+}
+.horario.ativo { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-white); }
+
+.lotado-aviso {
+  padding: 12px; border-radius: var(--radius-md);
+  background: var(--color-white); border: 1px solid var(--color-border);
+  font-size: 0.84rem; color: var(--color-text);
+}
+.link {
+  padding: 0; border: none; background: none;
+  font: inherit; color: var(--color-primary-dark); text-decoration: underline;
+  cursor: pointer;
+}
+
+/* seus dados */
+.form-dados { display: flex; flex-direction: column; gap: 8px; }
+.form-dados label { font-size: 0.82rem; font-weight: 600; color: var(--color-text-soft); margin-top: 4px; }
+.form-dados input[type="text"], .form-dados input[type="tel"] {
+  width: 100%; min-height: 46px; padding: 10px 14px; box-sizing: border-box;
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-white); color: var(--color-text);
+  font-family: var(--font-body); font-size: 1rem; outline: none;
+}
+.form-dados input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-foco); }
+.armadilha { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.aceite { display: flex !important; gap: 10px; align-items: flex-start; font-weight: 500 !important; color: var(--color-text) !important; cursor: pointer; }
+.aceite input { width: 20px; height: 20px; margin: 0; flex-shrink: 0; accent-color: var(--color-primary); }
+.privacidade, .privacidade-texto { margin: 0; font-size: 0.76rem; color: var(--color-text-muted); }
+.form-dados .btn-principal { margin-top: 10px; }
+
+.resumo-card {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 14px; border-radius: var(--radius-lg);
+  background: var(--color-white); border: 1px solid var(--color-border);
+  font-size: 0.9rem; color: var(--color-text);
+}
+.resumo-card.centro { align-items: center; text-align: center; }
+.resumo-card small { font-size: 0.78rem; color: var(--color-text-muted); }
+
+/* pronto */
+.pronto { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 16px; text-align: center; }
+.check {
+  width: 64px; height: 64px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--color-sucesso-claro); color: var(--color-sucesso);
+  font-size: 1.8rem; font-weight: 700;
+}
+.pronto .resumo-card { align-self: stretch; }
+.dica { margin: 0; font-size: 0.82rem; color: var(--color-text-muted); }
+
+/* rodapé com o botão */
+.rodape {
+  position: sticky; bottom: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 16px 14px;
+  background: var(--color-white);
+  border-top: 1px solid var(--color-border);
+}
+.rodape p { margin: 0; font-size: 0.82rem; color: var(--color-text-muted); }
+.marca { font-size: 0.7rem; color: var(--color-text-faint); }
+
+.btn-principal, .btn-secundario {
+  width: 100%; min-height: 48px;
+  border: none; border-radius: var(--radius-md);
+  font-family: var(--font-body); font-size: 0.95rem; font-weight: 600;
+  cursor: pointer;
+}
+.btn-principal { background: var(--color-primary); color: var(--color-white); }
+.btn-principal:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secundario { background: var(--color-bg); color: var(--color-text); }
+
+.carregando { padding: 40px 16px; text-align: center; color: var(--color-text-muted); }
+.pagina-erro { margin: 40px 16px; padding: 16px; border-radius: var(--radius-lg); background: var(--color-white); text-align: center; color: var(--color-text); }
+.pagina-erro p { margin: 6px 0 0; color: var(--color-text-muted); font-size: 0.9rem; }

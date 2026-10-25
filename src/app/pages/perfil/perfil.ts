@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import {
   API_URL,
   Aparencia,
@@ -36,6 +37,9 @@ interface Usuario {
   permissoes: string[];
   foto: string | null;
   aparencia?: Aparencia;
+  trocarSenha?: boolean; // entrou com senha provisória: precisa criar a dele
+  temSenha?: boolean;    // false = conta só do Google (ainda sem senha)
+  temGoogle?: boolean;
 }
 
 /** Uma pessoa da aba Equipe (GET /api/equipe). */
@@ -54,6 +58,16 @@ interface LinhaPermissao {
   area: string;
   permissao: string | null;
   atendentePode: boolean; // vale quando permissao = null
+}
+
+/** Folgas seguidas com o mesmo nome (ex.: 10 dias de férias) aparecem numa linha só. */
+interface GrupoBloqueio {
+  ids: number[];
+  inicio: string;            // 'YYYY-MM-DD'
+  fim: string;               // 'YYYY-MM-DD' (igual ao início quando é um dia só)
+  horaInicio: string | null; // só quando é um período de um dia
+  horaFim: string | null;
+  descricao: string;
 }
 
 /** Um cliente lido da planilha ou do backup (antes de mandar para a API). */
@@ -140,8 +154,10 @@ export class Perfil implements OnInit, OnDestroy {
 
   // folgas e feriados
   formBloqueioAberto = false;
-  formBloqueio = { data: '', descricao: '', diaInteiro: true, horaInicio: '12:00', horaFim: '18:00' };
+  readonly tiposBloqueio = ['Folga', 'Férias', 'Feriado', 'Curso', 'Outro'];
+  formBloqueio = this.formBloqueioVazio();
   erroBloqueio = '';
+  erroCarregarHorario = '';
   avisoBloqueio = '';
   salvandoBloqueio = false;
 
@@ -151,7 +167,7 @@ export class Perfil implements OnInit, OnDestroy {
   equipe: Pessoa[] = [];
   erroEquipe = '';
   mensagemEquipe = '';
-  novoAtendente = { nome: '', email: '', senha: '' };
+  novoAtendente = { nome: '', email: '', senha: '', permissoes: [] as string[] };
   criandoAcesso = false;
   erroNovo = '';
   mostrarSenhaNovo = false;
@@ -176,6 +192,16 @@ export class Perfil implements OnInit, OnDestroy {
     { area: 'Equipe, aparência e excluir conta', permissao: null, atendentePode: false },
   ];
 
+  /** As áreas que o dono escolhe (caixas de marcar). */
+  get permissoesEscolhiveis(): LinhaPermissao[] {
+    return this.linhasPermissao.filter(l => l.permissao);
+  }
+
+  alternarPermissaoNova(permissao: string) {
+    const lista = this.novoAtendente.permissoes;
+    this.novoAtendente.permissoes = lista.includes(permissao) ? lista.filter(p => p !== permissao) : [...lista, permissao];
+  }
+
   get atendentes(): Pessoa[] {
     return this.equipe.filter(p => p.papel === 'atendente');
   }
@@ -188,8 +214,13 @@ export class Perfil implements OnInit, OnDestroy {
   private aparenciaGravada: Aparencia = aparenciaSalva();
   tema: TemaCores = temaDaAparencia(this.aparenciaGravada);
   tamanhoTexto: 'normal' | 'grande' = this.aparenciaGravada.tamanhoTexto;
-  /** Cor do seletor "Cor principal" (Personalizada). */
+  /** Cores dos 3 seletores da Personalizada. */
   corPersonalizada = this.aparenciaGravada.corPrimaria || hexDoTema(this.tema);
+  corAcento = '';
+  corDestaque = '';
+  /** true = a pessoa escolheu a cor; false = calculada pelo círculo cromático a partir da principal. */
+  acentoManual = !!this.aparenciaGravada.corAcento;
+  destaqueManual = !!this.aparenciaGravada.corDestaque;
   salvandoAparencia = false;
   mensagemAparencia = '';
   erroAparencia = '';
@@ -199,7 +230,9 @@ export class Perfil implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
-  ) {}
+  ) {
+    this.iniciarCoresPersonalizadas();
+  }
 
   private cabecalhoAuth(): HttpHeaders {
     const token = localStorage.getItem('meufluxo_token');
@@ -364,6 +397,64 @@ export class Perfil implements OnInit, OnDestroy {
 
   // ---------- senha ----------
 
+  // ---------- criar senha (conta do Google, sem senha) ----------
+  codigoEnviado = false;
+  codigoSenha = '';
+
+  /** Manda o código de 6 números para o e-mail da conta (o mesmo do "Esqueci minha senha"). */
+  enviarCodigoSenha() {
+    this.erroSenha = '';
+    this.salvandoSenha = true;
+    this.http.post<{ mensagem: string }>(`${API_URL}/usuarios/senha/codigo`, { email: this.usuario.email }).subscribe({
+      next: () => {
+        this.salvandoSenha = false;
+        this.codigoEnviado = true;
+        this.mensagemSenha = `Enviamos um código para ${this.usuario.email}.`;
+        this.cdr.markForCheck();
+      },
+      error: (erro) => {
+        this.salvandoSenha = false;
+        this.erroSenha = erro?.error?.erro || 'Não foi possível enviar o código.';
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  criarSenhaComCodigo(event: Event) {
+    event.preventDefault();
+    this.erroSenha = '';
+    if (this.codigoSenha.replace(/\D/g, '').length !== 6) {
+      this.erroSenha = 'Digite o código de 6 números.';
+      return;
+    }
+    if (!this.senhaValida) {
+      this.erroSenha = 'A senha precisa ter pelo menos 8 caracteres, uma letra maiúscula e um caractere especial.';
+      return;
+    }
+    this.salvandoSenha = true;
+    this.http.post<{ usuario: Usuario; token: string }>(`${API_URL}/usuarios/senha/redefinir`, {
+      email: this.usuario.email,
+      codigo: this.codigoSenha,
+      novaSenha: this.novaSenha,
+    }).subscribe({
+      next: ({ usuario, token }) => {
+        this.salvandoSenha = false;
+        localStorage.setItem('meufluxo_token', token);
+        this.usarUsuario(usuario);
+        this.codigoEnviado = false;
+        this.codigoSenha = '';
+        this.novaSenha = '';
+        this.mensagemSenha = 'Senha criada! Agora você também pode entrar com e-mail e senha.';
+        this.cdr.markForCheck();
+      },
+      error: (erro) => {
+        this.salvandoSenha = false;
+        this.erroSenha = erro?.error?.erro || 'Não foi possível criar a senha.';
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
   alterarSenha(event: Event) {
     event.preventDefault();
     this.erroSenha = '';
@@ -389,9 +480,13 @@ export class Perfil implements OnInit, OnDestroy {
         this.novaSenha = '';
         this.mostrarSenhaAtual = false;
         this.mostrarNovaSenha = false;
-        this.mensagemSenha = 'Senha alterada!';
+        // era a senha provisória: libera o resto do sistema
+        const eraProvisoria = !!this.usuario.trocarSenha;
+        this.usarUsuario({ ...this.usuario, trocarSenha: false });
+        this.mensagemSenha = eraProvisoria ? 'Senha criada! Já pode usar o sistema.' : 'Senha alterada!';
         this.cdr.markForCheck();
         setTimeout(() => { this.mensagemSenha = ''; this.cdr.markForCheck(); }, 3000);
+        if (eraProvisoria) setTimeout(() => this.router.navigate(['/tela-inicial']), 1200);
       },
       error: (erro) => {
         this.salvandoSenha = false;
@@ -634,9 +729,14 @@ export class Perfil implements OnInit, OnDestroy {
     this.http.get<unknown>(`${API_URL}/horario-trabalho`, { headers: this.cabecalhoAuth() }).subscribe({
       next: (resposta) => {
         this.horario = normalizarHorarioTrabalho(resposta);
+        this.erroCarregarHorario = '';
         this.cdr.markForCheck();
       },
-      error: (erro) => console.error(erro),
+      error: (erro) => {
+        console.error(erro);
+        this.erroCarregarHorario = erro?.error?.erro || 'Não foi possível carregar o horário de trabalho.';
+        this.cdr.markForCheck();
+      },
     });
   }
 
@@ -727,8 +827,18 @@ export class Perfil implements OnInit, OnDestroy {
     return this.hojeParaArquivo();
   }
 
+  private formBloqueioVazio() {
+    return { tipo: 'Folga', descricao: 'Folga', data: '', dataFim: '', diaInteiro: true, horaInicio: '12:00', horaFim: '18:00' };
+  }
+
+  /** Vários dias (ex.: férias de 20 a 30): sempre o dia inteiro. */
+  get bloqueioVariosDias(): boolean {
+    const f = this.formBloqueio;
+    return !!f.data && !!f.dataFim && f.dataFim > f.data;
+  }
+
   abrirFormBloqueio() {
-    this.formBloqueio = { data: '', descricao: '', diaInteiro: true, horaInicio: '12:00', horaFim: '18:00' };
+    this.formBloqueio = this.formBloqueioVazio();
     this.erroBloqueio = '';
     this.avisoBloqueio = '';
     this.formBloqueioAberto = true;
@@ -738,28 +848,47 @@ export class Perfil implements OnInit, OnDestroy {
     this.formBloqueioAberto = false;
   }
 
+  /** Trocar o tipo preenche o nome (se a pessoa ainda não escreveu outro). */
+  escolherTipoBloqueio(tipo: string) {
+    const f = this.formBloqueio;
+    if (!f.descricao.trim() || this.tiposBloqueio.includes(f.descricao.trim())) {
+      f.descricao = tipo === 'Outro' ? '' : tipo;
+    }
+    f.tipo = tipo;
+  }
+
+  /** Ao mudar o "De", o "Até" não pode ficar antes dele. */
+  aoMudarInicioBloqueio() {
+    const f = this.formBloqueio;
+    if (f.dataFim && f.dataFim < f.data) f.dataFim = f.data;
+  }
+
   salvarBloqueio(event: Event) {
     event.preventDefault();
     this.erroBloqueio = '';
     const f = this.formBloqueio;
+    const fim = f.dataFim || f.data;
     if (!f.data) { this.erroBloqueio = 'Escolha a data.'; return; }
     if (f.data < this.hojeISO) { this.erroBloqueio = 'Essa data já passou.'; return; }
-    if (!f.descricao.trim()) { this.erroBloqueio = 'Dê um nome (ex.: Finados, Férias, Curso).'; return; }
-    if (!f.diaInteiro && this.paraMinutos(f.horaFim) <= this.paraMinutos(f.horaInicio)) {
+    if (fim < f.data) { this.erroBloqueio = 'A data final precisa ser depois da inicial.'; return; }
+    if (!f.descricao.trim()) { this.erroBloqueio = 'Dê um nome (ex.: Férias, Folga, Finados).'; return; }
+    const umPeriodo = !this.bloqueioVariosDias && !f.diaInteiro;
+    if (umPeriodo && this.paraMinutos(f.horaFim) <= this.paraMinutos(f.horaInicio)) {
       this.erroBloqueio = 'A hora final precisa ser depois da inicial.';
       return;
     }
 
     this.salvandoBloqueio = true;
-    this.http.post<{ bloqueio: Bloqueio; agendamentosNoPeriodo: number }>(`${API_URL}/horario-trabalho/bloqueios`, {
+    this.http.post<{ bloqueios: Bloqueio[]; agendamentosNoPeriodo: number }>(`${API_URL}/horario-trabalho/bloqueios`, {
       data: f.data,
+      dataFim: fim,
       descricao: f.descricao.trim(),
-      horaInicio: f.diaInteiro ? null : f.horaInicio,
-      horaFim: f.diaInteiro ? null : f.horaFim,
+      horaInicio: umPeriodo ? f.horaInicio : null,
+      horaFim: umPeriodo ? f.horaFim : null,
     }, { headers: this.cabecalhoAuth() }).subscribe({
-      next: ({ bloqueio, agendamentosNoPeriodo }) => {
+      next: ({ bloqueios, agendamentosNoPeriodo }) => {
         this.salvandoBloqueio = false;
-        this.horario.bloqueios = [...this.horario.bloqueios, bloqueio]
+        this.horario.bloqueios = [...this.horario.bloqueios, ...bloqueios]
           .sort((a, b) => a.data.localeCompare(b.data) || String(a.horaInicio).localeCompare(String(b.horaInicio)));
         this.formBloqueioAberto = false;
         this.avisoBloqueio = agendamentosNoPeriodo > 0
@@ -775,38 +904,69 @@ export class Perfil implements OnInit, OnDestroy {
     });
   }
 
-  removerBloqueio(b: Bloqueio) {
-    if (!confirm(`Remover "${b.descricao}" (${this.diaDoBloqueio(b)}/${this.mesDoBloqueio(b)})? O dia volta a aceitar agendamentos.`)) return;
-    this.http.delete(`${API_URL}/horario-trabalho/bloqueios/${b.id}`, { headers: this.cabecalhoAuth() }).subscribe({
+  /** Junta os dias seguidos de dia inteiro com o mesmo nome (férias de 20 a 30 = uma linha). */
+  get gruposBloqueio(): GrupoBloqueio[] {
+    const grupos: GrupoBloqueio[] = [];
+    for (const b of this.horario.bloqueios) {
+      const ultimo = grupos[grupos.length - 1];
+      const diaInteiro = !b.horaInicio;
+      if (ultimo && diaInteiro && !ultimo.horaInicio && ultimo.descricao === b.descricao && this.diaSeguinte(ultimo.fim) === b.data) {
+        ultimo.fim = b.data;
+        ultimo.ids.push(b.id);
+      } else {
+        grupos.push({ ids: [b.id], inicio: b.data, fim: b.data, horaInicio: b.horaInicio, horaFim: b.horaFim, descricao: b.descricao });
+      }
+    }
+    return grupos;
+  }
+
+  private diaSeguinte(data: string): string {
+    const [ano, mes, dia] = data.split('-').map(Number);
+    const d = new Date(ano, mes - 1, dia + 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  private dataCurtaBloqueio(data: string): string {
+    return `${data.slice(8, 10)}/${data.slice(5, 7)}`;
+  }
+
+  removerGrupo(g: GrupoBloqueio) {
+    const quando = g.inicio === g.fim ? this.dataCurtaBloqueio(g.inicio) : `${this.dataCurtaBloqueio(g.inicio)} a ${this.dataCurtaBloqueio(g.fim)}`;
+    if (!confirm(`Remover "${g.descricao}" (${quando})? Esses dias voltam a aceitar agendamentos.`)) return;
+    forkJoin(g.ids.map(id => this.http.delete(`${API_URL}/horario-trabalho/bloqueios/${id}`, { headers: this.cabecalhoAuth() }))).subscribe({
       next: () => {
-        this.horario.bloqueios = this.horario.bloqueios.filter(x => x.id !== b.id);
+        this.horario.bloqueios = this.horario.bloqueios.filter(x => !g.ids.includes(x.id));
         this.avisoBloqueio = '';
         this.cdr.markForCheck();
       },
       error: (erro) => {
         this.erroBloqueio = erro?.error?.erro || 'Não foi possível remover.';
+        this.carregarHorario(); // recarrega para mostrar o que sobrou
         this.cdr.markForCheck();
       },
     });
   }
 
-  diaDoBloqueio(b: Bloqueio): string {
-    return b.data.slice(8, 10);
+  diaDoGrupo(g: GrupoBloqueio): string {
+    return g.inicio.slice(8, 10);
   }
 
-  mesDoBloqueio(b: Bloqueio): string {
-    return this.mesesCurtos[Number(b.data.slice(5, 7)) - 1];
+  mesDoGrupo(g: GrupoBloqueio): string {
+    return this.mesesCurtos[Number(g.inicio.slice(5, 7)) - 1];
   }
 
-  /** "Dia inteiro" · "Fechado à tarde (12:00 – 18:00)" · "Fechado de manhã (...)" · "Fechado das 10:00 às 11:00" */
-  detalheBloqueio(b: Bloqueio): string {
-    const [ano, mes, dia] = b.data.split('-').map(Number);
+  /** "segunda · dia inteiro" · "20/10 a 30/10 · 11 dias" · "terça · fechado à tarde (12:00 – 18:00)" */
+  detalheGrupo(g: GrupoBloqueio): string {
+    if (g.inicio !== g.fim) {
+      return `${this.dataCurtaBloqueio(g.inicio)} a ${this.dataCurtaBloqueio(g.fim)} · ${g.ids.length} dias`;
+    }
+    const [ano, mes, dia] = g.inicio.split('-').map(Number);
     const semana = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][new Date(ano, mes - 1, dia).getDay()];
-    if (!b.horaInicio || !b.horaFim) return `${semana} · dia inteiro`;
-    const periodo = `${b.horaInicio} – ${b.horaFim}`;
-    if (this.paraMinutos(b.horaInicio) >= 12 * 60) return `${semana} · fechado à tarde (${periodo})`;
-    if (this.paraMinutos(b.horaFim) <= 12 * 60) return `${semana} · fechado de manhã (${periodo})`;
-    return `${semana} · fechado das ${b.horaInicio} às ${b.horaFim}`;
+    if (!g.horaInicio || !g.horaFim) return `${semana} · dia inteiro`;
+    const periodo = `${g.horaInicio} – ${g.horaFim}`;
+    if (this.paraMinutos(g.horaInicio) >= 12 * 60) return `${semana} · fechado à tarde (${periodo})`;
+    if (this.paraMinutos(g.horaFim) <= 12 * 60) return `${semana} · fechado de manhã (${periodo})`;
+    return `${semana} · fechado das ${g.horaInicio} às ${g.horaFim}`;
   }
 
   // =====================================================================
@@ -859,17 +1019,17 @@ export class Perfil implements OnInit, OnDestroy {
     }
 
     this.criandoAcesso = true;
-    // começa só com o básico; o dono marca as caixas na tabela logo abaixo
+    // o que ficou marcado em "O que pode acessar" (dá para mudar depois na tabela)
     this.http.post<{ pessoa: Pessoa }>(`${API_URL}/equipe`, {
       nome: n.nome.trim(),
       email: n.email.trim(),
       senha: n.senha,
-      permissoes: [],
+      permissoes: n.permissoes,
     }, { headers: this.cabecalhoAuth() }).subscribe({
       next: ({ pessoa }) => {
         this.criandoAcesso = false;
         this.equipe = [...this.equipe, pessoa];
-        this.novoAtendente = { nome: '', email: '', senha: '' };
+        this.novoAtendente = { nome: '', email: '', senha: '', permissoes: [] };
         this.mostrarSenhaNovo = false;
         this.mensagemEquipe = `Acesso criado para ${this.primeiroNome(pessoa.nome)}. Passe o e-mail e a senha provisória para ela.`;
         this.cdr.markForCheck();
@@ -977,18 +1137,79 @@ export class Perfil implements OnInit, OnDestroy {
     const h = this.tema.h;
     return [
       { papel: 'Base', angulo: h },
-      { papel: 'Acento', angulo: (h + 150) % 360 },
-      { papel: 'Destaque', angulo: (h + 210) % 360 },
+      { papel: 'Acento', angulo: this.tema.hAcento ?? (h + 150) % 360 },
+      { papel: 'Destaque', angulo: this.tema.hDestaque ?? (h + 210) % 360 },
     ];
   }
 
-  /** Cores que saem da cor escolhida no seletor (o sistema calcula as outras duas). */
-  get coresDaPersonalizada(): { rotulo: string; detalhe: string; cor: string }[] {
-    const t = temaDeHex(this.corPersonalizada);
-    return [
-      { rotulo: 'Cor de acento', detalhe: 'calculada: base + 150°', cor: `hsl(${(t.h + 150) % 360} 45% 56%)` },
-      { rotulo: 'Cor de destaque', detalhe: 'calculada: base + 210°', cor: `hsl(${(t.h + 210) % 360} 34% 45%)` },
-    ];
+  /** Converte HSL em #rrggbb (para mostrar no seletor a cor que o sistema calculou). */
+  private hslParaHex(h: number, s: number, l: number): string {
+    const sat = s / 100;
+    const luz = l / 100;
+    const k = (n: number) => (n + h / 30) % 12;
+    const a = sat * Math.min(luz, 1 - luz);
+    const f = (n: number) => luz - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    const paraHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+    return `#${paraHex(f(0))}${paraHex(f(8))}${paraHex(f(4))}`;
+  }
+
+  /** Acento e destaque: os salvos, ou os calculados pelo círculo cromático a partir da principal. */
+  private iniciarCoresPersonalizadas() {
+    const salva = this.aparenciaGravada;
+    this.corAcento = salva.corAcento || '';
+    this.corDestaque = salva.corDestaque || '';
+    this.recalcularCoresAutomaticas();
+  }
+
+  /** Atualiza nos seletores as cores que estão no automático. */
+  private recalcularCoresAutomaticas() {
+    const h = temaDeHex(this.corPersonalizada).h;
+    if (!this.acentoManual) this.corAcento = this.hslParaHex((h + 150) % 360, 45, 56);
+    if (!this.destaqueManual) this.corDestaque = this.hslParaHex((h + 210) % 360, 34, 45);
+  }
+
+  /** Aplica na hora as 3 cores da Personalizada (a prévia e o sistema mudam juntos). */
+  private aplicarPersonalizada() {
+    this.tema = temaDaAparencia(this.aparenciaEscolhidaPersonalizada());
+    this.mensagemAparencia = '';
+    aplicarTema(this.tema);
+  }
+
+  private aparenciaEscolhidaPersonalizada(): Aparencia {
+    return {
+      paleta: 'personalizada',
+      corPrimaria: this.corPersonalizada.toLowerCase(),
+      corAcento: this.acentoManual ? this.corAcento.toLowerCase() : null,
+      corDestaque: this.destaqueManual ? this.corDestaque.toLowerCase() : null,
+      tamanhoTexto: this.tamanhoTexto,
+    };
+  }
+
+  /** Os 3 seletores mudam o sistema na hora (enquanto arrasta a cor). */
+  mudarCorPrincipal(hex: string) {
+    this.corPersonalizada = hex;
+    this.recalcularCoresAutomaticas();
+    this.aplicarPersonalizada();
+  }
+
+  mudarCorAcento(hex: string) {
+    this.corAcento = hex;
+    this.acentoManual = true;
+    this.aplicarPersonalizada();
+  }
+
+  mudarCorDestaque(hex: string) {
+    this.corDestaque = hex;
+    this.destaqueManual = true;
+    this.aplicarPersonalizada();
+  }
+
+  /** "Calcular pelo círculo cromático": acento e destaque voltam a acompanhar a cor principal. */
+  calcularPeloCirculo() {
+    this.acentoManual = false;
+    this.destaqueManual = false;
+    this.recalcularCoresAutomaticas();
+    this.aplicarPersonalizada();
   }
 
   /** Cor clara demais para texto branco (contraste < 4,5:1). */
@@ -1002,18 +1223,13 @@ export class Perfil implements OnInit, OnDestroy {
     const salva = this.aparenciaGravada;
     return atual.paleta !== salva.paleta
       || (atual.corPrimaria || '') !== (salva.corPrimaria || '')
+      || (atual.corAcento || '') !== (salva.corAcento || '')
+      || (atual.corDestaque || '') !== (salva.corDestaque || '')
       || atual.tamanhoTexto !== salva.tamanhoTexto;
   }
 
   escolherTema(t: TemaCores) {
     this.tema = { ...t };
-    this.mensagemAparencia = '';
-    aplicarTema(this.tema);
-  }
-
-  /** "Usar minhas cores": aplica a cor do seletor. */
-  usarCorPersonalizada() {
-    this.tema = temaDeHex(this.corPersonalizada);
     this.mensagemAparencia = '';
     aplicarTema(this.tema);
   }
@@ -1025,12 +1241,8 @@ export class Perfil implements OnInit, OnDestroy {
   }
 
   private aparenciaEscolhida(): Aparencia {
-    const personalizada = this.tema.id === 'personalizada';
-    return {
-      paleta: this.tema.id,
-      corPrimaria: personalizada ? this.corPersonalizada.toLowerCase() : null,
-      tamanhoTexto: this.tamanhoTexto,
-    };
+    if (this.tema.id === 'personalizada') return this.aparenciaEscolhidaPersonalizada();
+    return { paleta: this.tema.id, corPrimaria: null, corAcento: null, corDestaque: null, tamanhoTexto: this.tamanhoTexto };
   }
 
   salvarAparencia() {
@@ -1059,6 +1271,9 @@ export class Perfil implements OnInit, OnDestroy {
     this.tema = temaDaAparencia(this.aparenciaGravada);
     this.tamanhoTexto = this.aparenciaGravada.tamanhoTexto;
     this.corPersonalizada = this.aparenciaGravada.corPrimaria || hexDoTema(this.tema);
+    this.acentoManual = !!this.aparenciaGravada.corAcento;
+    this.destaqueManual = !!this.aparenciaGravada.corDestaque;
+    this.iniciarCoresPersonalizadas();
     this.mensagemAparencia = '';
     aplicarAparencia(this.aparenciaGravada);
   }

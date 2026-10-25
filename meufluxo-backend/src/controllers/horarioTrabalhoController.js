@@ -142,26 +142,52 @@ async function listarBloqueios(req, res) {
   }
 }
 
-// POST /api/horario-trabalho/bloqueios → { data, descricao, horaInicio, horaFim }
-// horaInicio/horaFim vazios = o dia inteiro fica fechado.
+/** '2026-10-20' + 1 dia → '2026-10-21' (sem fuso: conta só a data). */
+function somarUmDia(data) {
+  const [ano, mes, dia] = data.split('-').map(Number);
+  const d = new Date(Date.UTC(ano, mes - 1, dia + 1));
+  return d.toISOString().slice(0, 10);
+}
+
+// POST /api/horario-trabalho/bloqueios → { data, dataFim, descricao, horaInicio, horaFim }
+// - um dia só: pode ser o dia inteiro ou só um período (horaInicio/horaFim);
+// - vários dias (dataFim depois de data, ex.: férias): cada dia vira uma linha, sempre o dia inteiro.
 async function criarBloqueio(req, res) {
   const { data } = req.body;
+  const dataFim = req.body.dataFim || data;
   const descricao = String(req.body.descricao || '').trim();
-  const horaInicio = req.body.horaInicio || null;
-  const horaFim = req.body.horaFim || null;
+  let horaInicio = req.body.horaInicio || null;
+  let horaFim = req.body.horaFim || null;
 
-  if (!DATA_REGEX.test(String(data || ''))) {
+  if (!DATA_REGEX.test(String(data || '')) || !DATA_REGEX.test(String(dataFim || ''))) {
     return res.status(400).json({ erro: 'Escolha a data.' });
   }
   if (data < hojeBrasilia()) {
     return res.status(400).json({ erro: 'Essa data já passou.' });
   }
+  if (dataFim < data) {
+    return res.status(400).json({ erro: 'A data final precisa ser depois da inicial.' });
+  }
   if (!descricao) {
-    return res.status(400).json({ erro: 'Dê um nome para o bloqueio (ex.: Finados, Férias).' });
+    return res.status(400).json({ erro: 'Dê um nome para o bloqueio (ex.: Férias, Folga, Finados).' });
   }
   if (descricao.length > 150) {
     return res.status(400).json({ erro: 'O nome pode ter no máximo 150 caracteres.' });
   }
+
+  // monta a lista de dias (no máximo 90, para ninguém bloquear o ano inteiro sem querer)
+  const dias = [];
+  for (let d = data; d <= dataFim; d = somarUmDia(d)) {
+    dias.push(d);
+    if (dias.length > 90) {
+      return res.status(400).json({ erro: 'Bloqueie no máximo 90 dias de uma vez.' });
+    }
+  }
+  if (dias.length > 1) {
+    horaInicio = null; // vários dias: sempre o dia inteiro
+    horaFim = null;
+  }
+
   if (!!horaInicio !== !!horaFim) {
     return res.status(400).json({ erro: 'Preencha as duas horas, ou marque "dia inteiro".' });
   }
@@ -170,21 +196,25 @@ async function criarBloqueio(req, res) {
   }
 
   try {
-    const [resultado] = await pool.query(
-      'INSERT INTO bloqueios (usuario_id, data, horario_inicio, horario_fim, motivo) VALUES (?, ?, ?, ?, ?)',
-      [req.usuarioId, data, horaInicio, horaFim, descricao]
-    );
+    const ids = [];
+    for (const dia of dias) {
+      const [resultado] = await pool.query(
+        'INSERT INTO bloqueios (usuario_id, data, horario_inicio, horario_fim, motivo) VALUES (?, ?, ?, ?, ?)',
+        [req.usuarioId, dia, horaInicio, horaFim, descricao]
+      );
+      ids.push(resultado.insertId);
+    }
 
     // avisa se já tem gente marcada no período bloqueado (os agendamentos continuam)
     const [[{ total }]] = await pool.query(
       `SELECT COUNT(*) AS total FROM agendamentos
-        WHERE usuario_id = ? AND data = ? AND status = 'agendado'
+        WHERE usuario_id = ? AND data BETWEEN ? AND ? AND status = 'agendado'
           ${horaInicio ? 'AND horario >= ? AND horario < ?' : ''}`,
-      horaInicio ? [req.usuarioId, data, horaInicio, horaFim] : [req.usuarioId, data]
+      horaInicio ? [req.usuarioId, data, dataFim, horaInicio, horaFim] : [req.usuarioId, data, dataFim]
     );
 
-    const [linhas] = await pool.query('SELECT * FROM bloqueios WHERE id = ?', [resultado.insertId]);
-    res.status(201).json({ bloqueio: formatarBloqueio(linhas[0]), agendamentosNoPeriodo: Number(total) || 0 });
+    const [linhas] = await pool.query('SELECT * FROM bloqueios WHERE id IN (?) ORDER BY data', [ids]);
+    res.status(201).json({ bloqueios: linhas.map(formatarBloqueio), agendamentosNoPeriodo: Number(total) || 0 });
   } catch (erro) {
     console.error(erro);
     res.status(500).json({ erro: 'Erro ao bloquear o dia.' });

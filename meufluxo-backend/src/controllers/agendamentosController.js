@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { avisarVagaLiberada } = require('./listaEsperaController');
 
 const STATUS = ['agendado', 'realizado', 'cancelado', 'nao_compareceu'];
 const FORMAS_PAGAMENTO = ['dinheiro', 'pix', 'debito', 'credito'];
@@ -115,7 +116,7 @@ function formatarAgendamento(linha) {
     // cancelamento
     canceladoPor: linha.cancelado_por,
     motivoCancelamento: linha.motivo_cancelamento || '',
-        // "Enviado ✓" dos lembretes de amanhã (Início)
+    // "Enviado ✓" dos lembretes de amanhã (Início)
     lembreteEnviadoEm: linha.lembrete_enviado_em || null,
   };
 }
@@ -248,6 +249,12 @@ async function atualizar(req, res) {
       );
     }
 
+    // reagendou: o horário antigo ficou livre → avisa se alguém da lista de espera serve
+    if (mudaData || mudaHorario) {
+      const [[cliente]] = await pool.query('SELECT nome FROM clientes WHERE id = ?', [atual.cliente_id]);
+      await avisarVagaLiberada(req.usuarioId, atual.data, String(atual.horario).slice(0, 5), cliente ? `${cliente.nome} remarcou` : null);
+    }
+
     const linha = await buscarAgendamento(id, req.usuarioId);
     res.json({ agendamento: formatarAgendamento(linha) });
   } catch (erro) {
@@ -368,6 +375,10 @@ async function atualizarStatus(req, res) {
           WHERE id = ? AND usuario_id = ?`,
         [agora, canceladoPor, motivo, id, req.usuarioId]
       );
+
+      // o horário ficou livre → avisa se alguém da lista de espera serve (RN-LE1)
+      const [[cliente]] = await pool.query('SELECT nome FROM clientes WHERE id = ?', [atual.cliente_id]);
+      await avisarVagaLiberada(req.usuarioId, atual.data, String(atual.horario).slice(0, 5), cliente ? `${cliente.nome} cancelou` : null);
     }
 
     const linha = await buscarAgendamento(id, req.usuarioId);

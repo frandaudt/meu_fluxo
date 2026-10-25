@@ -7,28 +7,94 @@
       <span class="auth-brand-name">MeuFluxo</span>
     </div>
 
-    <h2 class="auth-heading">Entrar</h2>
-    <p class="subtitle">Entre para continuar organizando o seu negócio</p>
+    <!-- ===== ENTRAR ===== -->
+    <ng-container *ngIf="modo === 'entrar'">
+      <h2 class="auth-heading">Entrar</h2>
+      <p class="subtitle">Entre para continuar organizando o seu negócio</p>
 
-    <form class="auth-form" (ngSubmit)="fazerLogin($event)">
-      <div class="auth-erro" *ngIf="erro">{{ erro }}</div>
+      <form class="auth-form" (ngSubmit)="fazerLogin($event)">
+        <div class="auth-erro" *ngIf="erro">{{ erro }}</div>
 
-      <div class="input-group">
-        <label>E-mail</label>
-        <input type="email" placeholder="seuemail@exemplo.com" [(ngModel)]="email" name="email" required />
+        <div class="input-group">
+          <label for="email">E-mail</label>
+          <input id="email" type="email" placeholder="seuemail@exemplo.com" [(ngModel)]="email" name="email" autocomplete="email" required />
+        </div>
+        <div class="input-group">
+          <label for="senha">Senha</label>
+          <div class="campo-senha">
+            <input id="senha" [type]="mostrarSenha ? 'text' : 'password'" placeholder="••••••••" [(ngModel)]="senha" name="senha" autocomplete="current-password" required />
+            <button type="button" class="btn-olho" (click)="mostrarSenha = !mostrarSenha" [title]="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'" [attr.aria-label]="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'">
+              <span class="icone notranslate" translate="no" aria-hidden="true">{{ mostrarSenha ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+          <button type="button" class="link-esqueci" (click)="irPara('email')">Esqueci minha senha</button>
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="carregando">
+          {{ carregando ? 'Entrando...' : 'Entrar' }}
+        </button>
+      </form>
+
+      <!-- "Continuar com Google" (só aparece quando estiver configurado) -->
+      <div class="separador" *ngIf="temGoogle"><span>ou</span></div>
+      <div #botaoGoogle class="botao-google"></div>
+
+      <div class="auth-footer">
+        Ainda não tem conta? <a routerLink="/cadastro">Criar uma conta</a>
       </div>
-      <div class="input-group">
-        <label>Senha</label>
-        <input type="password" placeholder="••••••••" [(ngModel)]="senha" name="senha" required />
+    </ng-container>
+
+    <!-- ===== ESQUECI MINHA SENHA: e-mail ===== -->
+    <ng-container *ngIf="modo === 'email'">
+      <h2 class="auth-heading">Esqueci minha senha</h2>
+      <p class="subtitle">Digite o e-mail da sua conta. Vamos mandar um código de 6 números para você criar uma senha nova.</p>
+
+      <form class="auth-form" (ngSubmit)="enviarCodigo($event)">
+        <div class="auth-erro" *ngIf="erro">{{ erro }}</div>
+        <div class="input-group">
+          <label for="emailRec">E-mail</label>
+          <input id="emailRec" type="email" placeholder="seuemail@exemplo.com" [(ngModel)]="email" name="emailRec" autocomplete="email" />
+        </div>
+        <button type="submit" class="btn-primary" [disabled]="carregando">{{ carregando ? 'Enviando...' : 'Enviar código' }}</button>
+      </form>
+
+      <div class="auth-footer">
+        <button type="button" class="link-voltar" (click)="irPara('entrar')">‹ Voltar para o login</button>
       </div>
+    </ng-container>
 
-      <button type="submit" class="btn-primary" [disabled]="carregando">
-        {{ carregando ? 'Entrando...' : 'Entrar' }}
-      </button>
-    </form>
+    <!-- ===== ESQUECI MINHA SENHA: código + senha nova ===== -->
+    <ng-container *ngIf="modo === 'codigo'">
+      <h2 class="auth-heading">Criar senha nova</h2>
+      <p class="subtitle">{{ aviso }}</p>
 
-    <div class="auth-footer">
-      Ainda não tem conta? <a routerLink="/cadastro">Criar uma conta</a>
-    </div>
+      <form class="auth-form" (ngSubmit)="redefinir($event)">
+        <div class="auth-erro" *ngIf="erro">{{ erro }}</div>
+        <div class="input-group">
+          <label for="codigo">Código (6 números)</label>
+          <input id="codigo" class="campo-codigo" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" [(ngModel)]="codigo" name="codigo" />
+        </div>
+        <div class="input-group">
+          <label for="novaSenha">Nova senha</label>
+          <div class="campo-senha">
+            <input id="novaSenha" [type]="mostrarNovaSenha ? 'text' : 'password'" [(ngModel)]="novaSenha" name="novaSenha" autocomplete="new-password" />
+            <button type="button" class="btn-olho" (click)="mostrarNovaSenha = !mostrarNovaSenha" [attr.aria-label]="mostrarNovaSenha ? 'Ocultar senha' : 'Mostrar senha'">
+              <span class="icone notranslate" translate="no" aria-hidden="true">{{ mostrarNovaSenha ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+          <ul class="checklist-senha">
+            <li [class.ok]="senhaTemComprimento">{{ senhaTemComprimento ? '✓' : '○' }} Pelo menos 8 caracteres</li>
+            <li [class.ok]="senhaTemMaiuscula">{{ senhaTemMaiuscula ? '✓' : '○' }} Uma letra maiúscula</li>
+            <li [class.ok]="senhaTemEspecial">{{ senhaTemEspecial ? '✓' : '○' }} Um caractere especial</li>
+          </ul>
+        </div>
+        <button type="submit" class="btn-primary" [disabled]="carregando">{{ carregando ? 'Salvando...' : 'Salvar e entrar' }}</button>
+      </form>
+
+      <div class="auth-footer">
+        Não chegou? <button type="button" class="link-voltar" (click)="enviarCodigo()" [disabled]="carregando">Enviar de novo</button>
+        · <button type="button" class="link-voltar" (click)="irPara('entrar')">Voltar</button>
+      </div>
+    </ng-container>
   </div>
 </div>
