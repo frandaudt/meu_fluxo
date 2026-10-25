@@ -6,9 +6,14 @@
 // O que faz:
 //  - apaga a conta demo anterior (só ela: as outras contas não são tocadas);
 //  - cria um salão completo, com as datas contadas a partir de HOJE:
-//    ~10 semanas de histórico, a agenda dos próximos dias, clientes fiéis,
+//    6 meses de histórico, a agenda dos próximos dias, clientes fiéis,
 //    novos e em risco, lista de espera, folga, despesas, metas, avisos e
-//    uma atendente.
+//    uma atendente;
+//  - 3 clientes com o WhatsApp de verdade da equipe, cada um num caso:
+//      Leonardo Lameu  → tem horário AMANHÃ (Lembretes de amanhã, e pelo bot: cancelar/remarcar)
+//      Pyetra Henrique → cliente EM RISCO (Sentimos sua falta / Chamar no WhatsApp)
+//      Mateus Maia     → 1º da LISTA DE ESPERA para a vaga de amanhã (Avisar pelo WhatsApp)
+//                        e atendido no último dia (Agradecer pelo WhatsApp, na Agenda)
 // Rode de novo no dia da apresentação para os dados ficarem "frescos".
 //
 // Entrar:  demo@meufluxo.com      / Demo@2026   (dona)
@@ -41,6 +46,7 @@ const SERVICOS = [
   { nome: 'Manicure', categoria: 'Unhas', valor: 35, duracao: 45 },
   { nome: 'Pedicure', categoria: 'Unhas', valor: 40, duracao: 45 },
   { nome: 'Design de sobrancelha', categoria: 'Sobrancelha', valor: 45, duracao: 30 },
+  { nome: 'Corte masculino', categoria: 'Cabelo', valor: 50, duracao: 45 },
 ];
 
 // perfil: fiel (vem a cada N dias), ocasional, risco (vinha sempre e sumiu),
@@ -68,6 +74,10 @@ const CLIENTES = [
   ['Letícia Araújo', 'novo', 0, 'Manicure', 'whatsapp'],
   ['Priscila Mendes', 'novo', 0, 'Escova', 'sistema'],
   ['Natália Pires', 'novo', 0, 'Corte feminino', 'whatsapp'],
+  // equipe: telefones de verdade, para mostrar os botões de WhatsApp e o bot na banca
+  ['Leonardo Lameu', 'fiel', 21, 'Corte masculino', 'whatsapp', '(11) 99921-2648'],
+  ['Pyetra Henrique', 'risco', 21, 'Manicure', 'sistema', '(11) 97890-2091'],
+  ['Mateus Maia', 'fiel', 28, 'Corte masculino', 'link', '(11) 99356-7599'],
 ];
 
 // ---------------------------------------------------------------------
@@ -198,20 +208,20 @@ async function criar() {
     const diaDoMes = Number(HOJE.slice(8, 10));
     let novos = 0;
     for (let i = 0; i < CLIENTES.length; i++) {
-      const [nome, perfil, cada, favorito, origem] = CLIENTES[i];
+      const [nome, perfil, cada, favorito, origem, telefoneEquipe] = CLIENTES[i];
       // novos: cadastrados neste mês (contam na meta "clientes novos")
       const desde = perfil === 'novo'
         ? somarDias(HOJE, -Math.min(++novos, diaDoMes - 1))
-        : somarDias(HOJE, -(120 + i * 9));
-      const telefone = `(11) 9${String(8100 + i * 37).padStart(4, '0')}-${String(1000 + i * 211).slice(-4)}`;
+        : somarDias(HOJE, -(200 + i * 5));
+      const telefone = telefoneEquipe || `(11) 9${String(8100 + i * 37).padStart(4, '0')}-${String(1000 + i * 211).slice(-4)}`;
       const [r] = await conexao.query(
         'INSERT INTO clientes (usuario_id, nome, telefone, email, endereco, origem, criado_em) VALUES (?, ?, ?, NULL, NULL, ?, ?)',
         [donaId, nome, telefone, origem, `${desde} 10:00:00`]
       );
-      clientes.push({ id: r.insertId, nome, perfil, cada, favorito, origem, desde });
+      clientes.push({ id: r.insertId, nome, perfil, cada, favorito, origem, desde, equipe: Boolean(telefoneEquipe) });
     }
 
-    // ---------- atendimentos: passado (≈10 semanas) e próximos dias ----------
+    // ---------- atendimentos: passado (≈6 meses) e próximos dias ----------
     const atendimentos = [];
     const marcar = (cliente, servicoNome, dataDesejada, extra = {}) => {
       const servico = servicos[servicoNome];
@@ -227,12 +237,12 @@ async function criar() {
       if (c.perfil === 'fiel' || c.perfil === 'ocasional') {
         // última visita há poucos dias, e daí para trás no ritmo do cliente
         let data = somarDias(HOJE, -Math.floor(aleatorio() * c.cada));
-        while (data > somarDias(HOJE, -72)) {
+        while (data > somarDias(HOJE, -180)) {
           if (data < HOJE) marcar(c, outroServico(c.favorito), data);
           data = somarDias(data, -(c.cada + Math.floor(aleatorio() * 5) - 2));
         }
-        // fiéis já têm o próximo horário marcado
-        if (c.perfil === 'fiel') {
+        // fiéis já têm o próximo horário marcado (os da equipe são marcados abaixo, em dia certo)
+        if (c.perfil === 'fiel' && !c.equipe) {
           const ultima = atendimentos.filter(a => a.cliente === c).map(a => a.data).sort().pop() || HOJE;
           let proxima = somarDias(ultima, c.cada);
           if (proxima <= HOJE) proxima = somarDias(HOJE, 1 + Math.floor(aleatorio() * 6));
@@ -242,13 +252,18 @@ async function criar() {
       if (c.perfil === 'risco') {
         // vinha no ritmo certinho e parou há uns 50 dias
         let data = somarDias(HOJE, -(48 + Math.floor(aleatorio() * 8)));
-        for (let k = 0; k < 4; k++) {
-          marcar(c, c.favorito, data);
+        for (let k = 0; k < 5; k++) {
+          marcar(c, c.favorito, data, { forcarRealizado: true });
           data = somarDias(data, -c.cada);
         }
       }
       if (c.perfil === 'inativo') {
-        marcar(c, c.favorito, somarDias(HOJE, -(100 + Math.floor(aleatorio() * 30))));
+        // vinha de vez em quando e sumiu há uns 4 meses
+        let data = somarDias(HOJE, -(110 + Math.floor(aleatorio() * 20)));
+        for (let k = 0; k < 3; k++) {
+          marcar(c, c.favorito, data);
+          data = somarDias(data, -c.cada);
+        }
       }
       if (c.perfil === 'novo') {
         // primeira visita logo depois do cadastro; metade já marcou a próxima
@@ -259,12 +274,15 @@ async function criar() {
 
     // completa os dias com clientes fiéis e ocasionais que "passaram" a mais
     // (passado: 4 a 7 por dia; próximos dias: vai esvaziando, como numa agenda de verdade)
-    const frequentes = clientes.filter(c => c.perfil === 'fiel' || c.perfil === 'ocasional');
-    for (let n = -70; n <= 14; n++) {
+    // (os da equipe ficam de fora, para cada um mostrar só o seu caso)
+    const frequentes = clientes.filter(c => (c.perfil === 'fiel' || c.perfil === 'ocasional') && !c.equipe);
+    for (let n = -180; n <= 14; n++) {
       const data = somarDias(HOJE, n);
       if (!abre(data)) continue;
       const sabado = diaSemana(data) === 6;
-      const alvo = n < 0 ? (sabado ? 3 : 4) + Math.floor(aleatorio() * 4)
+      // o salão foi crescendo: há 4–6 meses, um pouco menos de movimento
+      const alvo = n < -120 ? (sabado ? 2 : 3) + Math.floor(aleatorio() * 3)
+        : n < 0 ? (sabado ? 3 : 4) + Math.floor(aleatorio() * 4)
         : n <= 2 ? 3 + Math.floor(aleatorio() * 3)
         : n <= 7 ? 1 + Math.floor(aleatorio() * 3)
         : Math.floor(aleatorio() * 2);
@@ -285,6 +303,19 @@ async function criar() {
       marcar(c, c.favorito, amanha);
     }
 
+    // ---------- os 3 casos da equipe ----------
+    const equipe = (nome) => clientes.find(c => c.nome === nome);
+    // Leonardo: horário amanhã à tarde (mais de 2h de antecedência: dá para cancelar/remarcar pelo bot)
+    marcar(equipe('Leonardo Lameu'), 'Corte masculino', amanha, { equipe: true });
+    // Mateus: atendido no último dia de trabalho antes de hoje (botão "Agradecer" na Agenda)
+    let ontem = somarDias(HOJE, -1);
+    while (!abre(ontem)) ontem = somarDias(ontem, -1);
+    marcar(equipe('Mateus Maia'), 'Corte masculino', ontem, { forcarRealizado: true, equipe: true });
+    // histórico dos dois sempre como atendimento realizado (para aparecerem como fiéis)
+    for (const a of atendimentos) {
+      if (a.cliente.equipe && a.data < HOJE) a.forcarRealizado = true;
+    }
+
     // status de cada atendimento
     const agoraMin = paraMin(agora.slice(11, 16));
     for (const a of atendimentos) {
@@ -296,7 +327,7 @@ async function criar() {
         a.status = 'agendado';
         continue;
       }
-      const sorte = aleatorio();
+      const sorte = a.forcarRealizado ? 1 : aleatorio();
       if (sorte < 0.05) {
         a.status = 'nao_compareceu';
       } else if (sorte < 0.11) {
@@ -325,7 +356,7 @@ async function criar() {
     // amanhã: a primeira cliente da manhã cancelou → abre vaga para a lista de espera
     const cancelouAmanha = atendimentos
       // de manhã e com tempo para a manicure de quem está esperando (45 min)
-      .filter(a => a.data === amanha && a.status === 'agendado' && paraMin(a.horario) < 12 * 60 && a.servico.duracao >= 45)
+      .filter(a => a.data === amanha && a.status === 'agendado' && !a.cliente.equipe && paraMin(a.horario) < 12 * 60 && a.servico.duracao >= 45)
       .sort((x, y) => x.horario.localeCompare(y.horario))[0];
     if (cancelouAmanha) {
       cancelouAmanha.status = 'cancelado';
@@ -362,7 +393,8 @@ async function criar() {
         [donaId, c.id, servicos[servicoNome].id, dataPreferida, periodo, observacao, origem, status, agendamentoId, `${criado} 09:30:00`]
       );
     };
-    await espera(cliente('Letícia Araújo'), 'Manicure', amanha, 'manha', 'whatsapp', 'aguardando', somarDias(HOJE, -2));
+    await espera(cliente('Mateus Maia'), 'Corte masculino', amanha, 'manha', 'whatsapp', 'aguardando', somarDias(HOJE, -3));
+    await espera(cliente('Letícia Araújo'), 'Manicure', somarDias(amanha, 3), 'tarde', 'whatsapp', 'aguardando', somarDias(HOJE, -2));
     await espera(cliente('Vanessa Rocha'), 'Escova', null, 'tarde', 'link', 'aguardando', somarDias(HOJE, -1));
     await espera(cliente('Aline Ferreira'), 'Design de sobrancelha', somarDias(amanha, 2), 'qualquer', 'sistema', 'aguardando', HOJE, null, 'Pode ser em qualquer horário');
     const encaixado = atendimentos.find(a => a.cliente.nome === 'Juliana Prado' && a.data < HOJE && a.status === 'realizado');
@@ -373,7 +405,7 @@ async function criar() {
     const dia = (d) => `${['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][diaSemana(d)]} ${d.slice(8, 10)}/${d.slice(5, 7)}`;
     const avisos = [];
     if (cancelouAmanha) {
-      avisos.push(['Vaga liberada', `Vaga liberada: ${dia(amanha)} às ${cancelouAmanha.horario} (${cancelouAmanha.cliente.nome} cancelou). Letícia Araújo é a 1ª da lista de espera para esse horário.`, 'vaga_liberada']);
+      avisos.push(['Vaga liberada', `Vaga liberada: ${dia(amanha)} às ${cancelouAmanha.horario} (${cancelouAmanha.cliente.nome} cancelou). Mateus Maia é o 1º da lista de espera para esse horário.`, 'vaga_liberada']);
     }
     avisos.push(['Novo cliente pelo WhatsApp', 'Natália Pires falou com o bot e foi cadastrada com o telefone do WhatsApp.', 'novo_cliente_bot']);
     const peloLink = atendimentos.find(a => a.status === 'agendado' && a.data > HOJE && a.cliente.origem === 'link');
@@ -387,10 +419,10 @@ async function criar() {
     }
 
     // ---------- despesas (mês atual e os 2 anteriores) ----------
-    for (let m = 0; m < 3; m++) {
+    for (let m = 0; m < 6; m++) {
       const [a, mm] = HOJE.split('-').map(Number);
       const ref = new Date(Date.UTC(a, mm - 1 - m, 1)).toISOString().slice(0, 10);
-      const fixas = [['Aluguel', 1500], ['Energia elétrica', 230 + m * 15], ['Internet', 120], ['Produtos e materiais', 640 - m * 40]];
+      const fixas = [['Aluguel', 1500], ['Energia elétrica', 230 + (m % 3) * 15], ['Internet', 120], ['Produtos e materiais', 640 - (m % 3) * 40]];
       for (const [descricao, valor] of fixas) {
         await conexao.query("INSERT INTO despesas (usuario_id, descricao, valor, tipo, mes) VALUES (?, ?, ?, 'fixa', ?)", [donaId, descricao, valor, ref]);
       }
@@ -411,7 +443,8 @@ async function criar() {
     console.log('\nConta de demonstração criada! ✔');
     console.log(`  ${clientes.length} clientes, ${SERVICOS.length} serviços, ${atendimentos.length} atendimentos`);
     console.log(`  (${contar('realizado')} realizados, ${contar('agendado')} agendados, ${contar('cancelado')} cancelados, ${contar('nao_compareceu')} faltas)`);
-    console.log(`  folga em ${FOLGA}, lista de espera com 3 pessoas aguardando`);
+    console.log(`  folga em ${FOLGA}, lista de espera com 4 pessoas aguardando`);
+    console.log('  equipe: Leonardo (horário amanhã), Pyetra (em risco), Mateus (1º da lista de espera + atendido ontem)');
     console.log(`\n  Dona:      ${DONA.email} / ${DONA.senha}`);
     console.log(`  Atendente: ${ATENDENTE.email} / ${ATENDENTE.senha}\n`);
   } catch (erro) {
