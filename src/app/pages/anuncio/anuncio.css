@@ -313,7 +313,16 @@
 .anuncio-footer a { color: var(--color-text-muted); text-decoration: none; font-size: 0.85rem; }
 .anuncio-footer a:hover { text-decoration: underline; }
 
+/* política de privacidade */
+.privacidade { max-width: 760px; margin: 0 auto; padding: 56px 60px 64px; }
+.privacidade h2 { margin: 0 0 4px; font-family: var(--font-display); font-size: 1.5rem; color: var(--color-text); }
+.privacidade-atualizacao { margin: 0 0 20px; font-size: 0.8rem; color: var(--color-text-muted); }
+.privacidade h3 { margin: 20px 0 6px; font-size: 1rem; color: var(--color-text); }
+.privacidade p { margin: 0; font-size: 0.9rem; line-height: 1.6; color: var(--color-text-soft); }
+.privacidade a { color: var(--color-primary-dark); }
+
 @media (max-width: 900px) {
+  .privacidade { padding-left: 24px; padding-right: 24px; }
   .anuncio-nav, .hero, .funcionalidades, .cta-final, .anuncio-footer { padding-left: 24px; padding-right: 24px; }
   .hero { flex-direction: column; }
   .hero-visual { width: 100%; }
