@@ -202,17 +202,23 @@
 }
 .funcionalidade-item.aberto { box-shadow: var(--shadow-md); }
 
+/* módulos seguem a harmonia: base (sálvia), acento (lavanda) e destaque (orquídea) */
 .funcionalidade-item.cor-agenda { border-left-color: var(--color-acento); }
 .funcionalidade-item.cor-clientes { border-left-color: var(--color-destaque); }
 .funcionalidade-item.cor-servicos { border-left-color: var(--color-primary); }
 .funcionalidade-item.cor-financeiro { border-left-color: var(--color-primary-dark); }
 .funcionalidade-item.cor-metas { border-left-color: var(--color-acento-escuro); }
+.funcionalidade-item.cor-lista { border-left-color: var(--color-destaque); }
+.funcionalidade-item.cor-whatsapp { border-left-color: #25d366; }
 
+/* ícone de cada módulo com a mesma cor da borda */
 .cor-agenda .funcionalidade-icone-img { color: var(--color-acento); }
 .cor-clientes .funcionalidade-icone-img { color: var(--color-destaque); }
 .cor-servicos .funcionalidade-icone-img { color: var(--color-primary); }
 .cor-financeiro .funcionalidade-icone-img { color: var(--color-primary-dark); }
 .cor-metas .funcionalidade-icone-img { color: var(--color-acento-escuro); }
+.cor-lista .funcionalidade-icone-img { color: var(--color-destaque); }
+.cor-whatsapp .funcionalidade-icone-img { color: #1ebe5a; }
 
 .funcionalidade-cabecalho {
   width: 100%;
@@ -315,6 +321,10 @@
 }
 
 @media (max-width: 640px) {
+  .anuncio-nav { gap: 12px; }
+  .anuncio-nav-links a:not(.btn-primary):not(.nav-entrar) { display: none; }
+  .hero-texto h1 { font-size: 1.9rem; }
+  .hero-ctas { flex-direction: column; }
   .funcionalidade-conteudo-inner { flex-direction: column; align-items: stretch; }
   .funcionalidade-print { max-width: 100%; }
 }
