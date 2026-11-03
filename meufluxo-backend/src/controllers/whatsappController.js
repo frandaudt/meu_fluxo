@@ -827,14 +827,24 @@ async function negocioDoNumero() {
   return n || null;
 }
 
+/** Brasil: o WhatsApp às vezes manda o celular sem o 9 (55 + DDD + 8 dígitos). Devolve com o 9. */
+function numeroParaEnvio(numero) {
+  const d = String(numero).replace(/\D/g, '');
+  if (d.length === 12 && d.startsWith('55') && /[6-9]/.test(d[4])) return d.slice(0, 4) + '9' + d.slice(4);
+  return d;
+}
+
 /** Manda um texto pelo WhatsApp (API Cloud da Meta). */
 async function enviarWhatsapp(para, texto) {
-  const resposta = await fetch(`https://graph.facebook.com/${VERSAO_API}/${process.env.WHATSAPP_PHONE_ID}/messages`, {
+  const destino = numeroParaEnvio(para);
+  const token = String(process.env.WHATSAPP_TOKEN || '').trim();
+  const resposta = await fetch(`https://graph.facebook.com/${VERSAO_API}/${String(process.env.WHATSAPP_PHONE_ID || '').trim()}/messages`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messaging_product: 'whatsapp', to: para, type: 'text', text: { body: texto } }),
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messaging_product: 'whatsapp', to: destino, type: 'text', text: { body: texto } }),
   });
   if (!resposta.ok) throw new Error(`Meta respondeu ${resposta.status}: ${await resposta.text()}`);
+  console.log(`[WhatsApp] resposta enviada para o final ${destino.slice(-4)}.`);
 }
 
 // a Meta às vezes manda a mesma mensagem duas vezes: guarda as últimas para não responder em dobro
@@ -853,6 +863,24 @@ async function receberWebhook(req, res) {
     for (const entrada of req.body.entry || []) {
       for (const mudanca of entrada.changes || []) {
         for (const m of mudanca.value?.messages || []) mensagens.push(m);
+        // a Meta avisa depois se não conseguiu entregar uma resposta
+        for (const s of mudanca.value?.statuses || []) {
+          if (s.status === 'failed') {
+            console.warn(`[WhatsApp] a Meta não entregou a mensagem para o final ${String(s.recipient_id).slice(-4)}:`, JSON.stringify(s.errors || []));
+          }
+        }
+        // a Meta avisa depois se não conseguiu entregar uma resposta
+        for (const s of mudanca.value?.statuses || []) {
+          if (s.status === 'failed') {
+            console.warn(`[WhatsApp] a Meta não entregou a mensagem para o final ${String(s.recipient_id).slice(-4)}:`, JSON.stringify(s.errors || []));
+          }
+        }
+        // a Meta avisa depois se não conseguiu entregar uma resposta
+        for (const s of mudanca.value?.statuses || []) {
+          if (s.status === 'failed') {
+            console.warn(`[WhatsApp] a Meta não entregou a mensagem para o final ${String(s.recipient_id).slice(-4)}:`, JSON.stringify(s.errors || []));
+          }
+        }
       }
     }
     if (mensagens.length === 0) return; // avisos de "entregue", "lido"...
