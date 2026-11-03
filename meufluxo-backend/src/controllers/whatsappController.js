@@ -945,39 +945,68 @@ function escaparXml(texto) {
     .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
+//** Manda um texto pelo WhatsApp usando a API da Twilio. */
+async function enviarTwilio(para, texto) {
+  const sid = String(process.env.TWILIO_ACCOUNT_SID || '').trim();
+  const token = String(process.env.TWILIO_AUTH_TOKEN || '').trim();
+  const de = String(process.env.TWILIO_WHATSAPP_FROM || '').trim();
+  const resposta = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({ From: de, To: para, Body: texto }),
+  });
+  if (!resposta.ok) throw new Error(`Twilio respondeu ${resposta.status}: ${await resposta.text()}`);
+}
+
+/** Manda um texto pelo WhatsApp usando a API da Twilio. */
+async function enviarTwilio(para, texto) {
+  const sid = String(process.env.TWILIO_ACCOUNT_SID || '').trim();
+  const token = String(process.env.TWILIO_AUTH_TOKEN || '').trim();
+  const de = String(process.env.TWILIO_WHATSAPP_FROM || '').trim();
+  const resposta = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({ From: de, To: para, Body: texto }),
+  });
+  if (!resposta.ok) throw new Error(`Twilio respondeu ${resposta.status}: ${await resposta.text()}`);
+}
+
 // POST /api/whatsapp/twilio → mensagem de um cliente pelo sandbox da Twilio
-// A resposta volta na própria resposta HTTP (TwiML), sem precisar de outra chamada.
+// Responde logo para a Twilio e manda as respostas do bot pela API dela.
 async function receberTwilio(req, res) {
   if (!assinaturaTwilioValida(req)) return res.sendStatus(403);
+  res.type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
 
-  const responderXml = (textos) => {
-    const corpo = textos.map(t => `<Message>${escaparXml(t)}</Message>`).join('');
-    res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response>${corpo}</Response>`);
-  };
-
+  const de = String(req.body.From || '');              // ex.: whatsapp:+5511999999999
+  const telefone = de.replace(/\D/g, '');
+  const texto = String(req.body.Body || '').trim();
   try {
-    const telefone = String(req.body.From || '').replace(/\D/g, '');
-    const texto = String(req.body.Body || '').trim();
     console.log(`[Twilio] mensagem recebida do final ${telefone.slice(-4)}.`);
 
     const negocio = await negocioDoNumero();
     if (!negocio) {
       console.warn('[Twilio] nenhum salão com o bot ligado.');
-      return responderXml([]);
+      return;
     }
     const { ativo } = await lerConfig(negocio.id);
     if (!ativo) {
       console.warn(`[Twilio] o bot do salão ${negocio.id} está desligado.`);
-      return responderXml([]);
+      return;
     }
-    if (!texto) return responderXml(['Por enquanto eu só entendo mensagens de texto 🙂 Responda MENU.']);
 
-    const respostas = await responder(negocio, telefone, texto);
-    console.log(`[Twilio] ${respostas.length} resposta(s) enviada(s).`);
-    responderXml(respostas);
+    const respostas = texto
+      ? await responder(negocio, telefone, texto)
+      : ['Por enquanto eu só entendo mensagens de texto 🙂 Responda MENU.'];
+    for (const r of respostas) await enviarTwilio(de, r);
+    console.log(`[Twilio] ${respostas.length} resposta(s) enviada(s) para o final ${telefone.slice(-4)}.`);
   } catch (erro) {
     console.error('[Twilio] erro ao responder:', erro);
-    responderXml(['Tive um problema agora. Tente de novo em instantes.']);
   }
 }
 
