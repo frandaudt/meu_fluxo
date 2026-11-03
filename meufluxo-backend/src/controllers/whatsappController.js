@@ -956,7 +956,12 @@ async function enviarTwilio(para, texto, remetente) {
       Authorization: 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: new URLSearchParams({ From: de, To: para, Body: texto }),
+    // contas de teste novas da Twilio só aceitam modelo: o texto do bot vai como variável {{1}}
+    body: new URLSearchParams(
+      process.env.TWILIO_CONTENT_SID
+        ? { From: de, To: para, ContentSid: process.env.TWILIO_CONTENT_SID.trim(), ContentVariables: JSON.stringify({ 1: texto }) }
+        : { From: de, To: para, Body: texto }
+    ),
   });
   if (!resposta.ok) throw new Error(`Twilio respondeu ${resposta.status}: ${await resposta.text()}`);
 }
