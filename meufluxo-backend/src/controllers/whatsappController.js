@@ -946,7 +946,24 @@ async function enviarTwilio(para, texto, remetente) {
         : { From: de, To: para, Body: texto }
     ),
   });
-  if (!resposta.ok) throw new Error(`Twilio respondeu ${resposta.status}: ${await resposta.text()}`);
+  if (!resposta.ok) {
+    const erro = await resposta.text();
+    // ajuda a achar o problema: mostra no log quais modelos existem nesta conta
+    if (erro.includes('21655')) {
+      try {
+        const lista = await fetch('https://content.twilio.com/v1/Content?PageSize=20', {
+          headers: { Authorization: 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64') },
+        });
+        const dados = await lista.json();
+        const modelos = (dados.contents || []).map(c => `${c.friendly_name} = ${c.sid}`);
+        const usado = String(process.env.TWILIO_CONTENT_SID || '').trim();
+        console.warn(`[Twilio] SID usado: ${usado} (${usado.length} caracteres). Modelos da conta: ${modelos.join(' | ') || 'nenhum'}`);
+      } catch (e) {
+        console.warn('[Twilio] não consegui listar os modelos:', e.message);
+      }
+    }
+    throw new Error(`Twilio respondeu ${resposta.status}: ${erro}`);
+  }
 }
 
 // POST /api/whatsapp/twilio → mensagem de um cliente pelo sandbox da Twilio
