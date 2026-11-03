@@ -946,10 +946,10 @@ function escaparXml(texto) {
 }
 
 //** Manda um texto pelo WhatsApp usando a API da Twilio. */
-async function enviarTwilio(para, texto) {
+async function enviarTwilio(para, texto, remetente) {
   const sid = String(process.env.TWILIO_ACCOUNT_SID || '').trim();
   const token = String(process.env.TWILIO_AUTH_TOKEN || '').trim();
-  const de = String(process.env.TWILIO_WHATSAPP_FROM || '').trim();
+  const de = String(remetente || process.env.TWILIO_WHATSAPP_FROM || '').trim();
   const resposta = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
     method: 'POST',
     headers: {
@@ -962,10 +962,10 @@ async function enviarTwilio(para, texto) {
 }
 
 /** Manda um texto pelo WhatsApp usando a API da Twilio. */
-async function enviarTwilio(para, texto) {
+async function enviarTwilio(para, texto, remetente) {
   const sid = String(process.env.TWILIO_ACCOUNT_SID || '').trim();
   const token = String(process.env.TWILIO_AUTH_TOKEN || '').trim();
-  const de = String(process.env.TWILIO_WHATSAPP_FROM || '').trim();
+  const de = String(remetente || process.env.TWILIO_WHATSAPP_FROM || '').trim();
   const resposta = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
     method: 'POST',
     headers: {
@@ -1003,7 +1003,9 @@ async function receberTwilio(req, res) {
     const respostas = texto
       ? await responder(negocio, telefone, texto)
       : ['Por enquanto eu só entendo mensagens de texto 🙂 Responda MENU.'];
-    for (const r of respostas) await enviarTwilio(de, r);
+    // responde pelo mesmo número para onde o cliente escreveu (ex.: whatsapp:+14155238886)
+    const numeroDoSandbox = String(req.body.To || process.env.TWILIO_WHATSAPP_FROM || '');
+    for (const r of respostas) await enviarTwilio(de, r, numeroDoSandbox);
     console.log(`[Twilio] ${respostas.length} resposta(s) enviada(s) para o final ${telefone.slice(-4)}.`);
   } catch (erro) {
     console.error('[Twilio] erro ao responder:', erro);
