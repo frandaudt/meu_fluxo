@@ -966,22 +966,6 @@ async function enviarTwilio(para, texto, remetente) {
   if (!resposta.ok) throw new Error(`Twilio respondeu ${resposta.status}: ${await resposta.text()}`);
 }
 
-/** Manda um texto pelo WhatsApp usando a API da Twilio. */
-async function enviarTwilio(para, texto, remetente) {
-  const sid = String(process.env.TWILIO_ACCOUNT_SID || '').trim();
-  const token = String(process.env.TWILIO_AUTH_TOKEN || '').trim();
-  const de = String(remetente || process.env.TWILIO_WHATSAPP_FROM || '').trim();
-  const resposta = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-    method: 'POST',
-    headers: {
-      Authorization: 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({ From: de, To: para, Body: texto }),
-  });
-  if (!resposta.ok) throw new Error(`Twilio respondeu ${resposta.status}: ${await resposta.text()}`);
-}
-
 // POST /api/whatsapp/twilio → mensagem de um cliente pelo sandbox da Twilio
 // Responde logo para a Twilio e manda as respostas do bot pela API dela.
 async function receberTwilio(req, res) {
