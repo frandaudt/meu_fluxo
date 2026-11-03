@@ -25,7 +25,14 @@ app.set('trust proxy', 1);
 
 app.use(cors());
 // 2 MB: cabe a foto do perfil e a importação de clientes (o padrão do Express é 100 KB)
-app.use(express.json({ limit: '2mb' }));
+   // 2 MB: cabe a foto do perfil e a importação de clientes (o padrão do Express é 100 KB).
+   // No webhook do WhatsApp guarda também o corpo original, para conferir a assinatura da Meta.
+   app.use(express.json({
+     limit: '2mb',
+     verify: (req, res, buf) => {
+       if (req.originalUrl.startsWith('/api/whatsapp/webhook')) req.rawBody = buf;
+     },
+   }));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
