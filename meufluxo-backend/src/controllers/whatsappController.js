@@ -20,6 +20,7 @@
 //  WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET
 //  WHATSAPP_NUMERO (opcional, só para mostrar na tela) e WHATSAPP_USUARIO_ID (opcional:
 //  qual negócio responde no número; sem ela, é o último dono que ligou o bot).
+//  Sandbox da Twilio: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM e TWILIO_CONTENT_SID.
 const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { carregarAgenda, avisarVagaLiberada } = require('./listaEsperaController');
@@ -869,18 +870,6 @@ async function receberWebhook(req, res) {
             console.warn(`[WhatsApp] a Meta não entregou a mensagem para o final ${String(s.recipient_id).slice(-4)}:`, JSON.stringify(s.errors || []));
           }
         }
-        // a Meta avisa depois se não conseguiu entregar uma resposta
-        for (const s of mudanca.value?.statuses || []) {
-          if (s.status === 'failed') {
-            console.warn(`[WhatsApp] a Meta não entregou a mensagem para o final ${String(s.recipient_id).slice(-4)}:`, JSON.stringify(s.errors || []));
-          }
-        }
-        // a Meta avisa depois se não conseguiu entregar uma resposta
-        for (const s of mudanca.value?.statuses || []) {
-          if (s.status === 'failed') {
-            console.warn(`[WhatsApp] a Meta não entregou a mensagem para o final ${String(s.recipient_id).slice(-4)}:`, JSON.stringify(s.errors || []));
-          }
-        }
       }
     }
     if (mensagens.length === 0) return; // avisos de "entregue", "lido"...
@@ -939,13 +928,7 @@ function assinaturaTwilioValida(req) {
   return ok;
 }
 
-function escaparXml(texto) {
-  return String(texto)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-}
-
-//** Manda um texto pelo WhatsApp usando a API da Twilio. */
+/** Manda um texto pelo WhatsApp usando a API da Twilio. */
 async function enviarTwilio(para, texto, remetente) {
   const sid = String(process.env.TWILIO_ACCOUNT_SID || '').trim();
   const token = String(process.env.TWILIO_AUTH_TOKEN || '').trim();
@@ -1011,6 +994,6 @@ module.exports = {
   simular,
   reiniciarSimulacao,
   verificarWebhook,
-  receberWebhook,  
+  receberWebhook,
   receberTwilio,
 };
