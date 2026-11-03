@@ -788,13 +788,30 @@ function verificarWebhook(req, res) {
 
 /** Confere a assinatura X-Hub-Signature-256 (prova de que a mensagem veio da Meta). */
 function assinaturaValida(req) {
-  const segredo = process.env.WHATSAPP_APP_SECRET;
+  // trim(): ignora espaço ou quebra de linha colada sem querer no Render
+  const segredo = String(process.env.WHATSAPP_APP_SECRET || '').trim();
   const recebida = String(req.headers['x-hub-signature-256'] || '');
-  if (!segredo || !req.rawBody || !recebida.startsWith('sha256=')) return false;
+  if (!segredo) {
+    console.warn('[WhatsApp] falta a variável WHATSAPP_APP_SECRET.');
+    return false;
+  }
+  if (!req.rawBody) {
+    console.warn('[WhatsApp] o corpo original não foi guardado: confira o "verify" do express.json no app.js.');
+    return false;
+  }
+  if (!recebida.startsWith('sha256=')) {
+    console.warn('[WhatsApp] chegou sem a assinatura da Meta.');
+    return false;
+  }
   const esperada = 'sha256=' + crypto.createHmac('sha256', segredo).update(req.rawBody).digest('hex');
   const a = Buffer.from(recebida);
   const b = Buffer.from(esperada);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!ok) {
+    // mostra só o tamanho, nunca a chave
+    console.warn(`[WhatsApp] assinatura diferente. A chave no Render tem ${segredo.length} caracteres (a da Meta tem 32).`);
+  }
+  return ok;
 }
 
 /** Qual negócio atende no número do MeuFluxo. */
