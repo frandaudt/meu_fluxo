@@ -34,6 +34,9 @@ app.use(cors());
      },
    }));
 
+   // a Twilio manda as mensagens como formulário (não JSON)
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });

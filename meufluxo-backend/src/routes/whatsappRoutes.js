@@ -10,6 +10,8 @@ const router = express.Router();
 // e pela assinatura com a chave secreta do app (POST).
 router.get('/webhook', whatsapp.verificarWebhook);
 router.post('/webhook', whatsapp.receberWebhook);
+// Sandbox da Twilio: SEM login. A Twilio prova quem é pela assinatura X-Twilio-Signature.
+router.post('/twilio', whatsapp.receberTwilio);
 
 // mensagens prontas: todo mundo logado lê (botões "Chamar no WhatsApp", lembretes...)
 router.get('/mensagens', autenticar, whatsapp.listarMensagens);

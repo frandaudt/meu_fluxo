@@ -915,6 +915,72 @@ async function receberWebhook(req, res) {
   }
 }
 
+// =====================================================================
+//  SANDBOX DA TWILIO (alternativa enquanto a Meta exige empresa verificada)
+//  Variável de ambiente: TWILIO_AUTH_TOKEN (Console da Twilio › Account Info)
+// =====================================================================
+
+/** Confere a assinatura X-Twilio-Signature (prova de que a mensagem veio da Twilio). */
+function assinaturaTwilioValida(req) {
+  const token = String(process.env.TWILIO_AUTH_TOKEN || '').trim();
+  const recebida = String(req.headers['x-twilio-signature'] || '');
+  if (!token) {
+    console.warn('[Twilio] falta a variável TWILIO_AUTH_TOKEN.');
+    return false;
+  }
+  const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  const params = req.body || {};
+  const dados = url + Object.keys(params).sort().map(k => k + params[k]).join('');
+  const esperada = crypto.createHmac('sha1', token).update(Buffer.from(dados, 'utf-8')).digest('base64');
+  const a = Buffer.from(recebida);
+  const b = Buffer.from(esperada);
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!ok) console.warn(`[Twilio] assinatura diferente (endereço conferido: ${url}).`);
+  return ok;
+}
+
+function escaparXml(texto) {
+  return String(texto)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+// POST /api/whatsapp/twilio → mensagem de um cliente pelo sandbox da Twilio
+// A resposta volta na própria resposta HTTP (TwiML), sem precisar de outra chamada.
+async function receberTwilio(req, res) {
+  if (!assinaturaTwilioValida(req)) return res.sendStatus(403);
+
+  const responderXml = (textos) => {
+    const corpo = textos.map(t => `<Message>${escaparXml(t)}</Message>`).join('');
+    res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response>${corpo}</Response>`);
+  };
+
+  try {
+    const telefone = String(req.body.From || '').replace(/\D/g, '');
+    const texto = String(req.body.Body || '').trim();
+    console.log(`[Twilio] mensagem recebida do final ${telefone.slice(-4)}.`);
+
+    const negocio = await negocioDoNumero();
+    if (!negocio) {
+      console.warn('[Twilio] nenhum salão com o bot ligado.');
+      return responderXml([]);
+    }
+    const { ativo } = await lerConfig(negocio.id);
+    if (!ativo) {
+      console.warn(`[Twilio] o bot do salão ${negocio.id} está desligado.`);
+      return responderXml([]);
+    }
+    if (!texto) return responderXml(['Por enquanto eu só entendo mensagens de texto 🙂 Responda MENU.']);
+
+    const respostas = await responder(negocio, telefone, texto);
+    console.log(`[Twilio] ${respostas.length} resposta(s) enviada(s).`);
+    responderXml(respostas);
+  } catch (erro) {
+    console.error('[Twilio] erro ao responder:', erro);
+    responderXml(['Tive um problema agora. Tente de novo em instantes.']);
+  }
+}
+
 module.exports = {
   obterConfig,
   salvarConfig,
@@ -925,5 +991,6 @@ module.exports = {
   simular,
   reiniciarSimulacao,
   verificarWebhook,
-  receberWebhook,
+  receberWebhook,  
+  receberTwilio,
 };
