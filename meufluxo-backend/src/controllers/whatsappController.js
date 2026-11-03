@@ -856,11 +856,18 @@ async function receberWebhook(req, res) {
       }
     }
     if (mensagens.length === 0) return; // avisos de "entregue", "lido"...
+    console.log(`[WhatsApp] ${mensagens.length} mensagem(ns) recebida(s).`);
 
     const negocio = await negocioDoNumero();
-    if (!negocio) return;
+    if (!negocio) {
+      console.warn('[WhatsApp] nenhum salão com o bot ligado: a mensagem ficou sem resposta.');
+      return;
+    }
     const { ativo } = await lerConfig(negocio.id);
-    if (!ativo) return; // bot desligado: ninguém recebe resposta automática
+    if (!ativo) {
+      console.warn(`[WhatsApp] o bot do salão ${negocio.id} está desligado.`);
+      return; // bot desligado: ninguém recebe resposta automática
+    }
 
     for (const m of mensagens) {
       if (jaRespondidas.has(m.id)) continue;
