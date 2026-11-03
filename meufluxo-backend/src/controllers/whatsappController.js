@@ -954,10 +954,9 @@ async function enviarTwilio(para, texto, remetente) {
         const lista = await fetch('https://content.twilio.com/v1/Content?PageSize=20', {
           headers: { Authorization: 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64') },
         });
-        const dados = await lista.json();
-        const modelos = (dados.contents || []).map(c => `${c.friendly_name} = ${c.sid}`);
+        const textoLista = await lista.text();
         const usado = String(process.env.TWILIO_CONTENT_SID || '').trim();
-        console.warn(`[Twilio] SID usado: ${usado} (${usado.length} caracteres). Modelos da conta: ${modelos.join(' | ') || 'nenhum'}`);
+        console.warn(`[Twilio] SID usado: ${usado}. Lista de modelos (status ${lista.status}): ${textoLista.slice(0, 1500)}`);
       } catch (e) {
         console.warn('[Twilio] não consegui listar os modelos:', e.message);
       }
