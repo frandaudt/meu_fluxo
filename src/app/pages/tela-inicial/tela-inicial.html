@@ -84,14 +84,17 @@
             <h2>Lembretes de amanhã</h2>
             <small class="card-contagem">{{ lembretes.length }} {{ lembretes.length === 1 ? 'cliente' : 'clientes' }}</small>
           </div>
-          <p class="card-dica">Abre o seu WhatsApp com a mensagem pronta</p>
+          <p class="card-dica">Abre o seu WhatsApp com a mensagem pronta e o link para o cliente confirmar</p>
 
           <div class="lembrete" *ngFor="let l of lembretes">
             <div class="lembrete-info">
               <strong><span class="lembrete-hora">{{ l.ag.horario }}</span> {{ l.cliente }}</strong>
               <small>{{ l.servico }}</small>
             </div>
-            <span class="enviado" *ngIf="l.ag.lembreteEnviadoEm; else botaoEnviar">Enviado ✓</span>
+            <span class="confirmou" *ngIf="l.ag.confirmadoEm; else naoConfirmou">Confirmou ✓</span>
+            <ng-template #naoConfirmou>
+              <span class="enviado" *ngIf="l.ag.lembreteEnviadoEm; else botaoEnviar">Enviado · aguardando</span>
+            </ng-template>
             <ng-template #botaoEnviar>
               <button type="button" class="btn-enviar" [disabled]="!l.link"
                       [title]="l.link ? 'Abrir o WhatsApp com o lembrete' : 'Cliente sem telefone cadastrado'"

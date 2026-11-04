@@ -19,7 +19,7 @@
             <p *ngIf="subtituloNegocio">{{ subtituloNegocio }}</p>
           </div>
         </div>
-        <ol class="etapas">
+        <ol class="etapas" *ngIf="!token">
           <li *ngFor="let e of etapas" [class.feita]="indiceEtapa(e.id) <= indiceEtapa(etapa)" [class.atual]="e.id === etapa">
             <span class="barra"></span>
             <span class="rotulo">{{ e.rotulo }}</span>
@@ -29,6 +29,45 @@
 
       <section class="conteudo">
         <div class="erro" *ngIf="erro">{{ erro }}</div>
+
+        <!-- LINK "CONFIRMAR PRESENÇA": o horário do cliente -->
+        <ng-container *ngIf="etapa === 'meu' && meuHorario as h">
+          <h2>Olá, {{ h.cliente }}!</h2>
+          <div class="aviso-ok" *ngIf="aviso">{{ aviso }}</div>
+
+          <div class="resumo-card centro">
+            <span class="selo" [class.selo-ok]="seloMeuHorario.cor === 'ok'" [class.selo-cancelado]="seloMeuHorario.cor === 'cancelado'">{{ seloMeuHorario.texto }}</span>
+            <strong>{{ h.servico }} · {{ preco(h.valor) }}</strong>
+            <span class="meu-quando">{{ diaPorExtenso(h.data) }} às {{ h.horario }}</span>
+            <small>{{ negocio?.nome }}<ng-container *ngIf="negocio?.endereco"> · {{ negocio?.endereco }}</ng-container></small>
+          </div>
+
+          <!-- ainda vai acontecer -->
+          <div class="acoes-meu" *ngIf="h.status === 'agendado' && !h.passou">
+            <button type="button" class="btn-principal" *ngIf="!h.confirmado" [disabled]="enviando" (click)="confirmarPresenca()">
+              {{ enviando ? 'Enviando...' : 'Confirmo, vou sim' }}
+            </button>
+
+            <ng-container *ngIf="h.podeMudar">
+              <button type="button" class="btn-secundario" [disabled]="enviando" (click)="remarcarHorario()">Remarcar</button>
+              <button type="button" class="btn-cancelar" *ngIf="!perguntandoCancelar" (click)="perguntandoCancelar = true">Não vou poder ir (cancelar)</button>
+              <div class="confirma-cancelar" *ngIf="perguntandoCancelar">
+                <p>Cancelar mesmo? O horário fica livre para outra pessoa.</p>
+                <div class="confirma-botoes">
+                  <button type="button" class="btn-secundario" (click)="perguntandoCancelar = false">Voltar</button>
+                  <button type="button" class="btn-perigo" [disabled]="enviando" (click)="cancelarHorario()">Sim, cancelar</button>
+                </div>
+              </div>
+            </ng-container>
+            <p class="dica" *ngIf="!h.podeMudar">
+              Faltam menos de 2 horas: para cancelar ou remarcar, fale com o {{ negocio?.nome }} pelo WhatsApp.
+            </p>
+
+            <button type="button" class="link link-calendario" (click)="adicionarAoCalendario()">Adicionar à agenda do celular</button>
+          </div>
+
+          <p class="dica" *ngIf="h.status === 'cancelado'">Para marcar um novo horário, fale com o {{ negocio?.nome }} pelo WhatsApp.</p>
+        </ng-container>
 
         <!-- 1. SERVIÇO -->
         <ng-container *ngIf="etapa === 'servico'">
@@ -46,7 +85,7 @@
         <!-- 2. HORÁRIO -->
         <ng-container *ngIf="etapa === 'horario' && servico as s">
           <button type="button" class="voltar" (click)="voltar()">‹ Voltar</button>
-          <h2>Escolha o dia e o horário</h2>
+          <h2>{{ remarcando ? 'Escolha o novo dia e horário' : 'Escolha o dia e o horário' }}</h2>
           <p class="resumo-linha">{{ s.nome }} · {{ preco(s.valor) }} · {{ s.duracao }} min</p>
 
           <p class="carregando-pequeno" *ngIf="carregandoDias">Procurando horários...</p>
@@ -68,7 +107,7 @@
           </div>
 
           <!-- dias lotados: oferece a lista de espera -->
-          <div class="lotado-aviso" *ngFor="let d of diasLotados">
+          <div class="lotado-aviso" *ngFor="let d of (remarcando ? [] : diasLotados)">
             <strong>{{ nomeDoDia(d.data) }} ({{ d.data.slice(8, 10) }}/{{ d.data.slice(5, 7) }}) está lotada.</strong>&nbsp;
             <button type="button" class="link" (click)="entrarNaEspera(d)">Entrar na lista de espera</button> e ser avisado se abrir vaga.
           </div>
@@ -140,7 +179,9 @@
       <!-- rodapé fixo com o botão da etapa -->
       <footer class="rodape">
         <p *ngIf="etapa === 'servico'">Toque num serviço para continuar</p>
-        <button type="button" class="btn-principal" *ngIf="etapa === 'horario'" [disabled]="!horario" (click)="continuar()">Continuar</button>
+        <button type="button" class="btn-principal" *ngIf="etapa === 'horario'" [disabled]="!horario || enviando" (click)="continuar()">
+          {{ remarcando ? (enviando ? 'Remarcando...' : 'Remarcar para ' + (horario || 'este horário')) : 'Continuar' }}
+        </button>
         <button type="button" class="btn-secundario" *ngIf="etapa === 'pronto'" (click)="novoAgendamento()">Fazer outro agendamento</button>
         <small class="marca">Agendamento online pelo MeuFluxo</small>
       </footer>

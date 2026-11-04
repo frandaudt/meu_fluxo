@@ -331,6 +331,7 @@ app-calendario { display: block; }
   border: 1px solid var(--color-sucesso-borda); border-radius: 8px;
   padding: 10px 14px; font-size: 0.88rem;
 }
+
 /* concluído: botão do agradecimento pelo WhatsApp */
 .pos-atendimento {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
@@ -342,3 +343,11 @@ app-calendario { display: block; }
   background: #25d366; color: #fff; font-weight: 600; font-size: 0.82rem; text-decoration: none; white-space: nowrap;
 }
 .btn-whatsapp-pos:hover { background: #1ebe5a; }
+
+/* confirmação de presença pelo link do lembrete */
+.detalhe-confirmacao {
+  margin: 0; padding: 8px 12px; border-radius: var(--radius-md);
+  background: var(--color-bg); color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+.detalhe-confirmacao.confirmada { background: var(--color-sucesso-claro); color: var(--color-sucesso); font-weight: 600; }

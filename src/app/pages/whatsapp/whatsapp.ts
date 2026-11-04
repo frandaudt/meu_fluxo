@@ -94,7 +94,7 @@ export class Whatsapp implements OnInit {
   salvandoMensagem = false;
   erroMensagens = '';
   copiadoTipo: TipoMensagem | null = null;
-  readonly camposMensagem = ['{nome}', '{servico}', '{data}', '{hora}', '{negocio}'];
+  readonly camposMensagem = ['{nome}', '{servico}', '{data}', '{hora}', '{negocio}', '{link}'];
 
   // ---------- simulador ----------
   telefoneTeste = '(11) 91234-5678';

@@ -82,6 +82,14 @@
         <a [routerLink]="['/clientes']" [queryParams]="{ ficha: ag.clienteId }">Ver ficha do cliente</a>
       </p>
 
+      <!-- link "Confirmar presença" do lembrete -->
+      <p class="detalhe-confirmacao" *ngIf="ag.status === 'agendado'" [class.confirmada]="ag.confirmadoEm">
+        <ng-container *ngIf="ag.confirmadoEm; else semConfirmacao">
+          ✅ Presença confirmada pelo cliente em {{ dataCurta(ag.confirmadoEm.slice(0, 10)) }} às {{ ag.confirmadoEm.slice(11, 16) }}
+        </ng-container>
+        <ng-template #semConfirmacao>Ainda sem confirmação do cliente (o link vai no lembrete da véspera).</ng-template>
+      </p>
+
       <div class="modal-erro" *ngIf="erroDetalhe">{{ erroDetalhe }}</div>
 
       <!-- concluído: oferece a mensagem "Depois do atendimento" (agradecimento e cuidados) -->

@@ -29,5 +29,6 @@ export const routes: Routes = [
   {path: 'lista-espera', component: ListaEspera},
   {path: 'whatsapp', component: Whatsapp},
   {path: 'agendar/:slug', component: Agendar}, // página pública, sem login
+  {path: 'confirmar/:token', component: Agendar}, // link do lembrete: confirmar, cancelar ou remarcar (sem login)
 
 ];

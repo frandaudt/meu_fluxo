@@ -50,6 +50,10 @@ const TIPOS_NOTIFICACAO = {
   novo_cliente_bot: { cor: 'agendado', rotulo: 'Ver clientes', link: '/clientes' },
   novo_cliente_link: { cor: 'agendado', rotulo: 'Ver clientes', link: '/clientes' },
   vaga_liberada: { cor: 'aviso', rotulo: 'Ver lista de espera', link: '/lista-espera' },
+  // link "Confirmar presença" do lembrete
+  presenca_confirmada: { cor: 'agendado', rotulo: 'Ver agenda', link: '/agenda' },
+  remarcacao_link: { cor: 'aviso', rotulo: 'Ver agenda', link: '/agenda' },
+  cancelamento_link: { cor: 'aviso', rotulo: 'Ver agenda', link: '/agenda' },
 };
 
 // GET /api/alertas

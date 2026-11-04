@@ -166,3 +166,39 @@
 .carregando { padding: 40px 16px; text-align: center; color: var(--color-text-muted); }
 .pagina-erro { margin: 40px 16px; padding: 16px; border-radius: var(--radius-lg); background: var(--color-white); text-align: center; color: var(--color-text); }
 .pagina-erro p { margin: 6px 0 0; color: var(--color-text-muted); font-size: 0.9rem; }
+
+/* ===== link "Confirmar presença" (/confirmar/:token) ===== */
+.aviso-ok {
+  padding: 10px 12px; border-radius: var(--radius-md);
+  background: var(--color-sucesso-claro); color: var(--color-sucesso);
+  font-size: 0.88rem; font-weight: 600;
+}
+.selo {
+  align-self: center;
+  margin-bottom: 4px; padding: 4px 12px; border-radius: 999px;
+  background: var(--color-aviso-claro); color: var(--color-aviso);
+  font-size: 0.78rem; font-weight: 700;
+}
+.selo-ok { background: var(--color-sucesso-claro); color: var(--color-sucesso); }
+.selo-cancelado { background: var(--color-perigo-claro); color: var(--color-perigo-escuro); }
+.meu-quando { font-size: 1.05rem; font-weight: 700; }
+.acoes-meu { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.btn-cancelar {
+  min-height: 44px; border: none; background: none;
+  font-family: var(--font-body); font-size: 0.9rem; font-weight: 600;
+  color: var(--color-perigo-escuro); cursor: pointer;
+}
+.confirma-cancelar {
+  padding: 12px; border-radius: var(--radius-md);
+  background: var(--color-perigo-claro);
+}
+.confirma-cancelar p { margin: 0 0 10px; font-size: 0.86rem; color: var(--color-perigo-escuro); }
+.confirma-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn-perigo {
+  min-height: 44px; border: none; border-radius: var(--radius-md);
+  background: var(--color-perigo-escuro); color: var(--color-white);
+  font-family: var(--font-body); font-size: 0.9rem; font-weight: 600;
+  cursor: pointer;
+}
+.btn-perigo:disabled { opacity: 0.5; cursor: not-allowed; }
+.link-calendario { align-self: center; font-size: 0.86rem; }

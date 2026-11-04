@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { avisarVagaLiberada } = require('./listaEsperaController');
 
@@ -118,7 +119,26 @@ function formatarAgendamento(linha) {
     motivoCancelamento: linha.motivo_cancelamento || '',
     // "Enviado ✓" dos lembretes de amanhã (Início)
     lembreteEnviadoEm: linha.lembrete_enviado_em || null,
+    tokenConfirmacao: linha.token_confirmacao || null, // link "Confirmar presença" do lembrete
+    confirmadoEm: linha.confirmado_em || null,
   };
+}
+
+/**
+ * Cada horário marcado ganha um código secreto (32 letras/números) para o link
+ * "Confirmar presença" que vai no lembrete. É gerado uma vez só, aqui na listagem.
+ */
+async function garantirTokens(usuarioId) {
+  const [semToken] = await pool.query(
+    "SELECT id FROM agendamentos WHERE usuario_id = ? AND status = 'agendado' AND token_confirmacao IS NULL AND data >= ?",
+    [usuarioId, hojeBrasilia()]
+  );
+  for (const { id } of semToken) {
+    await pool.query(
+      'UPDATE agendamentos SET token_confirmacao = ? WHERE id = ? AND token_confirmacao IS NULL',
+      [crypto.randomBytes(16).toString('hex'), id]
+    );
+  }
 }
 
 async function buscarAgendamento(id, usuarioId) {
@@ -129,6 +149,7 @@ async function buscarAgendamento(id, usuarioId) {
 // GET /api/agendamentos
 async function listar(req, res) {
   try {
+    await garantirTokens(req.usuarioId);
     const [linhas] = await pool.query(
       `${SELECT_AGENDAMENTO} WHERE a.usuario_id = ? ORDER BY a.data, a.horario`,
       [req.usuarioId]
@@ -239,7 +260,8 @@ async function atualizar(req, res) {
       if (mudaData) { campos.push('data = ?'); valores.push(data); }
       if (mudaHorario) { campos.push('horario = ?'); valores.push(horario); }
       // RN05: reagendar altera o mesmo registro e soma +1
-      if (mudaData || mudaHorario) campos.push('reagendamentos = reagendamentos + 1');
+      // (e a confirmação do cliente volta a zero: ele confirmou o horário antigo)
+      if (mudaData || mudaHorario) campos.push('reagendamentos = reagendamentos + 1', 'confirmado_em = NULL');
     }
 
     if (campos.length > 0) {

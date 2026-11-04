@@ -10,11 +10,28 @@ import { API_URL, Aparencia, aplicarAparencia } from '../../app';
  * Página pública de agendamento: /agendar/:slug (sem login, feita para celular).
  * 4 etapas: Serviço · Horário · Seus dados · Pronto.
  * Os dados vêm de /api/publico/:slug (o back-end confere tudo de novo ao gravar).
+ *
+ * A mesma página abre o link "Confirmar presença" do lembrete: /confirmar/:token.
+ * Nesse modo o cliente vê o próprio horário e pode confirmar, cancelar ou remarcar
+ * (a remarcação reaproveita a etapa Horário). Dados em /api/publico/horario/:token.
  */
-interface Negocio { nome: string; descricao: string; endereco: string; foto: string | null; aparencia: Aparencia; }
+interface Negocio { nome: string; descricao: string; endereco: string; foto: string | null; telefone?: string; aparencia: Aparencia; }
+/** O horário do cliente no link de confirmação. */
+interface MeuHorario {
+  cliente: string;
+  servico: string;
+  valor: number;
+  duracao: number;
+  data: string;
+  horario: string;
+  status: 'agendado' | 'realizado' | 'cancelado' | 'nao_compareceu';
+  confirmado: boolean;
+  passou: boolean;
+  podeMudar: boolean; // RN16: só com 2h ou mais de antecedência
+}
 interface ServicoPublico { id: number; nome: string; valor: number; duracao: number; }
 interface DiaPublico { data: string; sigla: string; livres: number; }
-type Etapa = 'servico' | 'horario' | 'dados' | 'pronto';
+type Etapa = 'servico' | 'horario' | 'dados' | 'pronto' | 'meu';
 
 const DIAS_LONGOS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
@@ -61,9 +78,21 @@ export class Agendar implements OnInit {
   modoEspera = false;
   mensagemEspera = '';
 
+  /** Link "Confirmar presença" (/confirmar/:token). */
+  token = '';
+  meuHorario: MeuHorario | null = null;
+  remarcando = false;
+  perguntandoCancelar = false;
+  aviso = '';
+
   constructor(private route: ActivatedRoute, private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
+    this.token = this.route.snapshot.paramMap.get('token') || '';
+    if (this.token) {
+      this.carregarMeuHorario();
+      return;
+    }
     this.slug = this.route.snapshot.paramMap.get('slug') || '';
     this.http.get<{ negocio: Negocio; servicos: ServicoPublico[] }>(`${API_URL}/publico/${encodeURIComponent(this.slug)}`).subscribe({
       next: ({ negocio, servicos }) => {
@@ -124,8 +153,97 @@ export class Agendar implements OnInit {
   }
 
   // =====================================================================
+  //  LINK "CONFIRMAR PRESENÇA" (/confirmar/:token)
+  // =====================================================================
+  private get urlDoHorario(): string {
+    return `${API_URL}/publico/horario/${encodeURIComponent(this.token)}`;
+  }
+
+  private carregarMeuHorario() {
+    this.http.get<{ negocio: Negocio; horario: MeuHorario }>(this.urlDoHorario).subscribe({
+      next: (resposta) => {
+        this.negocio = resposta.negocio;
+        this.mostrarMeuHorario(resposta.horario);
+        this.carregando = false;
+        aplicarAparencia(resposta.negocio.aparencia);
+        document.title = `Seu horário · ${resposta.negocio.nome}`;
+        this.cdr.markForCheck();
+      },
+      error: (erro) => {
+        this.carregando = false;
+        this.erroPagina = erro?.error?.erro || 'Não foi possível abrir o seu horário.';
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  /** Guarda o horário e deixa serviço, dia e hora prontos (usados no resumo e no "Adicionar à agenda"). */
+  private mostrarMeuHorario(h: MeuHorario) {
+    this.meuHorario = h;
+    this.servico = { id: 0, nome: h.servico, valor: h.valor, duracao: h.duracao };
+    this.dia = { data: h.data, sigla: '', livres: 1 };
+    this.horario = h.horario;
+    this.remarcando = false;
+    this.perguntandoCancelar = false;
+    this.etapa = 'meu';
+  }
+
+  /** Texto e cor do selo do horário. */
+  get seloMeuHorario(): { texto: string; cor: 'ok' | 'espera' | 'cancelado' } {
+    const h = this.meuHorario;
+    if (!h) return { texto: '', cor: 'espera' };
+    if (h.status === 'cancelado') return { texto: 'Cancelado', cor: 'cancelado' };
+    if (h.status === 'realizado') return { texto: 'Atendimento realizado', cor: 'ok' };
+    if (h.status === 'nao_compareceu' || h.passou) return { texto: 'Esse horário já passou', cor: 'cancelado' };
+    return h.confirmado ? { texto: 'Presença confirmada ✓', cor: 'ok' } : { texto: 'Aguardando sua confirmação', cor: 'espera' };
+  }
+
+  /** Ações do link: confirmar, cancelar ou remarcar. Todas devolvem o horário atualizado. */
+  private enviarAcao(acao: 'confirmar' | 'cancelar' | 'remarcar', corpo: object, aviso: string) {
+    this.enviando = true;
+    this.erro = '';
+    this.http.post<{ horario: MeuHorario }>(`${this.urlDoHorario}/${acao}`, corpo).subscribe({
+      next: ({ horario }) => {
+        this.enviando = false;
+        this.mostrarMeuHorario(horario);
+        this.aviso = aviso;
+        this.cdr.markForCheck();
+      },
+      error: (erro) => {
+        this.enviando = false;
+        this.erro = erro?.error?.erro || 'Não foi possível concluir. Tente de novo.';
+        // remarcando e o horário foi ocupado: recarrega os horários do dia
+        if (acao === 'remarcar' && erro?.status === 409 && this.dia) this.escolherDia(this.dia);
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  confirmarPresenca() {
+    this.enviarAcao('confirmar', {}, 'Obrigado! O salão já sabe que você vem 😊');
+  }
+
+  cancelarHorario() {
+    this.enviarAcao('cancelar', {}, 'Horário cancelado. Obrigado por avisar!');
+  }
+
+  /** Abre a etapa Horário (mesmo serviço) para escolher o novo dia e hora. */
+  remarcarHorario() {
+    if (!this.servico) return;
+    this.remarcando = true;
+    this.aviso = '';
+    this.escolherServico(this.servico);
+  }
+
+  // =====================================================================
   //  ETAPAS
   // =====================================================================
+
+  /** Endereço de dias e horários: o do salão (slug) ou o do horário (remarcar pelo link). */
+  private urlDaAgenda(caminho: 'dias' | 'horarios'): string {
+    return this.remarcando ? `${this.urlDoHorario}/${caminho}` : `${API_URL}/publico/${encodeURIComponent(this.slug)}/${caminho}`;
+  }
+
   escolherServico(s: ServicoPublico) {
     this.servico = s;
     this.dia = null;
@@ -134,7 +252,7 @@ export class Agendar implements OnInit {
     this.erro = '';
     this.etapa = 'horario';
     this.carregandoDias = true;
-    this.http.get<{ dias: DiaPublico[] }>(`${API_URL}/publico/${encodeURIComponent(this.slug)}/dias`, { params: { servicoId: s.id } }).subscribe({
+    this.http.get<{ dias: DiaPublico[] }>(this.urlDaAgenda('dias'), { params: { servicoId: s.id } }).subscribe({
       next: ({ dias }) => {
         this.dias = dias;
         this.carregandoDias = false;
@@ -156,7 +274,7 @@ export class Agendar implements OnInit {
     this.dia = d;
     this.horario = '';
     this.carregandoHorarios = true;
-    this.http.get<{ horarios: string[] }>(`${API_URL}/publico/${encodeURIComponent(this.slug)}/horarios`, {
+    this.http.get<{ horarios: string[] }>(this.urlDaAgenda('horarios'), {
       params: { servicoId: this.servico.id, data: d.data },
     }).subscribe({
       next: ({ horarios }) => {
@@ -174,6 +292,10 @@ export class Agendar implements OnInit {
 
   continuar() {
     if (!this.dia || !this.horario) return;
+    if (this.remarcando) {
+      this.enviarAcao('remarcar', { data: this.dia.data, horario: this.horario }, 'Remarcado! Seu novo horário já está confirmado.');
+      return;
+    }
     this.modoEspera = false;
     this.erro = '';
     this.etapa = 'dados';
@@ -190,7 +312,8 @@ export class Agendar implements OnInit {
 
   voltar() {
     this.erro = '';
-    if (this.etapa === 'dados') this.etapa = 'horario';
+    if (this.remarcando && this.meuHorario) this.mostrarMeuHorario(this.meuHorario);
+    else if (this.etapa === 'dados') this.etapa = 'horario';
     else if (this.etapa === 'horario') this.etapa = 'servico';
   }
 

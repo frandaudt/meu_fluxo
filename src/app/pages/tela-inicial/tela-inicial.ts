@@ -19,6 +19,7 @@ import {
   minutosDeTrabalho,
   linkWhatsappPronto,
   textoMensagemPronta,
+  linkConfirmacao,
 } from '../../app';
 import {
   AcaoRapida,
@@ -46,6 +47,8 @@ interface Agendamento {
   statusPagamento: 'pendente' | 'pago';
   pagoEm: string | null;              // 'YYYY-MM-DD HH:mm:ss'
   lembreteEnviadoEm?: string | null;  // "Enviado ✓"
+  tokenConfirmacao?: string | null;   // código do link "Confirmar presença"
+  confirmadoEm?: string | null;       // o cliente confirmou pelo link
 }
 
 interface MetaMensal { id: number; mes: string; tipo: 'faturamento' | 'clientes'; valorAlvo: number; }
@@ -346,6 +349,7 @@ export class TelaInicial implements OnInit {
     const servico = this.servico(ag.servicoId);
     const texto = textoMensagemPronta('lembrete', servico ? { id: servico.id, nome: servico.nome } : null, {
       nome: cliente?.nome, data: ag.data, hora: ag.horario,
+      link: linkConfirmacao(ag.tokenConfirmacao), // o cliente confirma, cancela ou remarca por ele
     });
     return linkWhatsappPronto(cliente?.telefone, texto);
   }

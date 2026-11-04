@@ -47,6 +47,7 @@ interface Agendamento {
   recebidoPorNome: string | null;
   canceladoPor: 'cliente' | 'profissional' | null;
   motivoCancelamento: string;
+  confirmadoEm?: string | null; // o cliente confirmou pelo link do lembrete
 }
 
 /** O que está aberto dentro da janela de detalhes. */
@@ -258,7 +259,8 @@ export class Agenda implements OnInit {
       mapaEventos.get(ag.data)!.push({
         id: ag.id,
         horario: ag.horario,
-        texto: this.nomeCurto(this.nomeCliente(ag.clienteId)),
+        // ✅ = o cliente confirmou a presença pelo link do lembrete
+        texto: (ag.confirmadoEm && ag.status === 'agendado' ? '✅ ' : '') + this.nomeCurto(this.nomeCliente(ag.clienteId)),
         nomeCompleto: this.nomeCliente(ag.clienteId),
         servico: this.nomeServico(ag.servicoId),
         duracao: this.duracaoServico(ag.servicoId),

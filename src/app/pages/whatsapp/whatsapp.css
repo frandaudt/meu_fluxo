@@ -261,3 +261,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .endereco-inicio { border-right: 1.5px solid var(--color-border); border-bottom: none; border-radius: var(--radius-md) var(--radius-md) 0 0; padding: 6px 10px; }
   .endereco input { border-radius: 0 0 var(--radius-md) var(--radius-md); }
 }
+
+/* sem o simulador do bot: uma coluna só */
+.grade.grade-unica { grid-template-columns: minmax(0, 1fr); max-width: 860px; }

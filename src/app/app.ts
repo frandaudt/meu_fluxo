@@ -561,17 +561,19 @@ export class App {
 
   private atualizarMostrarLayout(url: string) {
     const caminhoLimpo = url.split('#')[0].split('?')[0];
+    // páginas públicas do cliente: agendamento (/agendar/:slug) e link do lembrete (/confirmar/:token)
+    const paginaDoCliente = caminhoLimpo.startsWith('/agendar/') || caminhoLimpo.startsWith('/confirmar/');
 
     // senha provisória (atendente novo ou senha redefinida pelo dono): só o Perfil até trocar
     try {
       const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
-      const telaInterna = !this.rotasSemLayout.includes(caminhoLimpo) && !caminhoLimpo.startsWith('/agendar/');
+      const telaInterna = !this.rotasSemLayout.includes(caminhoLimpo) && !paginaDoCliente;
       if (usuario?.trocarSenha && telaInterna && caminhoLimpo !== '/perfil') {
         this.router.navigate(['/perfil']);
       }
     } catch {}
-    // a página pública de agendamento (/agendar/:slug) também fica sem menu e sem cabeçalho
-    this.mostrarLayout = !this.rotasSemLayout.includes(caminhoLimpo) && !caminhoLimpo.startsWith('/agendar/');
+    // as páginas públicas do cliente também ficam sem menu e sem cabeçalho
+    this.mostrarLayout = !this.rotasSemLayout.includes(caminhoLimpo) && !paginaDoCliente;
 
     // tela de login/cadastro/anúncio: o próximo login começa com os valores ocultos
     if (!this.mostrarLayout) reiniciarValoresOcultos();
@@ -829,19 +831,19 @@ type Modelos = Record<TipoMensagem, [string, string]>;
 /** Modelos do "Padrão (todos)". */
 export const MODELOS_PADRAO: Modelos = {
   lembrete: [
-    'Oi {nome}! Lembrando do seu {servico} amanhã ({data}) às {hora}. Responda 1 para confirmar ou 2 para remarcar.',
-    'Olá {nome}, passando para lembrar: {servico} amanhã às {hora} no {negocio}. Te esperamos!',
+    'Oi {nome}! Lembrando do seu {servico} amanhã ({data}) às {hora}. Confirme, cancele ou remarque por aqui: {link}',
+    'Olá {nome}, passando para lembrar: {servico} amanhã às {hora} no {negocio}. Toque para confirmar sua presença: {link}',
   ],
   pos: [
     'Obrigado pela visita, {nome}! Foi um prazer te atender. Até a próxima 💚',
     'Oi {nome}! O que achou do atendimento hoje? Sua opinião ajuda muito a gente.',
   ],
   falta: [
-    'Oi {nome}, faz um tempinho que você não aparece por aqui! Quer agendar seu {servico}? É só responder 2.',
-    '{nome}, estamos com saudade! Temos horários livres essa semana. Responda 2 para ver.',
+    'Oi {nome}, faz um tempinho que você não aparece por aqui! Quer agendar seu {servico}? É só me responder por aqui.',
+    '{nome}, estamos com saudade! Temos horários livres essa semana. Quer que eu veja um para você?',
   ],
   vaga: [
-    'Boa notícia, {nome}! Abriu um horário para {servico} em {data} às {hora}. Quer? Responda SIM em até 1 hora.',
+    'Boa notícia, {nome}! Abriu um horário para {servico} em {data} às {hora}. Quer? Me responde em até 1 hora.',
     'Oi {nome}! Liberou uma vaga para {servico} em {data} às {hora}. Quer que eu reserve para você?',
   ],
 };
@@ -852,7 +854,7 @@ const MODELOS_POR_SERVICO: { nome: RegExp; modelos: Omit<Modelos, 'vaga'> }[] = 
     nome: /manicure|pedicure|unha/i,
     modelos: {
       lembrete: [
-        'Oi {nome}! Amanhã às {hora} é dia de deixar as unhas lindas 💅 Responda 1 para confirmar ou 2 para remarcar.',
+        'Oi {nome}! Amanhã às {hora} é dia de deixar as unhas lindas 💅 Confirme aqui: {link}',
         'Olá {nome}, sua manicure está marcada para amanhã ({data}) às {hora}. Até lá!',
       ],
       pos: [
@@ -860,8 +862,8 @@ const MODELOS_POR_SERVICO: { nome: RegExp; modelos: Omit<Modelos, 'vaga'> }[] = 
         'Unhas prontas! Hidratar as cutículas todo dia ajuda o resultado a durar mais, {nome} ✨',
       ],
       falta: [
-        'Oi {nome}! Já faz um tempinho desde a sua última manicure. Que tal renovar? Responda 2.',
-        '{nome}, suas unhas estão com saudade da gente 💅 Temos horários essa semana. Responda 2.',
+        'Oi {nome}! Já faz um tempinho desde a sua última manicure. Que tal renovar? Me chama aqui.',
+        '{nome}, suas unhas estão com saudade da gente 💅 Temos horários essa semana. Quer marcar?',
       ],
     },
   },
@@ -870,15 +872,15 @@ const MODELOS_POR_SERVICO: { nome: RegExp; modelos: Omit<Modelos, 'vaga'> }[] = 
     modelos: {
       lembrete: [
         'Oi {nome}! Amanhã às {hora} tem escova marcada. Se puder, venha com o cabelo lavado 😉',
-        'Olá {nome}, lembrete da sua escova amanhã ({data}) às {hora}. Responda 1 para confirmar.',
+        'Olá {nome}, lembrete da sua escova amanhã ({data}) às {hora}. Confirme aqui: {link}',
       ],
       pos: [
         'Obrigado, {nome}! Para a escova durar mais, prenda o cabelo num coque frouxo para dormir.',
         'Que bom te ver, {nome}! Evite umidade nas próximas horas para manter o liso.',
       ],
       falta: [
-        'Oi {nome}! Bateu saudade daquela escova? Responda 2 para ver os horários.',
-        '{nome}, que tal um cabelo novo para o fim de semana? Responda 2 e a gente agenda.',
+        'Oi {nome}! Bateu saudade daquela escova? Me responde que eu te mando os horários.',
+        '{nome}, que tal um cabelo novo para o fim de semana? Me responde que a gente agenda.',
       ],
     },
   },
@@ -886,7 +888,7 @@ const MODELOS_POR_SERVICO: { nome: RegExp; modelos: Omit<Modelos, 'vaga'> }[] = 
     nome: /corte|barba/i,
     modelos: {
       lembrete: [
-        'Fala, {nome}! Seu corte é amanhã às {hora}. Responda 1 para confirmar ou 2 para remarcar.',
+        'Fala, {nome}! Seu corte é amanhã às {hora}. Confirma aqui pra mim: {link}',
         'Olá {nome}, lembrando do seu corte amanhã ({data}) às {hora}.',
       ],
       pos: [
@@ -894,8 +896,8 @@ const MODELOS_POR_SERVICO: { nome: RegExp; modelos: Omit<Modelos, 'vaga'> }[] = 
         'Corte feito! Qualquer ajuste, é só chamar aqui, {nome}.',
       ],
       falta: [
-        '{nome}, já está na hora de dar aquele trato no cabelo? Responda 2 que a gente agenda.',
-        'Oi {nome}! Seu último corte foi há um tempinho. Bora marcar? Responda 2.',
+        '{nome}, já está na hora de dar aquele trato no cabelo? Me responde que a gente agenda.',
+        'Oi {nome}! Seu último corte foi há um tempinho. Bora marcar?',
       ],
     },
   },
@@ -911,8 +913,8 @@ const MODELOS_POR_SERVICO: { nome: RegExp; modelos: Omit<Modelos, 'vaga'> }[] = 
         'Sobrancelhas prontas! O retoque ideal é em 15 a 20 dias, {nome}.',
       ],
       falta: [
-        'Oi {nome}! Suas sobrancelhas já devem estar pedindo um retoque. Responda 2 para agendar.',
-        '{nome}, que tal manter o desenho em dia? Responda 2 e escolha um horário.',
+        'Oi {nome}! Suas sobrancelhas já devem estar pedindo um retoque. Quer agendar?',
+        '{nome}, que tal manter o desenho em dia? Me responde que eu te passo os horários.',
       ],
     },
   },
@@ -994,25 +996,37 @@ export function diaCurtoMensagem(data: string): string {
   return `${sigla} ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`;
 }
 
-/** Troca {nome}, {servico}, {data}, {hora} e {negocio} pelos valores. */
-export function preencherMensagem(texto: string, campos: { nome?: string; servico?: string; data?: string; hora?: string }): string {
+/** Troca {nome}, {servico}, {data}, {hora}, {negocio} e {link} pelos valores. */
+export function preencherMensagem(texto: string, campos: { nome?: string; servico?: string; data?: string; hora?: string; link?: string }): string {
   const valores: Record<string, string> = {
     nome: String(campos.nome || '').trim().split(/\s+/)[0],
     servico: String(campos.servico || 'atendimento').toLowerCase(),
     data: campos.data ? diaCurtoMensagem(campos.data) : '',
     hora: campos.hora || '',
     negocio: nomeDoNegocio || 'salão',
+    link: campos.link || '',
   };
-  return texto.replace(/\{(nome|servico|data|hora|negocio)\}/g, (_, c) => valores[c]);
+  return texto.replace(/\{(nome|servico|data|hora|negocio|link)\}/g, (_, c) => valores[c]).trim();
+}
+
+/** Link "Confirmar presença" de um agendamento (vai no lembrete da véspera). */
+export function linkConfirmacao(token: string | null | undefined): string {
+  return token ? `${window.location.origin}/confirmar/${token}` : '';
 }
 
 /** Texto pronto (já preenchido) para mandar ao cliente. */
 export function textoMensagemPronta(
   tipo: TipoMensagem,
   servico: { id?: number | null; nome?: string | null } | null,
-  campos: { nome?: string; data?: string; hora?: string },
+  campos: { nome?: string; data?: string; hora?: string; link?: string },
 ): string {
-  return preencherMensagem(mensagemEmUso(tipo, servico).texto, { ...campos, servico: servico?.nome || undefined });
+  const modelo = mensagemEmUso(tipo, servico).texto;
+  const texto = preencherMensagem(modelo, { ...campos, servico: servico?.nome || undefined });
+  // lembrete com mensagem própria sem {link}: o link de confirmação vai no fim
+  if (tipo === 'lembrete' && campos.link && !modelo.includes('{link}')) {
+    return `${texto}\n\nConfirme sua presença: ${campos.link}`;
+  }
+  return texto;
 }
 
 /** Link do WhatsApp do aparelho com a mensagem pronta (wa.me). Sem telefone: null. */

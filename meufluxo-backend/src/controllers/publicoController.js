@@ -9,8 +9,12 @@
 //  - por negócio: no máximo 30 agendamentos pelo link por dia;
 //  - o horário é conferido de novo na hora de gravar (pode ter sido ocupado).
 // Nenhuma mensagem automática é enviada: o dono vê o aviso no sininho.
+//
+// Também fica aqui o link "Confirmar presença" (/confirmar/:token), que vai no
+// lembrete da véspera: o cliente confirma, cancela ou remarca sem login.
+// O token é um código secreto de 32 letras/números, um por agendamento.
 const { pool } = require('../config/db');
-const { carregarAgenda, livresDoDia } = require('./listaEsperaController');
+const { carregarAgenda, livresDoDia, avisarVagaLiberada } = require('./listaEsperaController');
 
 const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATA_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -19,6 +23,8 @@ const MAX_FUTUROS_POR_TELEFONE = 2;
 const MAX_POR_DIA_NO_NEGOCIO = 30;
 const DIAS_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 const PALETAS = ['salvia', 'oceano', 'lavanda', 'rose', 'terracota', 'grafite', 'personalizada'];
+const TOKEN_REGEX = /^[a-f0-9]{32}$/;
+const ANTECEDENCIA_MIN = 120; // RN16: cancelar ou remarcar pelo link só com 2h ou mais de antecedência
 
 function paraMinutos(hhmm) {
   const [h, m] = String(hhmm).split(':');
@@ -29,8 +35,20 @@ function paraHora(minutos) {
   return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
 }
 
+function agoraBrasilia() {
+  return new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace('T', ' ');
+}
+
 function hojeBrasilia() {
-  return new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 10);
+  return agoraBrasilia().slice(0, 10);
+}
+
+/** Minutos que faltam até data + hora (as duas no horário de Brasília). */
+function minutosAte(data, horario) {
+  const agora = agoraBrasilia();
+  const alvo = Date.parse(`${data}T${String(horario).slice(0, 5)}:00Z`);
+  const atual = Date.parse(`${agora.slice(0, 10)}T${agora.slice(11, 16)}:00Z`);
+  return (alvo - atual) / 60000;
 }
 
 function somarDias(data, dias) {
@@ -314,4 +332,221 @@ async function entrarNaEspera(req, res) {
   }
 }
 
-module.exports = { obterNegocio, listarDias, listarHorarios, agendar, entrarNaEspera };
+// =====================================================================
+//  CONFIRMAR PRESENÇA (/confirmar/:token) — o link que vai no lembrete
+// =====================================================================
+
+/** Cabeçalho da página (nome, foto e cores do negócio). */
+function dadosDaPagina(negocio) {
+  return {
+    nome: negocio.nome_negocio || negocio.nome,
+    descricao: negocio.descricao_negocio || '',
+    endereco: negocio.endereco_negocio || '',
+    foto: negocio.foto || null,
+    telefone: negocio.telefone || '',
+    aparencia: {
+      paleta: PALETAS.includes(negocio.paleta) ? negocio.paleta : 'salvia',
+      corPrimaria: negocio.cor_primaria || null,
+      corAcento: negocio.cor_acento || null,
+      corDestaque: negocio.cor_destaque || null,
+      tamanhoTexto: 'normal',
+    },
+  };
+}
+
+/** Acha o agendamento (e o negócio) pelo código secreto do link. */
+async function agendamentoPeloToken(token) {
+  if (!TOKEN_REGEX.test(String(token || ''))) return null;
+  const [[ag]] = await pool.query(
+    `SELECT a.id, a.usuario_id, a.servico_id, a.data, a.horario, a.status, a.confirmado_em,
+            s.nome AS servico, s.valor, s.duracao_min, c.nome AS cliente
+       FROM agendamentos a
+       JOIN servicos s ON s.id = a.servico_id
+       JOIN clientes c ON c.id = a.cliente_id
+      WHERE a.token_confirmacao = ?`,
+    [token]
+  );
+  if (!ag) return null;
+  const [[negocio]] = await pool.query("SELECT * FROM usuarios WHERE id = ? AND papel = 'dono'", [ag.usuario_id]);
+  if (!negocio) return null;
+  ag.data = String(ag.data).slice(0, 10);
+  ag.horario = String(ag.horario).slice(0, 5);
+  ag.duracao = ag.duracao_min || 30;
+  return { ag, negocio };
+}
+
+/** O que a página mostra: o horário e o que o cliente ainda pode fazer. */
+function respostaDoHorario({ ag, negocio }) {
+  const faltam = minutosAte(ag.data, ag.horario);
+  return {
+    negocio: dadosDaPagina(negocio),
+    horario: {
+      cliente: String(ag.cliente || '').split(' ')[0],
+      servico: ag.servico,
+      valor: Number(ag.valor),
+      duracao: ag.duracao,
+      data: ag.data,
+      horario: ag.horario,
+      status: ag.status,
+      confirmado: Boolean(ag.confirmado_em),
+      passou: faltam <= 0,
+      podeMudar: ag.status === 'agendado' && faltam >= ANTECEDENCIA_MIN, // RN16
+    },
+  };
+}
+
+const textoQuando = (data, horario) => `${DIAS_SEMANA[diaDaSemana(data)]} ${data.slice(8, 10)}/${data.slice(5, 7)} às ${horario}`;
+
+function avisarDono(usuarioId, tipo, titulo, mensagem) {
+  return pool.query(
+    'INSERT INTO notificacoes (usuario_id, titulo, mensagem, tipo) VALUES (?, ?, ?, ?)',
+    [usuarioId, titulo, mensagem, tipo]
+  ).catch(erro => console.error('Aviso do link de confirmação falhou:', erro.message));
+}
+
+const LINK_INVALIDO = 'Esse link não vale mais. Fale com o estabelecimento pelo WhatsApp.';
+
+// GET /api/publico/horario/:token → o horário do cliente
+async function obterHorario(req, res) {
+  try {
+    const achado = await agendamentoPeloToken(req.params.token);
+    if (!achado) return res.status(404).json({ erro: LINK_INVALIDO });
+    res.json(respostaDoHorario(achado));
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Não foi possível abrir o seu horário. Tente de novo.' });
+  }
+}
+
+// POST /api/publico/horario/:token/confirmar → "Confirmo, vou sim"
+async function confirmarPresenca(req, res) {
+  try {
+    const achado = await agendamentoPeloToken(req.params.token);
+    if (!achado) return res.status(404).json({ erro: LINK_INVALIDO });
+    const { ag } = achado;
+    if (ag.status !== 'agendado') return res.status(409).json({ erro: 'Esse horário não está mais marcado.' });
+    if (minutosAte(ag.data, ag.horario) <= 0) return res.status(409).json({ erro: 'Esse horário já passou.' });
+
+    if (!ag.confirmado_em) {
+      await pool.query('UPDATE agendamentos SET confirmado_em = ? WHERE id = ?', [agoraBrasilia(), ag.id]);
+      await avisarDono(ag.usuario_id, 'presenca_confirmada', 'Presença confirmada',
+        `${ag.cliente} confirmou ${ag.servico} de ${textoQuando(ag.data, ag.horario)} pelo link.`);
+    }
+    res.json(respostaDoHorario(await agendamentoPeloToken(req.params.token)));
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Não foi possível confirmar. Tente de novo.' });
+  }
+}
+
+// POST /api/publico/horario/:token/cancelar → cancela (até 2h antes) e avisa a lista de espera
+async function cancelarPeloLink(req, res) {
+  try {
+    const achado = await agendamentoPeloToken(req.params.token);
+    if (!achado) return res.status(404).json({ erro: LINK_INVALIDO });
+    const { ag, negocio } = achado;
+    if (ag.status !== 'agendado') return res.status(409).json({ erro: 'Esse horário não está mais marcado.' });
+    if (minutosAte(ag.data, ag.horario) < ANTECEDENCIA_MIN) {
+      return res.status(409).json({ erro: `Faltam menos de 2 horas. Para cancelar, fale com o ${negocio.nome_negocio || negocio.nome} pelo WhatsApp.` });
+    }
+
+    await pool.query(
+      `UPDATE agendamentos
+          SET status = 'cancelado', status_em = ?, cancelado_por = 'cliente', motivo_cancelamento = 'Cancelado pelo link de confirmação'
+        WHERE id = ? AND status = 'agendado'`,
+      [agoraBrasilia(), ag.id]
+    );
+    await avisarDono(ag.usuario_id, 'cancelamento_link', 'Cancelamento pelo link',
+      `${ag.cliente} cancelou ${ag.servico} de ${textoQuando(ag.data, ag.horario)} pelo link de confirmação.`);
+    // o horário ficou livre: avisa se alguém da lista de espera serve (RN09)
+    await avisarVagaLiberada(ag.usuario_id, ag.data, ag.horario, `${ag.cliente} cancelou`);
+
+    res.json(respostaDoHorario(await agendamentoPeloToken(req.params.token)));
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Não foi possível cancelar. Tente de novo.' });
+  }
+}
+
+// GET /api/publico/horario/:token/dias → próximos 14 dias para remarcar (mesmo serviço)
+async function diasParaRemarcar(req, res) {
+  try {
+    const achado = await agendamentoPeloToken(req.params.token);
+    if (!achado) return res.status(404).json({ erro: LINK_INVALIDO });
+    const { ag } = achado;
+    const hoje = hojeBrasilia();
+    const agenda = await carregarAgenda(ag.usuario_id, hoje, somarDias(hoje, DIAS_MOSTRADOS - 1));
+    const dias = [];
+    for (let i = 0; i < DIAS_MOSTRADOS; i++) {
+      const data = somarDias(hoje, i);
+      if (diaFechado(agenda, data)) continue;
+      dias.push({ data, sigla: DIAS_SEMANA[diaDaSemana(data)], livres: horariosDoDia(agenda, data, ag.duracao).length });
+    }
+    res.json({ dias });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Não foi possível carregar os dias.' });
+  }
+}
+
+// GET /api/publico/horario/:token/horarios?data= → horários livres do dia (mesmo serviço)
+async function horariosParaRemarcar(req, res) {
+  try {
+    const achado = await agendamentoPeloToken(req.params.token);
+    if (!achado) return res.status(404).json({ erro: LINK_INVALIDO });
+    const data = String(req.query.data || '');
+    if (!DATA_REGEX.test(data) || data < hojeBrasilia()) return res.status(400).json({ erro: 'Dia inválido.' });
+    const agenda = await carregarAgenda(achado.ag.usuario_id, data, data);
+    res.json({ horarios: diaFechado(agenda, data) ? [] : horariosDoDia(agenda, data, achado.ag.duracao) });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Não foi possível carregar os horários.' });
+  }
+}
+
+// POST /api/publico/horario/:token/remarcar → { data, horario }: muda o mesmo agendamento (RN05: +1)
+async function remarcarPeloLink(req, res) {
+  try {
+    const achado = await agendamentoPeloToken(req.params.token);
+    if (!achado) return res.status(404).json({ erro: LINK_INVALIDO });
+    const { ag, negocio } = achado;
+    if (ag.status !== 'agendado') return res.status(409).json({ erro: 'Esse horário não está mais marcado.' });
+    if (minutosAte(ag.data, ag.horario) < ANTECEDENCIA_MIN) {
+      return res.status(409).json({ erro: `Faltam menos de 2 horas. Para remarcar, fale com o ${negocio.nome_negocio || negocio.nome} pelo WhatsApp.` });
+    }
+
+    const { data, horario } = req.body;
+    if (!DATA_REGEX.test(String(data || '')) || !HORA_REGEX.test(String(horario || '')) || data < hojeBrasilia()) {
+      return res.status(400).json({ erro: 'Escolha o dia e o horário.' });
+    }
+    // o horário novo ainda está livre? (confere de novo na hora de gravar)
+    const agenda = await carregarAgenda(ag.usuario_id, data, data);
+    if (diaFechado(agenda, data) || !horariosDoDia(agenda, data, ag.duracao).includes(horario)) {
+      return res.status(409).json({ erro: 'Esse horário acabou de ser ocupado. Escolha outro.' });
+    }
+
+    // o cliente escolheu o horário novo, então ele já fica confirmado
+    await pool.query(
+      `UPDATE agendamentos
+          SET data = ?, horario = ?, reagendamentos = reagendamentos + 1, confirmado_em = ?
+        WHERE id = ? AND status = 'agendado'`,
+      [data, horario, agoraBrasilia(), ag.id]
+    );
+    await avisarDono(ag.usuario_id, 'remarcacao_link', 'Remarcação pelo link',
+      `${ag.cliente} remarcou ${ag.servico} de ${textoQuando(ag.data, ag.horario)} para ${textoQuando(data, horario)} pelo link.`);
+    await avisarVagaLiberada(ag.usuario_id, ag.data, ag.horario, `${ag.cliente} remarcou`);
+
+    res.json(respostaDoHorario(await agendamentoPeloToken(req.params.token)));
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Não foi possível remarcar. Tente de novo.' });
+  }
+}
+
+module.exports = {
+  obterNegocio, listarDias, listarHorarios, agendar, entrarNaEspera,
+  // link "Confirmar presença" do lembrete
+  obterHorario, confirmarPresenca, cancelarPeloLink, diasParaRemarcar, horariosParaRemarcar, remarcarPeloLink,
+  // o bot do WhatsApp usa a mesma conta de horários livres
+  horariosDoDia, diaFechado,
+};
