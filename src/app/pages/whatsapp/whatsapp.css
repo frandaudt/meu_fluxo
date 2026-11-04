@@ -2,7 +2,8 @@
 .whatsapp-page h1 { margin: 0; font-size: 1.6rem; color: var(--color-text); }
 .subtitulo { margin: 4px 0 0; font-size: 0.88rem; color: var(--color-text-muted); }
 
-.grade { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+/* duas colunas: link e serviços à esquerda, mensagens prontas à direita (no celular, uma embaixo da outra) */
+.grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .coluna { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
 .card {
@@ -261,6 +262,3 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .endereco-inicio { border-right: 1.5px solid var(--color-border); border-bottom: none; border-radius: var(--radius-md) var(--radius-md) 0 0; padding: 6px 10px; }
   .endereco input { border-radius: 0 0 var(--radius-md) var(--radius-md); }
 }
-
-/* sem o simulador do bot: uma coluna só */
-.grade.grade-unica { grid-template-columns: minmax(0, 1fr); max-width: 860px; }

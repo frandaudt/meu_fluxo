@@ -7,7 +7,7 @@
   <div class="pagina-erro" *ngIf="erro">{{ erro }}</div>
   <p class="carregando" *ngIf="carregando">Carregando...</p>
 
-  <div class="grade grade-unica" *ngIf="!carregando && !erro">
+  <div class="grade" *ngIf="!carregando && !erro">
     <div class="coluna">
 
       <!-- LINK DE AGENDAMENTO -->
@@ -86,6 +86,10 @@
         <p class="vazio" *ngIf="servicos.length === 0">Cadastre os serviços na tela Serviços.</p>
       </section>
 
+    </div>
+
+    <!-- coluna da direita -->
+    <div class="coluna">
       <!-- MENSAGENS PRONTAS POR SERVIÇO -->
       <section class="card">
         <div>
