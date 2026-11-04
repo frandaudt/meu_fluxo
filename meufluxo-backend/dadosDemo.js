@@ -10,7 +10,7 @@
 //    novos e em risco, lista de espera, folga, despesas, metas, avisos e
 //    uma atendente;
 //  - 3 clientes com o WhatsApp de verdade da equipe, cada um num caso:
-//      Leonardo Lameu  → tem horário AMANHÃ (Lembretes de amanhã, e pelo bot: cancelar/remarcar)
+//      Leonardo Lameu  → tem horário AMANHÃ (Lembretes de amanhã; pelo link: confirmar/cancelar/remarcar)
 //      Pyetra Henrique → cliente EM RISCO (Sentimos sua falta / Chamar no WhatsApp)
 //      Mateus Maia     → 1º da LISTA DE ESPERA para a vaga de amanhã (Avisar pelo WhatsApp)
 //                        e atendido no último dia (Agradecer pelo WhatsApp, na Agenda)
@@ -23,7 +23,7 @@ require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { pool } = require('./src/config/db');
 
-const DONA = { nome: 'Carla Mendes', email: 'demo@meufluxo.com', senha: 'Demo@2026', telefone: '(11) 96934-7492'}
+const DONA = { nome: 'Carla Mendes', email: 'demo@meufluxo.com', senha: 'Demo@2026', telefone: '(11) 94000-1234' };
 const ATENDENTE = { nome: 'Bianca Rocha', email: 'atendente@meufluxo.com', senha: 'Atende@2026' };
 const NEGOCIO = {
   nome: 'Studio Sublime',
@@ -53,30 +53,30 @@ const SERVICOS = [
 // perfil: fiel (vem a cada N dias), ocasional, risco (vinha sempre e sumiu),
 // inativo (sumiu há meses), novo (chegou este mês)
 const CLIENTES = [
-  ['Ana Souza', 'fiel', 14, 'Manicure', 'whatsapp'],
+  ['Ana Souza', 'fiel', 14, 'Manicure', 'link'],
   ['Juliana Prado', 'fiel', 21, 'Escova', 'sistema'],
   ['Mariana Lopes', 'fiel', 28, 'Corte feminino', 'sistema'],
   ['Patrícia Gomes', 'fiel', 14, 'Manicure', 'link'],
-  ['Fernanda Lima', 'fiel', 21, 'Design de sobrancelha', 'whatsapp'],
+  ['Fernanda Lima', 'fiel', 21, 'Design de sobrancelha', 'link'],
   ['Renata Alves', 'fiel', 35, 'Coloração', 'sistema'],
   ['Camila Ribeiro', 'fiel', 14, 'Pedicure', 'sistema'],
   ['Larissa Martins', 'fiel', 21, 'Escova', 'link'],
   ['Beatriz Costa', 'ocasional', 30, 'Corte feminino', 'sistema'],
-  ['Gabriela Nunes', 'ocasional', 40, 'Manicure', 'whatsapp'],
+  ['Gabriela Nunes', 'ocasional', 40, 'Manicure', 'link'],
   ['Aline Ferreira', 'ocasional', 35, 'Design de sobrancelha', 'sistema'],
   ['Vanessa Rocha', 'ocasional', 45, 'Escova', 'link'],
   ['Tatiane Barbosa', 'ocasional', 30, 'Pedicure', 'sistema'],
   ['Sônia Alves', 'risco', 21, 'Manicure', 'sistema'],
   ['Cristina Duarte', 'risco', 28, 'Corte feminino', 'sistema'],
-  ['Elaine Moreira', 'risco', 21, 'Escova', 'whatsapp'],
+  ['Elaine Moreira', 'risco', 21, 'Escova', 'link'],
   ['Rosana Teixeira', 'inativo', 30, 'Coloração', 'sistema'],
   ['Débora Cardoso', 'inativo', 30, 'Manicure', 'sistema'],
   ['Isabela Freitas', 'novo', 0, 'Design de sobrancelha', 'link'],
-  ['Letícia Araújo', 'novo', 0, 'Manicure', 'whatsapp'],
+  ['Letícia Araújo', 'novo', 0, 'Manicure', 'link'],
   ['Priscila Mendes', 'novo', 0, 'Escova', 'sistema'],
-  ['Natália Pires', 'novo', 0, 'Corte feminino', 'whatsapp'],
-  // equipe: telefones de verdade, para mostrar os botões de WhatsApp e o bot na banca
-  ['Leonardo Lameu', 'fiel', 21, 'Corte masculino', 'whatsapp', '(11) 99921-2648'],
+  ['Natália Pires', 'novo', 0, 'Corte feminino', 'link'],
+  // equipe: telefones de verdade, para mostrar os botões de WhatsApp e o link de confirmação na banca
+  ['Leonardo Lameu', 'fiel', 21, 'Corte masculino', 'link', '(11) 99921-2648'],
   ['Pyetra Henrique', 'risco', 21, 'Manicure', 'sistema', '(11) 97890-2091'],
   ['Mateus Maia', 'fiel', 28, 'Corte masculino', 'link', '(11) 99356-7599'],
 ];
@@ -271,7 +271,7 @@ async function criar() {
       if (c.perfil === 'novo') {
         // primeira visita logo depois do cadastro; metade já marcou a próxima
         marcar(c, c.favorito, c.desde);
-        if (aleatorio() < 0.5) marcar(c, c.favorito, somarDias(HOJE, 2 + Math.floor(aleatorio() * 5)));
+        if (!c.equipe && aleatorio() < 0.5) marcar(c, c.favorito, somarDias(HOJE, 2 + Math.floor(aleatorio() * 5)));
       }
     }
 
@@ -308,7 +308,7 @@ async function criar() {
 
     // ---------- os 3 casos da equipe ----------
     const equipe = (nome) => clientes.find(c => c.nome === nome);
-    // Leonardo: horário amanhã à tarde (mais de 2h de antecedência: dá para cancelar/remarcar pelo bot)
+    // Leonardo: horário amanhã (mais de 2h de antecedência: dá para cancelar/remarcar pelo link)
     marcar(equipe('Leonardo Lameu'), 'Corte masculino', amanha, { equipe: true });
     // Mateus: atendido no último dia de trabalho antes de hoje (botão "Agradecer" na Agenda)
     let ontem = somarDias(HOJE, -1);
@@ -323,7 +323,7 @@ async function criar() {
     const agoraMin = paraMin(agora.slice(11, 16));
     for (const a of atendimentos) {
       const passou = a.data < HOJE || (a.data === HOJE && paraMin(a.horario) + a.servico.duracao <= agoraMin);
-      a.origem = escolher(['sistema', 'sistema', 'sistema', 'whatsapp', 'link']);
+      a.origem = escolher(['sistema', 'sistema', 'sistema', 'link']);
       a.criadoPor = a.origem === 'sistema' ? (aleatorio() < 0.3 ? atendenteId : donaId) : null;
       a.criadoEm = `${somarDias(a.data, -(2 + Math.floor(aleatorio() * 10)))} ${paraHora(540 + Math.floor(aleatorio() * 20) * 30)}:00`;
       if (!passou) {
@@ -364,8 +364,7 @@ async function criar() {
     if (cancelouAmanha) {
       cancelouAmanha.status = 'cancelado';
       cancelouAmanha.canceladoPor = 'cliente';
-      cancelouAmanha.motivo = 'Cancelado pelo WhatsApp';
-      cancelouAmanha.origem = 'whatsapp';
+      cancelouAmanha.motivo = 'Cancelado pelo link de confirmação';
       cancelouAmanha.statusEm = `${HOJE} 08:40:00`;
     }
 
@@ -396,13 +395,13 @@ async function criar() {
         [donaId, c.id, servicos[servicoNome].id, dataPreferida, periodo, observacao, origem, status, agendamentoId, `${criado} 09:30:00`]
       );
     };
-    await espera(cliente('Mateus Maia'), 'Corte masculino', amanha, 'manha', 'whatsapp', 'aguardando', somarDias(HOJE, -3));
-    await espera(cliente('Letícia Araújo'), 'Manicure', somarDias(amanha, 3), 'tarde', 'whatsapp', 'aguardando', somarDias(HOJE, -2));
+    await espera(cliente('Mateus Maia'), 'Corte masculino', amanha, 'manha', 'link', 'aguardando', somarDias(HOJE, -3));
+    await espera(cliente('Letícia Araújo'), 'Manicure', somarDias(amanha, 3), 'tarde', 'link', 'aguardando', somarDias(HOJE, -2));
     await espera(cliente('Vanessa Rocha'), 'Escova', null, 'tarde', 'link', 'aguardando', somarDias(HOJE, -1));
     await espera(cliente('Aline Ferreira'), 'Design de sobrancelha', somarDias(amanha, 2), 'qualquer', 'sistema', 'aguardando', HOJE, null, 'Pode ser em qualquer horário');
     const encaixado = atendimentos.find(a => a.cliente.nome === 'Juliana Prado' && a.data < HOJE && a.status === 'realizado');
     if (encaixado) await espera(cliente('Juliana Prado'), 'Escova', encaixado.data, 'qualquer', 'sistema', 'convertido', somarDias(encaixado.data, -3), encaixado.id);
-    await espera(cliente('Débora Cardoso'), 'Manicure', somarDias(HOJE, -10), 'manha', 'whatsapp', 'cancelado', somarDias(HOJE, -14));
+    await espera(cliente('Débora Cardoso'), 'Manicure', somarDias(HOJE, -10), 'manha', 'link', 'cancelado', somarDias(HOJE, -14));
 
     // ---------- avisos (sininho e "Precisa da sua atenção") ----------
     const dia = (d) => `${['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][diaSemana(d)]} ${d.slice(8, 10)}/${d.slice(5, 7)}`;
@@ -410,7 +409,12 @@ async function criar() {
     if (cancelouAmanha) {
       avisos.push(['Vaga liberada', `Vaga liberada: ${dia(amanha)} às ${cancelouAmanha.horario} (${cancelouAmanha.cliente.nome} cancelou). Mateus Maia é o 1º da lista de espera para esse horário.`, 'vaga_liberada']);
     }
-    avisos.push(['Novo cliente pelo WhatsApp', 'Natália Pires falou com o bot e foi cadastrada com o telefone do WhatsApp.', 'novo_cliente_bot']);
+    // uma cliente de amanhã já confirmou pelo link ("Confirmou ✓" nos Lembretes de amanhã)
+    const confirmou = atendimentos.find(a => a.data === amanha && a.status === 'agendado' && !a.cliente.equipe);
+    if (confirmou) {
+      await conexao.query('UPDATE agendamentos SET confirmado_em = ? WHERE id = ?', [`${HOJE} 09:12:00`, confirmou.id]);
+      avisos.push(['Presença confirmada', `${confirmou.cliente.nome} confirmou ${confirmou.servico.nome} de ${dia(amanha)} às ${confirmou.horario} pelo link.`, 'presenca_confirmada']);
+    }
     const peloLink = atendimentos.find(a => a.status === 'agendado' && a.data > HOJE && a.cliente.origem === 'link');
     if (peloLink) {
       peloLink.origem = 'link';

@@ -157,7 +157,7 @@ export class Servicos implements OnInit {
         else this.servicos.push(servico);
 
         if (criando) {
-          this.avisoNovo = `"${servico.nome}" já vai aparecer no menu do bot e no link de agendamento. Você pode ocultá-lo na tela WhatsApp.`;
+          this.avisoNovo = `"${servico.nome}" já vai aparecer no link de agendamento. Você pode ocultá-lo na tela WhatsApp e link.`;
         }
 
         this.salvando = false;

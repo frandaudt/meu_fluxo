@@ -779,7 +779,7 @@ export class Agenda implements OnInit {
 
     if (ag.criadoEm) {
       const quando = this.dataCurta(ag.criadoEm.slice(0, 10));
-      if (ag.origem === 'whatsapp') linhas.push(`Criado em ${quando} pelo bot do WhatsApp`);
+      if (ag.origem === 'whatsapp') linhas.push(`Criado em ${quando} pelo WhatsApp`);
       else if (ag.origem === 'link') linhas.push(`Criado em ${quando} pelo link de agendamento`);
       else linhas.push(`Criado em ${quando}${ag.criadoPorNome ? ' por ' + ag.criadoPorNome : ''}`);
     }
