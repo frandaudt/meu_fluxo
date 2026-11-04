@@ -15,6 +15,7 @@
 //      Mateus Maia     → 1º da LISTA DE ESPERA para a vaga de amanhã (Avisar pelo WhatsApp)
 //                        e atendido no último dia (Agradecer pelo WhatsApp, na Agenda)
 // Rode de novo no dia da apresentação para os dados ficarem "frescos".
+// A foto da dona (Meu perfil › Foto) é mantida: coloque uma vez e ela continua.
 //
 // Entrar:  demo@meufluxo.com      / Demo@2026   (dona)
 //          atendente@meufluxo.com / Atende@2026 (atendente)
@@ -162,12 +163,14 @@ async function criar() {
   const conexao = await pool.getConnection();
   try {
     await conexao.beginTransaction();
+    // a foto que a dona colocou em Meu perfil continua (aparece no link e no "Confirmar presença")
+    const [[fotoAntiga]] = await conexao.query("SELECT foto FROM usuarios WHERE email = ? AND papel = 'dono'", [DONA.email]);
     await apagarDemoAnterior(conexao);
 
     // ---------- dona e negócio ----------
     const [dona] = await conexao.query(
-      'INSERT INTO usuarios (nome, email, senha_hash, telefone, nome_negocio) VALUES (?, ?, ?, ?, ?)',
-      [DONA.nome, DONA.email, await bcrypt.hash(DONA.senha, 10), DONA.telefone, NEGOCIO.nome]
+      'INSERT INTO usuarios (nome, email, senha_hash, telefone, nome_negocio, foto) VALUES (?, ?, ?, ?, ?, ?)',
+      [DONA.nome, DONA.email, await bcrypt.hash(DONA.senha, 10), DONA.telefone, NEGOCIO.nome, fotoAntiga?.foto || null]
     );
     const donaId = dona.insertId;
     // link de agendamento (se o endereço já for de outra conta, usa outro)
