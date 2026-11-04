@@ -14,10 +14,14 @@
         <div class="negocio">
           <img class="avatar" *ngIf="n.foto; else semFoto" [src]="n.foto" alt="" />
           <ng-template #semFoto><span class="avatar">{{ iniciais }}</span></ng-template>
-          <div>
+          <div class="negocio-textos">
             <h1>{{ n.nome }}</h1>
             <p *ngIf="subtituloNegocio">{{ subtituloNegocio }}</p>
           </div>
+          <!-- WhatsApp do salão (telefone do Meu perfil) -->
+          <a class="btn-whats-topo" *ngIf="linkWhatsappNegocio as link" [href]="link" target="_blank" rel="noopener" title="Falar com o salão no WhatsApp">
+            <span class="icone" aria-hidden="true">chat</span> WhatsApp
+          </a>
         </div>
         <ol class="etapas" *ngIf="!token">
           <li *ngFor="let e of etapas" [class.feita]="indiceEtapa(e.id) <= indiceEtapa(etapa)" [class.atual]="e.id === etapa">

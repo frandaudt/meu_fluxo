@@ -162,6 +162,7 @@ async function obterNegocio(req, res) {
         descricao: negocio.descricao_negocio || '',
         endereco: negocio.endereco_negocio || '',
         foto: negocio.foto || null, // a mesma foto do Perfil (no lugar das iniciais)
+        telefone: negocio.telefone || '', // botão "Falar no WhatsApp"
         // a página pública usa as cores do negócio
         aparencia: {
           paleta: PALETAS.includes(negocio.paleta) ? negocio.paleta : 'salvia',

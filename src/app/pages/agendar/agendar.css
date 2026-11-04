@@ -202,3 +202,15 @@
 }
 .btn-perigo:disabled { opacity: 0.5; cursor: not-allowed; }
 .link-calendario { align-self: center; font-size: 0.86rem; }
+
+/* botão "WhatsApp" do topo (telefone do salão) */
+.negocio-textos { flex: 1; min-width: 0; }
+.btn-whats-topo {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 8px 12px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18); color: var(--color-white);
+  font-size: 0.8rem; font-weight: 700; text-decoration: none;
+}
+.btn-whats-topo:hover { background: rgba(255, 255, 255, 0.28); }
+.btn-whats-topo .icone { font-size: 18px; }

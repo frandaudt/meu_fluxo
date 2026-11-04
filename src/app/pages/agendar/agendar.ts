@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
-import { API_URL, Aparencia, aplicarAparencia } from '../../app';
+import { API_URL, Aparencia, aplicarAparencia, linkWhatsappPronto } from '../../app';
 
 /**
  * Página pública de agendamento: /agendar/:slug (sem login, feita para celular).
@@ -121,6 +121,17 @@ export class Agendar implements OnInit {
 
   get subtituloNegocio(): string {
     return [this.negocio?.descricao, this.negocio?.endereco].filter(Boolean).join(' · ');
+  }
+
+  /** Botão "Falar no WhatsApp" do topo: abre o WhatsApp do salão (telefone do Meu perfil). */
+  get linkWhatsappNegocio(): string | null {
+    const n = this.negocio;
+    if (!n?.telefone) return null;
+    const h = this.meuHorario;
+    const texto = h
+      ? `Olá! Sobre o meu horário de ${h.servico} em ${this.diaPorExtenso(h.data)} às ${h.horario}: `
+      : `Olá! Vim pelo link de agendamento do ${n.nome}.`;
+    return linkWhatsappPronto(n.telefone, texto);
   }
 
   indiceEtapa(e: Etapa): number {

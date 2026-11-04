@@ -23,7 +23,7 @@ require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { pool } = require('./src/config/db');
 
-const DONA = { nome: 'Carla Mendes', email: 'demo@meufluxo.com', senha: 'Demo@2026', telefone: '(11) 94000-1234' };
+const DONA = { nome: 'Carla Mendes', email: 'demo@meufluxo.com', senha: 'Demo@2026', telefone: '(11) 96934-7492'}
 const ATENDENTE = { nome: 'Bianca Rocha', email: 'atendente@meufluxo.com', senha: 'Atende@2026' };
 const NEGOCIO = {
   nome: 'Studio Sublime',
