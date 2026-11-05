@@ -277,7 +277,8 @@
   .semana { gap: 2px; }
   .dia-cell { min-height: 64px; padding: 3px; gap: 2px; font-size: 0.78rem; }
   .dia-cell.resumo { min-height: 60px; }
-  .evento-chip { font-size: 0.6rem; padding: 2px 3px; }
+  /* no mês, cada horário vira uma barrinha colorida (cor = situação); o toque no dia abre os detalhes */
+  .dia-cell .evento-chip { font-size: 0; line-height: 0; height: 6px; min-height: 0; padding: 0; border-radius: 3px; overflow: hidden; }
 }
 
 /* horário livre que serve para alguém da lista de espera ("vaga liberada") */

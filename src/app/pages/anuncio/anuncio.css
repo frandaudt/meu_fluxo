@@ -356,8 +356,11 @@
   .anuncio-nav-links a:not(.btn-primary):not(.nav-entrar) { display: none; }
   .hero-texto h1 { font-size: 1.9rem; }
   .hero-ctas { flex-direction: column; }
-  .funcionalidade-conteudo-inner { flex-direction: column; align-items: stretch; }
+  .funcionalidade-conteudo-inner { flex-direction: column; align-items: stretch; gap: 16px; }
   .funcionalidade-print { max-width: 100%; }
+    /* em coluna, o "flex-basis" virava altura: sobrava um espaço vazio grande no módulo aberto */
+  .funcionalidade-conteudo-inner .funcionalidade-print-botao,
+  .funcionalidade-conteudo-inner p { flex: 0 0 auto; max-width: 100%; }
 }
 .funcionalidade-print-botao {
   position: relative;

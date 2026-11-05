@@ -287,4 +287,7 @@
   .form-row { grid-template-columns: 1fr; }
   .linha-receber { grid-template-columns: minmax(0, 1fr) auto; }
   .receber-data { display: none; }
+    /* despesas: o nome quebra linha em vez de virar "Cons..." */
+  .linha-despesa { grid-template-columns: minmax(0, 1fr) auto auto 32px; }
+  .despesa-nome { white-space: normal; overflow-wrap: anywhere; }
 }

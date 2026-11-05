@@ -257,6 +257,9 @@
   .tabela-rolagem > table th:nth-child(n+2):nth-child(-n+5),
   .tabela-rolagem > table td:nth-child(n+2):nth-child(-n+5) { display: none; }
   .tabela-rolagem > table th, .tabela-rolagem > table td { padding-left: 4px; padding-right: 4px; }
+    /* o nome quebra linha e o botão fica menor: tudo cabe sem rolar para o lado */
+  .tabela-rolagem > table td:first-child { white-space: normal; }
+  .btn-visualizar { padding: 6px 10px; font-size: 0.78rem; }
 }
 
 /* ===== ficha: lista de espera ===== */

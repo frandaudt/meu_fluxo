@@ -442,15 +442,34 @@ label.cor-caixa { cursor: pointer; }
 .modal-form .card-sub { margin: 0; }
 
 /* ===== telas menores ===== */
+/* ===== telas menores ===== */
 @media (max-width: 1100px) {
-  .grade-2-1, .grade-horario { display: grid; grid-template-columns: minmax(0, 2.3fr) minmax(270px, 1fr); gap: 16px; align-items: start; }
-.grade-aparencia { grid-template-columns: 1fr; }
+  .grade-aparencia { grid-template-columns: 1fr; }
   .previa-card { position: static; }
+}
+/* tablet e celular: os cartões ficam um embaixo do outro */
+@media (max-width: 900px) {
+  .grade-2-1, .grade-horario { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 640px) {
   .form-row, .cores-personalizadas { grid-template-columns: 1fr; }
   .acao-linha { flex-direction: column; align-items: flex-start; }
   .harmonia { flex-direction: column; align-items: flex-start; }
+  .card-topo > *, .tamanho-horario { width: 100%; min-width: 0; }
+  /* horário de trabalho: cada dia vira um bloco (sem rolar para o lado) */
+  .tabela-horario { min-width: 0; }
+  .tabela-horario thead { display: none; }
+  .tabela-horario tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
+  .tabela-horario tr:last-child { border-bottom: none; }
+  .tabela-horario td { display: block; padding: 0; border: none; }
+  .tabela-horario td:first-child, .tabela-horario td:nth-child(4), .tabela-horario td.folga { grid-column: 1 / -1; }
+  .tabela-horario td:nth-child(2)::before { content: 'Abre'; }
+  .tabela-horario td:nth-child(3)::before { content: 'Fecha'; }
+  .tabela-horario td:nth-child(4)::before { content: 'Pausa (almoço)'; }
+  .tabela-horario td:not(:first-child):not(.folga)::before { display: block; margin-bottom: 4px; font-size: 0.74rem; font-weight: 600; color: var(--color-text-muted); }
+  .tabela-horario td.folga::before { content: none; }
+  /* equipe: nome e e-mail ocupam a linha toda; selo e botões descem para a linha de baixo */
+  .pessoa-textos { min-width: 0; flex: 1 1 calc(100% - 50px); overflow-wrap: anywhere; }
 }
 
 /* ===== campo de senha com olho (fica dentro do campo, à direita) ===== */
